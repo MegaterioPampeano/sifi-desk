@@ -14,7 +14,7 @@ ui/
 ├── mock/
 │   ├── server.py         # servicio de maqueta (sólo stdlib)
 │   ├── gen_data.py       # regenera mock_data.json desde el fixture + scoring del core
-│   └── data/mock_data.json
+│   └── data/mock_data.json.gz
 ├── tauri/                # envoltorio de escritorio (config + src-tauri)
 └── docs/screens/         # capturas de verificación
 ```
@@ -84,6 +84,26 @@ cargo tauri build        # requiere rust + tauri-cli + webkit2gtk-4.1 (Linux)
 * `bundle.externalBin` espera `src-tauri/binaries/sifid-<target-triple>[.exe]`,
   generado por el frente de empaquetado (M8). Sin ese archivo el `build` falla,
   igual que sin los iconos (ya incluidos en `src-tauri/icons/`).
+
+### Datos de ejemplo y límites
+
+`ui/mock/gen_data.py` usa el fixture (`tests/data/results_fixture.json`) como
+molde y el scoring real del core. Escribe `mock_data.json` (plano, ignorado por
+git) y `mock_data.json.gz` (163 KB, versionado); el servidor lee el `.gz`.
+
+Límites de la maqueta, para no confundirla con el servicio:
+
+* sólo existen 7 combinaciones curadas de paneles × {3 genes, cada gen suelto};
+  cualquier otra selección se resuelve con la variante más parecida;
+* el gen se elige por el nombre en `query_path` (`Dm_COPI`, `Dm_VATP`, `Dm_CHS2`);
+  si no aparece ninguno, se sirven los tres;
+* `POST /runs` acepta `query_text`, `genes[]` y `sirna_size` como extensiones;
+  el `sifid` real usa `query_path`;
+* `POST /agent/chat` y `log[]` en `GET /runs/{id}` son extensiones de la maqueta;
+* la corrida simulada tarda ~7 s y no ejecuta binarios;
+* «Exportar PDF» está deshabilitado: `POST /reports` no está en el contrato.
+
+Los datos son sintéticos y no son evidencia biológica.
 
 ## Tests
 
