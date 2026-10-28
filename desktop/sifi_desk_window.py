@@ -9,10 +9,12 @@ Ubuntu de escritorio (git y webkit2gtk-4.1 ya vienen con el sistema).
 """
 from __future__ import annotations
 
+import os
 import sys
 
 import gi
 
+gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
 from gi.repository import Gdk, Gtk, WebKit2  # noqa: E402
@@ -30,12 +32,33 @@ class Ventana(Gtk.Window):
         self.set_default_size(min(1320, ancho), min(900, alto))
         self.set_position(Gtk.WindowPosition.CENTER)
 
+        # sin caché de documentos: la UI se actualiza con el programa y un reinicio
+        # tiene que traer el JS nuevo, no el que quedó en disco
+        try:
+            WebKit2.WebContext.get_default().set_cache_model(WebKit2.CacheModel.DOCUMENT_VIEWER)
+        except Exception:
+            pass
+
         self.web = WebKit2.WebView()
         self.web.load_uri(url)
         self.add(self.web)
 
         self.web.connect("load-failed", self._fallo)
+        if os.environ.get("SIFI_UI_DEBUG"):
+            # consola del WebView al stdout: sirve para depurar la interfaz sin
+            # abrir las herramientas de desarrollo (el nombre del signal cambió
+            # entre versiones de WebKitGTK)
+            for _sig in ("console-message", "write-console-message"):
+                try:
+                    self.web.connect(_sig, self._consola)
+                    break
+                except TypeError:
+                    continue
         self.connect("destroy", Gtk.main_quit)
+
+    def _consola(self, _web, _fuente, linea, mensaje):
+        print(f"[ui] {mensaje} ({linea})", flush=True)
+        return False
 
     def _fallo(self, _web, _evento, uri, error):
         dialogo = Gtk.MessageDialog(

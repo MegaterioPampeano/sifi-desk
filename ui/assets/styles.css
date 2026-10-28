@@ -616,3 +616,45 @@ table.hits tr.mm1 td { background: var(--mid-soft); }
 .news-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; justify-content: space-between; }
 .news-foot { margin-top: 10px; }
 select.input.sm { padding: 5px 8px; font-size: 12px; }
+
+/* ----------------------------------------------------------------- modal */
+.modal {
+  position: fixed; inset: 0; z-index: 80;
+  background: color-mix(in srgb, #05070d 62%, transparent);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.modal.hidden { display: none; }
+.modal-card {
+  width: min(720px, 100%); max-height: 88vh; overflow: auto;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 35%);
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; border-bottom: 1px solid var(--line);
+}
+.modal-head h2 { margin: 0; font-size: 1.15rem; }
+.modal-body { padding: 20px 22px 22px; }
+.modal-block h3 { margin: 0 0 6px; font-size: 0.95rem; letter-spacing: .02em; }
+.modal-row { display: flex; gap: 10px; margin: 12px 0 10px; }
+.modal-row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-row.two label { display: flex; flex-direction: column; gap: 6px;
+  font-size: .8rem; color: var(--mid); }
+.modal-row input {
+  flex: 1; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+  font: inherit;
+}
+.modal-row.two input { width: 100%; }
+.chip-line { margin: 6px 0 4px; }
+.chip {
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  background: var(--ok-soft, rgb(34 197 94 / 14%)); color: var(--ink-2);
+  font-size: .78rem;
+}
+.chip.off { background: var(--bad-soft); }
+.modal-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.modal-estado { font-size: .82rem; color: var(--mid); }
+.modal-estado.err { color: var(--bad); }
+.btn.danger { color: var(--bad); }

@@ -204,6 +204,10 @@ export const api = {
     return request("GET", `/news?${q.toString()}`, undefined, signal)
       .then(normalizeNews);
   },
-  chat: (mensaje, runId, signal) =>
-    request("POST", "/agent/chat", { mensaje, run_id: runId || null }, signal),
+  chat: (mensaje, runId, signal, historial) =>
+    request("POST", "/agent/chat", { mensaje, run_id: runId || null, historial: historial || [] }, signal),
+  ajustes: (signal) => request("GET", "/settings/llm", undefined, signal),
+  guardarAjustes: (body, signal) => request("PUT", "/settings/llm", body, signal),
+  borrarAjustes: (signal) => request("DELETE", "/settings/llm", undefined, signal),
+  probarAjustes: (signal) => request("POST", "/settings/llm/test", {}, signal),
 };

@@ -7,6 +7,7 @@ import { initResults, showResults } from "./results.js";
 import { initDetail } from "./detail.js";
 import { initChat, actualizarContexto } from "./chat.js";
 import { initNews, cargarNews } from "./news.js";
+import { initAjustes } from "./ajustes.js";
 import { esc, fechaCorta, entero, num, ESTADOS } from "./format.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -223,6 +224,7 @@ async function main() {
   initResults({ onNewRun: volverAlAsistente });
   initDetail();
   initChat();
+  initAjustes();
   initNews();
 
   const chatPref = localStorage.getItem("sifi.chat");

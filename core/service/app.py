@@ -514,6 +514,48 @@ def create_app(data_dir: Optional[str] = None,
             from .news import empty_digest
             return empty_digest(since, offline, f"sin novedades ahora: {exc}")
 
+    # La UI se sirve desde disco y cambia con cada actualización: sin caché, para
+    # que un F5 (o el reinicio de la ventana) traiga el JS nuevo de verdad.
+    @app.middleware("http")
+    async def _sin_cache_assets(request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path.startswith("/assets/") or path in ("/", "/index.html"):
+            response.headers["Cache-Control"] = "no-store, must-revalidate"
+        return response
+
+    # --------------------------------------------------------------- ajustes
+    @app.get("/settings/llm")
+    def get_llm_settings() -> dict:
+        from . import settings as _settings
+        return _settings.estado()
+
+    @app.put("/settings/llm")
+    def put_llm_settings(body: dict) -> dict:
+        from . import settings as _settings
+        try:
+            return _settings.guardar(body.get("api_key") or "",
+                                     body.get("modelo"), body.get("base_url"))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.delete("/settings/llm")
+    def delete_llm_settings() -> dict:
+        from . import settings as _settings
+        return _settings.borrar()
+
+    @app.post("/settings/llm/test")
+    def test_llm_settings() -> dict:
+        from . import agent as _agent
+        return _agent.probar()
+
+    # ----------------------------------------------------------------- agente
+    @app.post("/agent/chat")
+    def agent_chat(body: dict) -> dict:
+        from . import agent as _agent
+        return _agent.chat(store, body.get("mensaje") or body.get("message") or "",
+                           body.get("run_id"), body.get("historial"))
+
     # ------------------------------------------------------------------- UI
     def _ui_index() -> Optional[HTMLResponse]:
         index = os.path.join(ui_dir, "index.html") if ui_dir else ""

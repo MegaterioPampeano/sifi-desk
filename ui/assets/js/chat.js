@@ -3,6 +3,7 @@
 import { api } from "./api.js";
 import { state } from "./state.js";
 import { esc } from "./format.js";
+import { abrir as abrirAjustes } from "./ajustes.js";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -19,6 +20,12 @@ const CON_RESULTADOS = [
 ];
 
 let ocupado = false;
+const conversacion = [];
+
+// Últimos turnos, para que el agente no pierda el hilo entre preguntas.
+function historial() {
+  return conversacion.slice(-6);
+}
 
 export function initChat() {
   $("#chat-form").addEventListener("submit", (ev) => {
@@ -61,13 +68,23 @@ async function enviar(texto) {
   if (!msg || ocupado) return;
   $("#chat-input").value = "";
   burbuja("user", msg);
+  conversacion.push({ role: "user", content: msg });
   ocupado = true;
   $("#chat-send").disabled = true;
   const espera = burbuja("agent", "…", true);
   try {
-    const res = await api.chat(msg, state.runId);
+    const res = await api.chat(msg, state.runId, undefined, historial());
     espera.remove();
-    burbuja("agent", res.respuesta || "(sin respuesta)");
+    const b = burbuja("agent", res.respuesta || "(sin respuesta)");
+    conversacion.push({ role: "assistant", content: res.respuesta || "" });
+    if (res.configurar) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn ghost";
+      btn.textContent = "Abrir Ajustes";
+      btn.addEventListener("click", abrirAjustes);
+      b.lastElementChild.appendChild(btn);
+    }
     if (Array.isArray(res.tools) && res.tools.length) {
       const ultima = $("#chat-log").lastElementChild;
       for (const t of res.tools) ultima.appendChild(tarjetaTool(t));
