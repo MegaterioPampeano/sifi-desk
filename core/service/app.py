@@ -1,0 +1,364 @@
+"""sifid — API local de siFi-Desk.
+
+    python3 -m service.app --port 8765 --data-dir /tmp/sifid
+
+Endpoints (v1):
+    GET  /health                     estado del servicio, cola y worker
+    GET  /panels                     paneles ingerados (registro bowtie)
+    POST /runs                       encola una corrida -> 201 {run}
+    GET  /runs                       lista corridas (?status=&limit=&offset=)
+    GET  /runs/{id}                  detalle (estado, progreso, timestamps, error)
+    POST /runs/{id}/cancel           cancela (encolada: inmediato; corriendo: mata el grupo)
+    GET  /runs/{id}/results          manifest `sifi.results/1` de la corrida terminada
+
+La cola es SQLite (WAL) y hay **un** worker: el pipeline corre en un subproceso
+(`python3 -m service.runner`), nunca dentro del proceso web.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from contextlib import asynccontextmanager
+from typing import List, Optional
+
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
+
+from . import SERVICE_NAME, __version__
+from .models import CancelResponse, RunRequest
+from .queue import STATUSES, Store, new_run_id, utcnow
+from .worker import CORE_DIR, Worker, recover_interrupted
+
+if CORE_DIR not in sys.path:  # el paquete `sifi` vive al lado de `service`
+    sys.path.insert(0, CORE_DIR)
+
+DEFAULT_DATA_DIR = os.environ.get("SIFID_DATA_DIR", os.path.expanduser("~/.sifidesk/sifid"))
+DEFAULT_PANELS_ROOT = os.environ.get("SIFI_PANELS_ROOT",
+                                     os.path.expanduser("~/.sifidesk/panels"))
+
+
+# --------------------------------------------------------------------------- #
+# validación / armado del spec
+# --------------------------------------------------------------------------- #
+def _count_records(path: str) -> int:
+    n = 0
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if line.startswith(">"):
+                n += 1
+    return n
+
+
+def _first_record_id(path: str) -> Optional[str]:
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if line.startswith(">"):
+                return line[1:].strip().split()[0] if line[1:].strip() else None
+    return None
+
+
+def _build_params(req: RunRequest):
+    from sifi.params import SifiParams
+
+    kw = {
+        "mode": req.mode,
+        "sirna_size": req.sirna_size,
+        "mismatches": req.mismatches,
+        "no_efficience": req.no_efficience,
+    }
+    if req.accessibility_window is not None:
+        kw["accessibility_window"] = req.accessibility_window
+    for name in ("strand_check", "end_check", "accessibility_check", "terminal_check"):
+        value = getattr(req, name)
+        if value is not None:
+            kw[name] = value
+    if req.mode == "offtarget":
+        # mismos defaults que la CLI (`sifi offtarget`): sólo hebra + terminales
+        kw.setdefault("end_check", False)
+        kw.setdefault("accessibility_check", False)
+    try:
+        return SifiParams(**kw)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=f"parámetros inválidos: {exc}") from exc
+
+
+def _resolve_db(req: RunRequest, panels_root: str) -> tuple[dict, List[dict], str, str]:
+    """Devuelve (public_db, paneles, db_dir, db_name)."""
+    from sifi.panels import PanelError, PanelsRegistry
+
+    if req.panel_id:
+        if req.db_dir or req.db_name:
+            raise HTTPException(status_code=400,
+                                detail="usá panel_id O db_dir+db_name, no los dos")
+        try:
+            spec = PanelsRegistry(root=panels_root).get(req.panel_id, req.panel_version)
+        except PanelError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if not os.path.exists(spec.index_path + ".1.ebwt"):
+            raise HTTPException(status_code=400,
+                                detail=f"el panel {spec.id} {spec.version} no tiene índice bowtie"
+                                       f" completo ({spec.path})")
+        public = {"dir": spec.path, "name": spec.index_prefix,
+                  "panel_id": spec.id, "panel_version": spec.version,
+                  "fingerprint": spec.fingerprint}
+        panels = [{"id": spec.id, "version": spec.version, "n_seqs": spec.n_seqs,
+                   "fingerprint": spec.fingerprint, "role": spec.rol}]
+        return public, panels, spec.path, spec.index_prefix
+
+    if not req.db_dir or not req.db_name:
+        raise HTTPException(status_code=400,
+                            detail="falta la base: pasá panel_id o db_dir + db_name")
+    db_dir = os.path.abspath(req.db_dir)
+    if not os.path.isdir(db_dir):
+        raise HTTPException(status_code=400, detail=f"no existe db_dir: {db_dir}")
+    prefix = os.path.join(db_dir, req.db_name)
+    if not os.path.exists(prefix + ".1.ebwt"):
+        raise HTTPException(status_code=400,
+                            detail=f"no hay índice bowtie en {prefix}.1.ebwt "
+                                   f"(¿--db-name correcto?)")
+    public = {"dir": db_dir, "name": req.db_name, "panel_id": None,
+              "panel_version": None, "fingerprint": None}
+    return public, [], db_dir, req.db_name
+
+
+def _resolve_tools(req: RunRequest):
+    from sifi.tools import discover
+
+    try:
+        return discover(req.bowtie, req.rnaplfold)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+# --------------------------------------------------------------------------- #
+# app
+# --------------------------------------------------------------------------- #
+def create_app(data_dir: Optional[str] = None,
+               panels_root: Optional[str] = None,
+               runner_argv: Optional[List[str]] = None,
+               start_worker: bool = True) -> FastAPI:
+    data_dir = os.path.abspath(data_dir or DEFAULT_DATA_DIR)
+    panels_root = os.path.abspath(panels_root or DEFAULT_PANELS_ROOT)
+    runs_dir = os.path.join(data_dir, "runs")
+    os.makedirs(runs_dir, exist_ok=True)
+
+    store = Store(os.path.join(data_dir, "sifid.sqlite3"))
+    worker = Worker(store, data_dir, runner_argv=runner_argv)
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        recover_interrupted(store)   # runners huérfanos de una vida anterior
+        if start_worker:
+            worker.start()
+        try:
+            yield
+        finally:
+            if start_worker:
+                worker.stop()
+            store.close()
+
+    app = FastAPI(title="sifid", version=__version__,
+                  description="Servicio local de siFi-Desk (cola de corridas)",
+                  lifespan=lifespan)
+    app.state.store = store
+    app.state.worker = worker
+    app.state.data_dir = data_dir
+    app.state.panels_root = panels_root
+    app.state.runs_dir = runs_dir
+    app.state.start_worker = start_worker
+
+    # ---------------------------------------------------------------- salud
+    @app.get("/health")
+    def health() -> dict:
+        counts = store.counts()
+        return {
+            "status": "ok",
+            "service": SERVICE_NAME,
+            "version": __version__,
+            "data_dir": data_dir,
+            "panels_root": panels_root,
+            "worker": {"enabled": start_worker, "alive": worker.alive,
+                       "current_run": worker.current},
+            "queue": counts,
+        }
+
+    # --------------------------------------------------------------- paneles
+    @app.get("/panels")
+    def panels() -> dict:
+        from sifi.panels import PanelsRegistry
+
+        out = []
+        for spec in PanelsRegistry(root=panels_root).list():
+            out.append({
+                "id": spec.id, "version": spec.version, "nombre": spec.nombre,
+                "rol": spec.rol, "n_seqs": spec.n_seqs, "fingerprint": spec.fingerprint,
+                "path": spec.path,
+                "index_ok": os.path.exists(spec.index_path + ".1.ebwt"),
+            })
+        return {"panels_root": panels_root, "count": len(out), "panels": out}
+
+    # ----------------------------------------------------------------- runs
+    @app.post("/runs", status_code=201)
+    def create_run(req: RunRequest) -> dict:
+        if bool(req.query_path) == bool(req.query_fasta):
+            raise HTTPException(status_code=400,
+                                detail="pasá exactamente uno: query_path o query_fasta")
+
+        params = _build_params(req)
+        tools = _resolve_tools(req)
+        db_public, panel_list, db_dir, db_name = _resolve_db(req, panels_root)
+
+        if req.main_target_mode == "explicit" and not req.main_targets:
+            raise HTTPException(status_code=400,
+                                detail="main_target_mode='explicit' requiere main_targets")
+
+        run_id = new_run_id()
+        run_dir = os.path.join(runs_dir, run_id)
+        os.makedirs(run_dir, exist_ok=False)
+        query_file = os.path.join(run_dir, "input.fa")
+        try:
+            if req.query_fasta is not None:
+                with open(query_file, "w", encoding="utf-8") as fh:
+                    fh.write(req.query_fasta if req.query_fasta.endswith("\n")
+                             else req.query_fasta + "\n")
+                origin = {"kind": "inline"}
+            else:
+                src = os.path.abspath(req.query_path or "")
+                if not os.path.isfile(src):
+                    raise HTTPException(status_code=400, detail=f"no existe query_path: {src}")
+                with open(src, "rb") as fi, open(query_file, "wb") as fo:
+                    fo.write(fi.read())
+                origin = {"kind": "path", "path": src}
+
+            records_total = _count_records(query_file)
+            if records_total == 0:
+                raise HTTPException(status_code=400,
+                                    detail="el FASTA de entrada no tiene registros")
+            query_name = _first_record_id(query_file)
+
+            out_dir = os.path.join(run_dir, "out")
+            spec = {
+                "run_id": run_id,
+                "core_path": CORE_DIR,
+                "query_path": query_file,
+                "db_dir": db_dir,
+                "db_name": db_name,
+                "out_dir": out_dir,
+                "params": params.as_dict(),
+                "tools": tools.as_dict(),
+                "main_targets": req.main_targets,
+                "main_target_mode": req.main_target_mode,
+                "records_total": records_total,
+                "extra_meta": {
+                    "service": {"name": SERVICE_NAME, "version": __version__,
+                                "run_id": run_id, "requested_at": utcnow()},
+                    **(req.extra_meta or {}),
+                },
+                "public": {
+                    "mode": req.mode,
+                    "query": {"name": query_name, "records": records_total,
+                              "origin": origin},
+                    "database": db_public,
+                    "panels": panel_list,
+                    "params": params.as_dict(),
+                    "main_target_mode": req.main_target_mode,
+                    "main_targets": req.main_targets,
+                },
+            }
+            return store.create(spec, records_total, run_id=run_id)
+        except Exception:
+            # una corrida que no llegó a encolarse no deja basura en disco
+            if store.get(run_id) is None:
+                import shutil
+                shutil.rmtree(run_dir, ignore_errors=True)
+            raise
+
+    @app.get("/runs")
+    def list_runs(status: Optional[str] = Query(None),
+                  limit: int = Query(50, ge=1, le=500),
+                  offset: int = Query(0, ge=0)) -> dict:
+        if status is not None and status not in STATUSES:
+            raise HTTPException(status_code=400,
+                                detail=f"status inválido: {status!r} (usar {', '.join(STATUSES)})")
+        runs = store.list(status=status, limit=limit, offset=offset)
+        return {"count": len(runs), "runs": runs}
+
+    @app.get("/runs/{run_id}")
+    def get_run(run_id: str) -> dict:
+        run = store.get(run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"no existe la corrida {run_id!r}")
+        return run
+
+    @app.post("/runs/{run_id}/cancel", response_model=CancelResponse)
+    def cancel_run(run_id: str) -> CancelResponse:
+        result, run = store.request_cancel(run_id)
+        if result == "missing":
+            raise HTTPException(status_code=404, detail=f"no existe la corrida {run_id!r}")
+        if result == "conflict":
+            raise HTTPException(
+                status_code=409,
+                detail=f"la corrida {run_id!r} ya terminó ({run['status'] if run else '?'})")
+        detail = ("cancelada antes de arrancar" if result == "cancelled"
+                  else "cancelación pedida: el worker está matando el subproceso")
+        assert run is not None
+        return CancelResponse(run_id=run_id, status=run["status"],
+                              cancel_requested=run["cancel_requested"], detail=detail)
+
+    @app.get("/runs/{run_id}/results")
+    def get_results(run_id: str) -> JSONResponse:
+        raw = store.raw(run_id)
+        if raw is None:
+            raise HTTPException(status_code=404, detail=f"no existe la corrida {run_id!r}")
+        if raw["status"] != "done":
+            raise HTTPException(
+                status_code=409,
+                detail=f"la corrida {run_id!r} está en estado {raw['status']!r};"
+                       " los resultados sólo están disponibles en 'done'")
+        path = raw["result_path"]
+        if not path or not os.path.isfile(path):
+            raise HTTPException(status_code=500,
+                                detail=f"el manifest de {run_id!r} se perdió ({path!r})")
+        with open(path, encoding="utf-8") as fh:
+            manifest = json.load(fh)
+        return JSONResponse(content=manifest)
+
+    @app.get("/")
+    def root() -> dict:
+        return {"service": SERVICE_NAME, "version": __version__,
+                "docs": "/docs", "health": "/health"}
+
+    return app
+
+
+# --------------------------------------------------------------------------- #
+# arranque
+# --------------------------------------------------------------------------- #
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(prog="sifid",
+                                 description="Servicio local de siFi-Desk (FastAPI)")
+    ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--host", default="127.0.0.1")
+    ap.add_argument("--data-dir", default=DEFAULT_DATA_DIR,
+                    help="cola SQLite + corridas (default: %(default)s)")
+    ap.add_argument("--panels-root", default=DEFAULT_PANELS_ROOT,
+                    help="registro de paneles (default: %(default)s)")
+    ap.add_argument("--log-level", default="info")
+    ap.add_argument("--no-worker", action="store_true",
+                    help="no ejecutar corridas (sólo API; para depurar la cola)")
+    args = ap.parse_args(argv)
+
+    import uvicorn
+
+    app = create_app(data_dir=args.data_dir, panels_root=args.panels_root,
+                     start_worker=not args.no_worker)
+    print(f"{SERVICE_NAME} {__version__} en http://{args.host}:{args.port}"
+          f"  (data-dir={os.path.abspath(args.data_dir)})", flush=True)
+    uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
