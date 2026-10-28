@@ -1,0 +1,435 @@
+/* Informe Si-Fi Agent Integration — A4, impresión en color o gris.
+   Reglas pensadas para WeasyPrint 70: sin flexbox, sin grid, sin JS. */
+
+@page {
+  size: A4;
+  margin: 19mm 16mm 18mm 16mm;
+  @bottom-left {
+    content: "Si-Fi Agent Integration · Omnivac Science";
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 6.8pt;
+    color: #7c8890;
+  }
+  @bottom-center {
+    content: "__TRAZA__";
+    font-family: "DejaVu Sans Mono", monospace;
+    font-size: 6.2pt;
+    color: #8a959c;
+  }
+  @bottom-right {
+    content: "pág. " counter(page) " / " counter(pages);
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 6.8pt;
+    color: #7c8890;
+  }
+}
+
+@page cover {
+  margin: 0;
+  @bottom-left { content: none; }
+  @bottom-center { content: none; }
+  @bottom-right { content: none; }
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 9.4pt; }
+
+body {
+  margin: 0;
+  font-family: "DejaVu Sans", "Liberation Sans", sans-serif;
+  color: #1c2430;
+  line-height: 1.42;
+}
+
+p { margin: 0 0 2.6mm; text-align: justify; hyphens: auto; }
+strong { color: #102a2f; }
+code {
+  font-family: "DejaVu Sans Mono", monospace;
+  font-size: 0.86em;
+  background: #eef2f4;
+  padding: 0 0.7mm;
+  border-radius: 0.6mm;
+}
+.mono { font-family: "DejaVu Sans Mono", monospace; }
+.muted { color: #6d7a83; }
+.small { font-size: 0.9em; }
+
+/* ------------------------------------------------------------------ portada */
+
+.cover {
+  page: cover;
+  height: 297mm;
+  break-after: page;
+  position: relative;
+}
+
+.cover-top {
+  background: #0e3b43;
+  color: #ffffff;
+  padding: 30mm 24mm 22mm 24mm;
+  height: 148mm;
+}
+
+.cover-brand {
+  font-size: 9pt;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #9fd3c1;
+  margin-bottom: 16mm;
+}
+
+.cover h1 {
+  font-size: 30pt;
+  line-height: 1.1;
+  margin: 0 0 5mm 0;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.cover-sub {
+  font-size: 12.5pt;
+  color: #cfe6dd;
+  max-width: 140mm;
+  line-height: 1.35;
+}
+
+.cover-rule {
+  height: 3mm;
+  background: #1f6f5c;
+}
+
+.cover-body {
+  padding: 16mm 24mm 0 24mm;
+}
+
+.cover-meta {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.2pt;
+}
+
+.cover-meta th {
+  text-align: left;
+  font-weight: normal;
+  color: #6d7a83;
+  width: 38mm;
+  padding: 2.4mm 4mm 2.4mm 0;
+  vertical-align: top;
+  border-bottom: 0.4pt solid #e1e7ea;
+}
+
+.cover-meta td {
+  padding: 2.4mm 0;
+  border-bottom: 0.4pt solid #e1e7ea;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.cover-note {
+  margin-top: 10mm;
+  padding: 4mm 5mm;
+  background: #f2f7f5;
+  border-left: 3pt solid #1f6f5c;
+  font-size: 8.4pt;
+  color: #35504d;
+}
+
+.cover-foot {
+  position: absolute;
+  bottom: 16mm;
+  left: 24mm;
+  right: 24mm;
+  font-size: 7.6pt;
+  color: #84919a;
+  border-top: 0.4pt solid #dfe6e9;
+  padding-top: 2.5mm;
+}
+
+/* ----------------------------------------------------------------- secciones */
+
+h2 {
+  font-size: 15pt;
+  color: #0e3b43;
+  border-bottom: 1.2pt solid #1f6f5c;
+  padding-bottom: 1.8mm;
+  margin: 8mm 0 4mm 0;
+  break-after: avoid;
+}
+
+h2 .num {
+  color: #1f6f5c;
+  margin-right: 2mm;
+}
+
+h3 {
+  font-size: 11pt;
+  color: #14504a;
+  margin: 5.5mm 0 2mm 0;
+  break-after: avoid;
+}
+
+h4 {
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #52616b;
+  margin: 4.5mm 0 1.6mm 0;
+  break-after: avoid;
+}
+
+.lead { font-size: 10pt; color: #2a3742; }
+
+/* ------------------------------------------------------------------- bloques */
+
+.stats {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 2.4mm 0;
+  margin: 1mm 0 5mm 0;
+  table-layout: fixed;
+}
+
+.stats td {
+  background: #f4f8f7;
+  border-left: 2.6pt solid #1f6f5c;
+  padding: 3.2mm 3.6mm;
+  vertical-align: top;
+}
+
+.stats .value {
+  font-size: 17pt;
+  font-weight: bold;
+  color: #0e3b43;
+  line-height: 1.1;
+}
+
+.stats .label {
+  font-size: 6.9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #61707a;
+  margin-top: 1.2mm;
+}
+
+.note {
+  background: #f2f7f5;
+  border-left: 3pt solid #1f6f5c;
+  padding: 3mm 4mm;
+  margin: 3mm 0 4mm 0;
+  font-size: 8.6pt;
+}
+
+.note p:last-child { margin-bottom: 0; }
+
+.warn {
+  background: #fdf6e8;
+  border-left: 3pt solid #b45309;
+  padding: 3mm 4mm;
+  margin: 3mm 0 4mm 0;
+  font-size: 8.6pt;
+}
+
+.alert {
+  background: #fdeeee;
+  border-left: 3pt solid #a32626;
+  padding: 3mm 4mm;
+  margin: 3mm 0 4mm 0;
+  font-size: 8.6pt;
+}
+
+.alert p, .warn p { margin-bottom: 1.4mm; }
+.alert p:last-child, .warn p:last-child { margin-bottom: 0; }
+
+/* -------------------------------------------------------------------- tablas */
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2mm 0 3mm 0;
+  font-size: 7.9pt;
+  line-height: 1.32;
+}
+
+table.data thead { display: table-header-group; }
+table.data thead th {
+  background: #e9f0ef;
+  color: #23413d;
+  font-size: 7pt;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+  border-bottom: 0.8pt solid #b9cdc8;
+  padding: 1.7mm 1.6mm;
+}
+
+table.data td {
+  padding: 1.5mm 1.6mm;
+  border-bottom: 0.4pt solid #e1e7ea;
+  vertical-align: top;
+}
+
+table.data tbody tr:nth-child(even) td { background: #f8fafb; }
+table.data tr { break-inside: avoid; }
+
+table.data td.num, table.data th.num { text-align: right; }
+table.data td.c, table.data th.c { text-align: center; }
+
+table.params { break-inside: avoid; }
+table.params td:first-child { width: 44%; }
+table.params td:last-child { width: 56%; }
+
+table.kv { width: 100%; border-collapse: collapse; font-size: 8.2pt; margin: 1mm 0 2mm 0; }
+table.kv th {
+  width: 34mm;
+  text-align: left;
+  font-weight: normal;
+  color: #64727c;
+  padding: 1.4mm 3mm 1.4mm 0;
+  border-bottom: 0.4pt solid #e6ebee;
+  vertical-align: top;
+}
+table.kv td {
+  padding: 1.4mm 0;
+  border-bottom: 0.4pt solid #e6ebee;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.sha { font-size: 6.6pt; word-break: break-all; }
+
+table.tools { break-inside: avoid; }
+table.tools td:first-child { width: 15%; font-weight: bold; }
+table.tools td:nth-child(2) { width: 39%; }
+table.tools td:nth-child(3) { width: 14%; }
+table.tools td:nth-child(4) { width: 32%; }
+
+/* tabla de candidatos */
+table.cand { font-size: 7.1pt; }
+table.cand td { padding: 1.3mm 1.2mm; }
+table.cand thead th { padding: 1.5mm 1.2mm; font-size: 6.6pt; }
+table.cand .seq {
+  font-family: "DejaVu Sans Mono", monospace;
+  font-size: 6.5pt;
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+}
+table.cand .id { font-family: "DejaVu Sans Mono", monospace; font-size: 6.7pt; }
+table.cand .total { font-weight: bold; font-size: 8pt; }
+
+td.ax-E { background: #ecf6f1; }
+td.ax-R { background: #fdf3ea; }
+td.ax-S { background: #eef3fb; }
+td.ax-T { background: #f4effb; }
+td.ax-D { background: #f8f4e9; }
+table.cand tbody tr:nth-child(even) td.ax-E { background: #e3f1ea; }
+table.cand tbody tr:nth-child(even) td.ax-R { background: #faecdf; }
+table.cand tbody tr:nth-child(even) td.ax-S { background: #e7eefa; }
+table.cand tbody tr:nth-child(even) td.ax-T { background: #efe8fa; }
+table.cand tbody tr:nth-child(even) td.ax-D { background: #f4efdf; }
+
+.band {
+  display: inline-block;
+  padding: 0.35mm 1.4mm;
+  border-radius: 1.4mm;
+  font-size: 6.3pt;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.band-recomendado { background: #d9f0e2; color: #14532d; }
+.band-revisar { background: #fbeecd; color: #7a4a00; }
+.band-bajo { background: #e8ecef; color: #3f4c55; }
+.band-descartar { background: #fadcdb; color: #8a1c1c; }
+
+.notas { color: #52616b; font-size: 6.6pt; }
+
+/* --------------------------------------------------------------------- figuras */
+
+.figure {
+  margin: 3mm 0 6mm 0;
+  break-inside: avoid;
+  text-align: center;
+}
+
+.figure img {
+  width: 100%;
+  max-width: 174mm;
+  border: 0.4pt solid #d6dfe3;
+  padding: 1.2mm;
+  background: #ffffff;
+}
+
+.figure .caption {
+  font-size: 7.7pt;
+  color: #5c6a74;
+  text-align: left;
+  margin-top: 1.8mm;
+  line-height: 1.35;
+}
+
+.figure .caption b { color: #23413d; }
+
+/* ------------------------------------------------------------------ apéndice */
+
+.appendix h2 {
+  border-bottom-color: #7c8890;
+}
+
+ul, ol { margin: 0 0 3mm 0; padding-left: 6mm; }
+li { margin-bottom: 1.3mm; text-align: justify; }
+
+pre.cmd {
+  font-family: "DejaVu Sans Mono", monospace;
+  font-size: 7.2pt;
+  background: #f4f7f8;
+  border: 0.4pt solid #dde5e8;
+  border-left: 3pt solid #7c8890;
+  padding: 2.6mm 3.4mm;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.4;
+  margin: 2mm 0 3.5mm 0;
+}
+
+table.meta-params { break-inside: avoid; width: 100%; border-collapse: collapse; font-size: 8.6pt; margin: 2mm 0 4mm 0; }
+table.meta-params th {
+  text-align: left;
+  color: #52616b;
+  font-weight: normal;
+  width: 38%;
+  padding: 1.8mm 3mm 1.8mm 0;
+  border-bottom: 0.4pt solid #e1e7ea;
+}
+table.meta-params td {
+  padding: 1.8mm 0;
+  border-bottom: 0.4pt solid #e1e7ea;
+}
+table.meta-params .valor { font-family: "DejaVu Sans Mono", monospace; font-weight: bold; color: #0e3b43; }
+
+.formula {
+  font-family: "DejaVu Sans Mono", monospace;
+  font-size: 8.4pt;
+  background: #f4f7f8;
+  border: 0.4pt solid #dde5e8;
+  padding: 3mm 4mm;
+  margin: 2mm 0 4mm 0;
+  line-height: 1.6;
+}
+
+.refs { font-size: 7.8pt; color: #4b5963; }
+.refs li { margin-bottom: 1.6mm; }
+
+.page-break { break-before: page; }
+
+.warn-cell { color: #8a4b00; font-weight: bold; }
+
+table.meta-params thead th {
+  font-size: 6.9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #52616b;
+  font-weight: bold;
+  border-bottom: 0.8pt solid #b9cdc8;
+  padding-bottom: 1.4mm;
+}
