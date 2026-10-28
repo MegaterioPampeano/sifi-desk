@@ -17,7 +17,7 @@
 
 - [x] M0 fundaciones (repo, vendor, licencias, notas)
 - [x] M1 core headless + test diferencial idéntico al original
-- [ ] **M2 dominio (paneles + scoring)** ← en curso
+- [~] **M2 dominio (paneles + scoring)** ← en curso
 - [ ] M3 servicio local `sifid`
 - [ ] M4 agente dsh + plugins
 - [ ] M5 ventana nativa
@@ -25,23 +25,33 @@
 - [ ] M7 novedades/actualizaciones
 - [ ] M8 distribución
 
-## Paso actual: 2.1 — registro de paneles
+## Paso actual: 2.2 — scoring v2
+
+Implementar el scoring sobre `results.json` (ver `docs/ROADMAP.md`): componentes
+E (eficiencia), R (riesgo), T (T sale de la eficiencia de siFi), S (especificidad) y
+D (diseño), con pesos versionados y salida explicable por candidato.
+
+* [ ] Definir la estructura de `score.yaml` (pesos + umbrales) y versionarla.
+* [ ] `core/sifi/scoring.py`: `score_candidates(results, params) -> list[dict]` con el
+      desglose por componente (no sólo el total).
+* [ ] Test con un `results.json` fixture: monotonicidad (mejor eficiencia ⇒ mejor score)
+      y que el desglose sume el total con los pesos declarados.
+* [ ] Commit.
 
 Implementar `core/domain/panels.py`:
 
-* [ ] `PanelSpec` (id, nombre, rol, fuente, versión, sha256 del FASTA, sha256 del índice).
-* [ ] `PanelsRegistry` que lee/escribe `panels/<id>/<version>/meta.yaml`.
-* [ ] `ingest(panel_spec, fasta_path)` → copia el FASTA, corre `bowtie-build`, calcula
+* [x] `PanelSpec` (id, nombre, rol, fuente, versión, sha256 del FASTA, sha256 del índice).
+* [x] `PanelsRegistry` que lee/escribe `panels/<id>/<version>/meta.yaml`.
+* [x] `ingest(panel_spec, fasta_path)` → copia el FASTA, corre `bowtie-build`, calcula
       fingerprints, escribe `meta.yaml` y devuelve el `PanelSpec` resultante.
-* [ ] `resolve(panel_ids)` → lista de rutas de índice listas para bowtie; error claro si
+* [x] `resolve(panel_ids)` → lista de rutas de índice listas para bowtie; error claro si
       falta alguno.
-* [ ] Test: ingestar `tests/data/toy.fa` como panel `toy`, verificar fingerprint estable
+* [x] Test: ingestar `tests/data/toy.fa` como panel `toy`, verificar fingerprint estable
       (mismo resultado si se ingesta dos veces) y detección de cambio si cambia el FASTA.
-* [ ] Commit.
+* [x] Commit (`cc10041`).
 
 ### Siguientes (en orden, no adelantar)
 
-2.2 scoring v2 sobre `results.json` (E/R/T/S/D, T sale de la eficiencia de siFi)
 2.3 comparación contra el shortlist histórico de chicharrita (documentar diferencias)
 3.1 esqueleto de `sifid` (FastAPI, cola SQLite, endpoints de ROADMAP §5.3)
 3.2 cancelación + reanudación (matar el proceso a mitad → estado `interrupted`)
@@ -53,3 +63,5 @@ Implementar `core/domain/panels.py`:
 | fecha (UTC) | paso | resultado |
 |---|---|---|
 | 2026-10-28 18:10 | M0/M1 | port idéntico al original en 6 configuraciones |
+| 2026-10-28 18:20 | M2 · panel build/list/show | índice bowtie1 + meta.yaml con sha256 (431d362) |
+| 2026-10-28 18:35 | M2 · 2.1 | PanelSpec + PanelsRegistry (ingest idempotente, resolve multi-panel) + 7 tests (cc10041) |
