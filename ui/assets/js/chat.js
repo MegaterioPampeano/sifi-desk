@@ -21,6 +21,9 @@ const CON_RESULTADOS = [
 
 let ocupado = false;
 const conversacion = [];
+// La charla vive en el servidor: al cerrar la ventana no se pierde nada y se pueden
+// tener varias conversaciones en paralelo (una por tema o por corrida).
+let sesionActual = localStorage.getItem("sifi.sesion") || null;
 
 // Últimos turnos, para que el agente no pierda el hilo entre preguntas.
 function historial() {
@@ -43,9 +46,89 @@ export function initChat() {
     if (chip) enviar(chip.dataset.q);
   });
 
+  $("#chat-sesiones").addEventListener("change", (ev) => {
+    const id = ev.target.value;
+    if (id) abrirSesion(id);
+    else nuevaSesion();
+  });
+  $("#chat-nueva").addEventListener("click", () => nuevaSesion());
+  $("#chat-borrar").addEventListener("click", () => borrarSesion());
+
+  cargarSesiones().then(() => (sesionActual ? abrirSesion(sesionActual) : saludar()));
+}
+
+function saludar() {
   burbuja("agent", "Soy el agente de siFi. Puedo explicar un ranking, revisar off-target, bajar un transcriptoma, armar un panel o lanzar una corrida. Trabajo en mi carpeta (~/.sifidesk/agente) y cada comando que ejecuto aparece abajo, con su salida. Lo que no hago: tocar el código de la app.");
   sugerencias(INICIAL);
   actualizarContexto();
+}
+
+async function cargarSesiones() {
+  const sel = $("#chat-sesiones");
+  try {
+    const data = await api.sesiones();
+    const lista = data.sesiones || [];
+    sel.innerHTML = `<option value="">Charla nueva</option>`;
+    for (const s of lista) {
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      const fecha = s.actualizado ? new Date(s.actualizado * 1000) : null;
+      const cuando = fecha && !isNaN(fecha) ? fecha.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" }) : "";
+      opt.textContent = `${s.titulo || "Charla"}${cuando ? " · " + cuando : ""}`;
+      sel.appendChild(opt);
+    }
+    sel.value = sesionActual || "";
+    return lista;
+  } catch {
+    return [];
+  }
+}
+
+// Reabre una conversación guardada: se dibuja lo que pasó, sin volver a ejecutar nada.
+async function abrirSesion(id) {
+  try {
+    const s = await api.sesion(id);
+    sesionActual = s.id;
+    localStorage.setItem("sifi.sesion", s.id);
+    conversacion.length = 0;
+    const log = $("#chat-log");
+    log.innerHTML = "";
+    for (const m of s.mensajes || []) {
+      burbuja(m.role === "user" ? "user" : "agent", m.texto || "");
+      conversacion.push({ role: m.role, content: m.texto || "" });
+      if (Array.isArray(m.herramientas) && m.herramientas.length) {
+        const ultima = log.lastElementChild;
+        for (const t of m.herramientas) ultima.appendChild(tarjetaTool(t));
+      }
+    }
+    $("#chat-sesiones").value = s.id;
+    log.scrollTop = log.scrollHeight;
+  } catch {
+    sesionActual = null;
+    localStorage.removeItem("sifi.sesion");
+    $("#chat-log").innerHTML = "";
+    saludar();
+  }
+}
+
+function nuevaSesion() {
+  sesionActual = null;
+  localStorage.removeItem("sifi.sesion");
+  conversacion.length = 0;
+  $("#chat-log").innerHTML = "";
+  $("#chat-sesiones").value = "";
+  saludar();
+  $("#chat-input").focus();
+}
+
+async function borrarSesion() {
+  if (!sesionActual) return;
+  if (!confirm("¿Borrar esta conversación?")) return;
+  try {
+    await api.borrarSesion(sesionActual);
+  } catch { /* si ya no está, da igual */ }
+  nuevaSesion();
+  cargarSesiones();
 }
 
 export function actualizarContexto() {
@@ -73,7 +156,7 @@ async function enviar(texto) {
   $("#chat-send").disabled = true;
   const espera = burbuja("agent", "…", true);
   try {
-    const res = await api.chat(msg, state.runId, undefined, historial());
+    const res = await api.chat(msg, state.runId, undefined, historial(), sesionActual);
     espera.remove();
     const b = burbuja("agent", res.respuesta || "(sin respuesta)");
     conversacion.push({ role: "assistant", content: res.respuesta || "" });
@@ -89,6 +172,11 @@ async function enviar(texto) {
       const ultima = $("#chat-log").lastElementChild;
       for (const t of res.tools) ultima.appendChild(tarjetaTool(t));
       $("#chat-log").scrollTop = $("#chat-log").scrollHeight;
+    }
+    if (res.sesion_id && res.sesion_id !== sesionActual) {
+      sesionActual = res.sesion_id;
+      localStorage.setItem("sifi.sesion", sesionActual);
+      cargarSesiones();
     }
     if (Array.isArray(res.sugerencias) && res.sugerencias.length) sugerencias(res.sugerencias);
     $("#chat-status").textContent = "local";

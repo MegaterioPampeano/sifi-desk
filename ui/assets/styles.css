@@ -668,3 +668,11 @@ select.input.sm { padding: 5px 8px; font-size: 12px; }
 .msg .tool-body summary { cursor: pointer; color: var(--ink-2); }
 .modal details.adv { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
 .modal details.adv summary { cursor: pointer; font-size: .82rem; color: var(--mid); }
+
+/* sesiones de la charla */
+.chat-acciones { display: flex; align-items: center; gap: 4px; }
+.chat-select {
+  max-width: 150px; font-size: 11px; padding: 4px 6px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2);
+}
+.chat-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

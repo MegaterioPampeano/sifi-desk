@@ -550,12 +550,56 @@ def create_app(data_dir: Optional[str] = None,
         return _agent.probar()
 
     # ----------------------------------------------------------------- agente
+    @app.get("/agent/sesiones")
+    def agent_sesiones() -> dict:
+        from . import charlas
+        return {"sesiones": charlas.listar(data_dir)}
+
+    @app.post("/agent/sesiones")
+    def agent_sesion_nueva(body: dict | None = None) -> dict:
+        from . import charlas
+        return charlas.crear(data_dir, (body or {}).get("titulo"))
+
+    @app.get("/agent/sesiones/{sid}")
+    def agent_sesion(sid: str) -> dict:
+        from . import charlas
+        try:
+            return charlas.obtener(data_dir, sid)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+
+    @app.patch("/agent/sesiones/{sid}")
+    def agent_sesion_renombrar(sid: str, body: dict) -> dict:
+        from . import charlas
+        try:
+            return charlas.renombrar(data_dir, sid, body.get("titulo") or "")
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+
+    @app.delete("/agent/sesiones/{sid}")
+    def agent_sesion_borrar(sid: str) -> dict:
+        from . import charlas
+        try:
+            return charlas.borrar(data_dir, sid)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+
     @app.post("/agent/chat")
     def agent_chat(request: Request, body: dict) -> dict:
-        from . import agent as _agent
-        return _agent.chat(store, body.get("mensaje") or body.get("message") or "",
-                           body.get("run_id"), body.get("historial"),
-                           base_url=str(request.base_url).rstrip("/"), token=token)
+        from . import agent as _agent, charlas
+        mensaje = body.get("mensaje") or body.get("message") or ""
+        run_id = body.get("run_id")
+        sesion = charlas.asegurar(data_dir, body.get("sesion_id"))
+        sid = sesion["id"]
+        historial = charlas.historial_para_llm(sesion) or body.get("historial")
+        charlas.agregar(data_dir, sid, "user", mensaje, run_id=run_id)
+        salida = _agent.chat(store, mensaje, run_id, historial,
+                             base_url=str(request.base_url).rstrip("/"), token=token)
+        charlas.agregar(data_dir, sid, "assistant", salida.get("respuesta") or "",
+                        herramientas=salida.get("tools") or None, run_id=run_id)
+        salida["sesion_id"] = sid
+        salida["sesion"] = [s for s in charlas.listar(data_dir) if s["id"] == sid][:1]
+        return salida
 
     # ------------------------------------------------------------------- UI
     def _ui_index() -> Optional[HTMLResponse]:
