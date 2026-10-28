@@ -8,13 +8,19 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Sequence
 
 import weasyprint
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from sifi.scoring import load_params
+# ``core`` en el path: permite importar ``report`` y ``core.report`` por igual.
+_CORE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _CORE_DIR not in sys.path:
+    sys.path.insert(0, _CORE_DIR)
+
+from sifi.scoring import load_params  # noqa: E402
 
 from .figures import figuras
 from .model import (
