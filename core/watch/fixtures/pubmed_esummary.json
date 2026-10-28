@@ -1,0 +1,713 @@
+{
+ "header": {
+  "type": "esummary",
+  "version": "0.3"
+ },
+ "result": {
+  "uids": [
+   "42940970",
+   "42940954",
+   "42940908",
+   "42939453",
+   "42934163"
+  ],
+  "42940970": {
+   "uid": "42940970",
+   "pubdate": "2026 Oct 14",
+   "epubdate": "2026 Oct 14",
+   "source": "Insects",
+   "authors": [
+    {
+     "name": "Cen Y",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Chen Y",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Wang K",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Chen D",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Ahmad S",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Jamil M",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Ouyang G",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Meng X",
+     "authtype": "Author",
+     "clusterid": ""
+    }
+   ],
+   "lastauthor": "Meng X",
+   "title": "Insect CncC: Roles in Redox Homeostasis, Physiology, and Insecticide Resistance, with Prospects for Biotechnological Applications.",
+   "sorttitle": "insect cncc roles in redox homeostasis physiology and insecticide resistance with prospects for biotechnological applications",
+   "volume": "17",
+   "issue": "10",
+   "pages": "",
+   "lang": [
+    "eng"
+   ],
+   "nlmuniqueid": "101574235",
+   "issn": "2075-4450",
+   "essn": "2075-4450",
+   "pubtype": [
+    "Journal Article",
+    "Review"
+   ],
+   "recordstatus": "PubMed",
+   "pubstatus": "3",
+   "articleids": [
+    {
+     "idtype": "pubmed",
+     "idtypen": 1,
+     "value": "42940970"
+    },
+    {
+     "idtype": "pmc",
+     "idtypen": 8,
+     "value": "PMC13705073"
+    },
+    {
+     "idtype": "pmcid",
+     "idtypen": 5,
+     "value": "pmc-id: PMC13705073;"
+    },
+    {
+     "idtype": "doi",
+     "idtypen": 3,
+     "value": "10.3390/insects17101061"
+    },
+    {
+     "idtype": "pii",
+     "idtypen": 4,
+     "value": "insects17101061"
+    }
+   ],
+   "history": [
+    {
+     "pubstatus": "received",
+     "date": "2026/08/31 00:00"
+    },
+    {
+     "pubstatus": "revised",
+     "date": "2026/09/22 00:00"
+    },
+    {
+     "pubstatus": "accepted",
+     "date": "2026/10/10 00:00"
+    },
+    {
+     "pubstatus": "medline",
+     "date": "2026/10/27 11:33"
+    },
+    {
+     "pubstatus": "pubmed",
+     "date": "2026/10/27 11:32"
+    },
+    {
+     "pubstatus": "entrez",
+     "date": "2026/10/27 10:37"
+    },
+    {
+     "pubstatus": "pmc-release",
+     "date": "2026/10/14 00:00"
+    }
+   ],
+   "references": [],
+   "attributes": [
+    "Has Abstract"
+   ],
+   "pmcrefcount": 126,
+   "fulljournalname": "Insects",
+   "elocationid": "doi: 10.3390/insects17101061",
+   "doctype": "citation",
+   "srccontriblist": [],
+   "booktitle": "",
+   "medium": "",
+   "edition": "",
+   "publisherlocation": "",
+   "publishername": "",
+   "srcdate": "",
+   "reportnumber": "",
+   "availablefromurl": "",
+   "locationlabel": "",
+   "doccontriblist": [],
+   "docdate": "",
+   "bookname": "",
+   "chapter": "",
+   "sortpubdate": "2026/10/14 00:00",
+   "sortfirstauthor": "Cen Y",
+   "vernaculartitle": ""
+  },
+  "42940954": {
+   "uid": "42940954",
+   "pubdate": "2026 Oct 12",
+   "epubdate": "2026 Oct 12",
+   "source": "Insects",
+   "authors": [
+    {
+     "name": "Fang A",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Wang XY",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Zou ZH",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Yang T",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Chen W",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Yu HZ",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Liu BQ",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Liu YX",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Lu ZJ",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Liu XQ",
+     "authtype": "Author",
+     "clusterid": ""
+    }
+   ],
+   "lastauthor": "Liu XQ",
+   "title": "Insecticidal Activity and Mechanism of 7-Methylcoumarin Against Diaphorina citri Reveal the Role of Chemosensory Genes in Defense Response.",
+   "sorttitle": "insecticidal activity and mechanism of 7 methylcoumarin against diaphorina citri reveal the role of chemosensory genes in defense response",
+   "volume": "17",
+   "issue": "10",
+   "pages": "",
+   "lang": [
+    "eng"
+   ],
+   "nlmuniqueid": "101574235",
+   "issn": "2075-4450",
+   "essn": "2075-4450",
+   "pubtype": [
+    "Journal Article"
+   ],
+   "recordstatus": "PubMed",
+   "pubstatus": "3",
+   "articleids": [
+    {
+     "idtype": "pubmed",
+     "idtypen": 1,
+     "value": "42940954"
+    },
+    {
+     "idtype": "pmc",
+     "idtypen": 8,
+     "value": "PMC13705207"
+    },
+    {
+     "idtype": "pmcid",
+     "idtypen": 5,
+     "value": "pmc-id: PMC13705207;"
+    },
+    {
+     "idtype": "doi",
+     "idtypen": 3,
+     "value": "10.3390/insects17101045"
+    },
+    {
+     "idtype": "pii",
+     "idtypen": 4,
+     "value": "insects17101045"
+    }
+   ],
+   "history": [
+    {
+     "pubstatus": "received",
+     "date": "2026/09/10 00:00"
+    },
+    {
+     "pubstatus": "revised",
+     "date": "2026/10/01 00:00"
+    },
+    {
+     "pubstatus": "accepted",
+     "date": "2026/10/09 00:00"
+    },
+    {
+     "pubstatus": "medline",
+     "date": "2026/10/27 11:33"
+    },
+    {
+     "pubstatus": "pubmed",
+     "date": "2026/10/27 11:32"
+    },
+    {
+     "pubstatus": "entrez",
+     "date": "2026/10/27 10:37"
+    },
+    {
+     "pubstatus": "pmc-release",
+     "date": "2026/10/12 00:00"
+    }
+   ],
+   "references": [],
+   "attributes": [
+    "Has Abstract"
+   ],
+   "pmcrefcount": 43,
+   "fulljournalname": "Insects",
+   "elocationid": "doi: 10.3390/insects17101045",
+   "doctype": "citation",
+   "srccontriblist": [],
+   "booktitle": "",
+   "medium": "",
+   "edition": "",
+   "publisherlocation": "",
+   "publishername": "",
+   "srcdate": "",
+   "reportnumber": "",
+   "availablefromurl": "",
+   "locationlabel": "",
+   "doccontriblist": [],
+   "docdate": "",
+   "bookname": "",
+   "chapter": "",
+   "sortpubdate": "2026/10/12 00:00",
+   "sortfirstauthor": "Fang A",
+   "vernaculartitle": ""
+  },
+  "42940908": {
+   "uid": "42940908",
+   "pubdate": "2026 Sep 26",
+   "epubdate": "2026 Sep 26",
+   "source": "Insects",
+   "authors": [
+    {
+     "name": "Sun L",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Hu Y",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Guan M",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Wang T",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Ye C",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Zheng Y",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Du J",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Wu D",
+     "authtype": "Author",
+     "clusterid": ""
+    }
+   ],
+   "lastauthor": "Wu D",
+   "title": "Expression Profiles of Chitin Deacetylase Genes and Functional Characterization of Key Genes in Spodoptera frugiperda.",
+   "sorttitle": "expression profiles of chitin deacetylase genes and functional characterization of key genes in spodoptera frugiperda",
+   "volume": "17",
+   "issue": "10",
+   "pages": "",
+   "lang": [
+    "eng"
+   ],
+   "nlmuniqueid": "101574235",
+   "issn": "2075-4450",
+   "essn": "2075-4450",
+   "pubtype": [
+    "Journal Article"
+   ],
+   "recordstatus": "PubMed",
+   "pubstatus": "3",
+   "articleids": [
+    {
+     "idtype": "pubmed",
+     "idtypen": 1,
+     "value": "42940908"
+    },
+    {
+     "idtype": "pmc",
+     "idtypen": 8,
+     "value": "PMC13705162"
+    },
+    {
+     "idtype": "pmcid",
+     "idtypen": 5,
+     "value": "pmc-id: PMC13705162;"
+    },
+    {
+     "idtype": "doi",
+     "idtypen": 3,
+     "value": "10.3390/insects17100997"
+    },
+    {
+     "idtype": "pii",
+     "idtypen": 4,
+     "value": "insects17100997"
+    }
+   ],
+   "history": [
+    {
+     "pubstatus": "received",
+     "date": "2026/08/22 00:00"
+    },
+    {
+     "pubstatus": "revised",
+     "date": "2026/09/16 00:00"
+    },
+    {
+     "pubstatus": "accepted",
+     "date": "2026/09/23 00:00"
+    },
+    {
+     "pubstatus": "medline",
+     "date": "2026/10/27 11:33"
+    },
+    {
+     "pubstatus": "pubmed",
+     "date": "2026/10/27 11:32"
+    },
+    {
+     "pubstatus": "entrez",
+     "date": "2026/10/27 10:37"
+    },
+    {
+     "pubstatus": "pmc-release",
+     "date": "2026/09/26 00:00"
+    }
+   ],
+   "references": [],
+   "attributes": [
+    "Has Abstract"
+   ],
+   "pmcrefcount": 56,
+   "fulljournalname": "Insects",
+   "elocationid": "doi: 10.3390/insects17100997",
+   "doctype": "citation",
+   "srccontriblist": [],
+   "booktitle": "",
+   "medium": "",
+   "edition": "",
+   "publisherlocation": "",
+   "publishername": "",
+   "srcdate": "",
+   "reportnumber": "",
+   "availablefromurl": "",
+   "locationlabel": "",
+   "doccontriblist": [],
+   "docdate": "",
+   "bookname": "",
+   "chapter": "",
+   "sortpubdate": "2026/09/26 00:00",
+   "sortfirstauthor": "Sun L",
+   "vernaculartitle": ""
+  },
+  "42939453": {
+   "uid": "42939453",
+   "pubdate": "2026 Oct 15",
+   "epubdate": "2026 Oct 15",
+   "source": "Biology (Basel)",
+   "authors": [
+    {
+     "name": "Liu D",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Guo Y",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Wang L",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Shen M",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Lv J",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Wei P",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Ma S",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Jia L",
+     "authtype": "Author",
+     "clusterid": ""
+    }
+   ],
+   "lastauthor": "Jia L",
+   "title": "SUGP1 Deficiency Leads to Splicing Dysregulation and Reduced piRNA Abundance in Insects.",
+   "sorttitle": "sugp1 deficiency leads to splicing dysregulation and reduced pirna abundance in insects",
+   "volume": "15",
+   "issue": "20",
+   "pages": "",
+   "lang": [
+    "eng"
+   ],
+   "nlmuniqueid": "101587988",
+   "issn": "2079-7737",
+   "essn": "2079-7737",
+   "pubtype": [
+    "Journal Article"
+   ],
+   "recordstatus": "PubMed",
+   "pubstatus": "3",
+   "articleids": [
+    {
+     "idtype": "pubmed",
+     "idtypen": 1,
+     "value": "42939453"
+    },
+    {
+     "idtype": "pmc",
+     "idtypen": 8,
+     "value": "PMC13701588"
+    },
+    {
+     "idtype": "pmcid",
+     "idtypen": 5,
+     "value": "pmc-id: PMC13701588;"
+    },
+    {
+     "idtype": "doi",
+     "idtypen": 3,
+     "value": "10.3390/biology15201852"
+    },
+    {
+     "idtype": "pii",
+     "idtypen": 4,
+     "value": "biology15201852"
+    }
+   ],
+   "history": [
+    {
+     "pubstatus": "received",
+     "date": "2026/09/07 00:00"
+    },
+    {
+     "pubstatus": "revised",
+     "date": "2026/10/09 00:00"
+    },
+    {
+     "pubstatus": "accepted",
+     "date": "2026/10/13 00:00"
+    },
+    {
+     "pubstatus": "medline",
+     "date": "2026/10/27 11:33"
+    },
+    {
+     "pubstatus": "pubmed",
+     "date": "2026/10/27 11:32"
+    },
+    {
+     "pubstatus": "entrez",
+     "date": "2026/10/27 10:33"
+    },
+    {
+     "pubstatus": "pmc-release",
+     "date": "2026/10/15 00:00"
+    }
+   ],
+   "references": [],
+   "attributes": [
+    "Has Abstract"
+   ],
+   "pmcrefcount": 53,
+   "fulljournalname": "Biology",
+   "elocationid": "doi: 10.3390/biology15201852",
+   "doctype": "citation",
+   "srccontriblist": [],
+   "booktitle": "",
+   "medium": "",
+   "edition": "",
+   "publisherlocation": "",
+   "publishername": "",
+   "srcdate": "",
+   "reportnumber": "",
+   "availablefromurl": "",
+   "locationlabel": "",
+   "doccontriblist": [],
+   "docdate": "",
+   "bookname": "",
+   "chapter": "",
+   "sortpubdate": "2026/10/15 00:00",
+   "sortfirstauthor": "Liu D",
+   "vernaculartitle": ""
+  },
+  "42934163": {
+   "uid": "42934163",
+   "pubdate": "2026 Oct 26",
+   "epubdate": "2026 Oct 26",
+   "source": "Insect Mol Biol",
+   "authors": [
+    {
+     "name": "Sanches-Almeida J",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Porto LL",
+     "authtype": "Author",
+     "clusterid": ""
+    },
+    {
+     "name": "Majerowicz D",
+     "authtype": "Author",
+     "clusterid": ""
+    }
+   ],
+   "lastauthor": "Majerowicz D",
+   "title": "TcFur1, a furin 1 ortholog in Tribolium castaneum, regulates reproduction and carbohydrate metabolism without affecting lipid homeostasis.",
+   "sorttitle": "tcfur1 a furin 1 ortholog in tribolium castaneum regulates reproduction and carbohydrate metabolism without affecting lipid homeostasis",
+   "volume": "",
+   "issue": "",
+   "pages": "",
+   "lang": [
+    "eng"
+   ],
+   "nlmuniqueid": "9303579",
+   "issn": "0962-1075",
+   "essn": "1365-2583",
+   "pubtype": [
+    "Journal Article"
+   ],
+   "recordstatus": "PubMed - as supplied by publisher",
+   "pubstatus": "10",
+   "articleids": [
+    {
+     "idtype": "pubmed",
+     "idtypen": 1,
+     "value": "42934163"
+    },
+    {
+     "idtype": "doi",
+     "idtypen": 3,
+     "value": "10.1111/imb.70071"
+    }
+   ],
+   "history": [
+    {
+     "pubstatus": "received",
+     "date": "2026/04/13 00:00"
+    },
+    {
+     "pubstatus": "accepted",
+     "date": "2026/10/12 00:00"
+    },
+    {
+     "pubstatus": "medline",
+     "date": "2026/10/27 05:29"
+    },
+    {
+     "pubstatus": "pubmed",
+     "date": "2026/10/27 05:29"
+    },
+    {
+     "pubstatus": "entrez",
+     "date": "2026/10/26 23:52"
+    }
+   ],
+   "references": [],
+   "attributes": [
+    "Has Abstract"
+   ],
+   "pmcrefcount": "",
+   "fulljournalname": "Insect molecular biology",
+   "elocationid": "doi: 10.1111/imb.70071",
+   "doctype": "citation",
+   "srccontriblist": [],
+   "booktitle": "",
+   "medium": "",
+   "edition": "",
+   "publisherlocation": "",
+   "publishername": "",
+   "srcdate": "",
+   "reportnumber": "",
+   "availablefromurl": "",
+   "locationlabel": "",
+   "doccontriblist": [],
+   "docdate": "",
+   "bookname": "",
+   "chapter": "",
+   "sortpubdate": "2026/10/26 00:00",
+   "sortfirstauthor": "Sanches-Almeida J",
+   "vernaculartitle": ""
+  }
+ }
+}
