@@ -51,3 +51,47 @@ la vez sin pisarse. El supervisor (cron `sifi-reporte`) los lanza, verifica y me
 * `core/watch/store.py`: `inventory.json` con ids vistos; `diff()` devuelve sólo lo nuevo.
 * `core/watch/cli.py`: `python3 -m watch.cli run --since 7d --out novedades.json`.
 * Test: con respuestas HTTP grabadas (fixtures), sin red; verificar deduplicación y diff.
+
+---
+
+## Frentes 4-6 (agregados 19:15 UTC)
+
+| Frente | Rama | Worktree | Dueño de archivos |
+|---|---|---|---|
+| `agente` (M4) | `w/agente` | `/mnt/datos/work/agente` | `agent/**` |
+| `ventana` (M5) | `w/ventana` | `/mnt/datos/work/ventana` | `ui/**` |
+| `empaquetado` (M8) | `w/empaquetado` | `/mnt/datos/work/empaquetado` | `packaging/**`, `.github/**`, `scripts/build_*.sh` |
+
+### agente (M4)
+* `agent/package.json` con `deepseek-harness` (dsh) y `cordis` **pinneados** a versión exacta + lockfile.
+* `agent/cordis.yml`: un plugin propio `sifi-tools` que expone las herramientas del producto:
+  `sifi_design`, `sifi_offtarget`, `sifi_status`, `sifi_score`, `sifi_report`, `sifi_panels`,
+  `sifi_news`. Cada tool = HTTP contra `sifid` (`http://127.0.0.1:<puerto>`), nunca importa el core.
+* `agent/plugins/sifi-tools/index.js` (o .ts): implementación de las tools con esquemas de
+  parámetros claros y errores útiles.
+* `agent/prompts/system.md`: persona y reglas del agente del producto (español, no inventa
+  resultados, siempre cita `run_id`, avisa limitaciones de la predicción in silico).
+* `agent/README.md`: cómo se arranca (dev y producción).
+* Verificación: `npm ci` + un script `agent/test/tools.test.mjs` que llama a las tools contra
+  un `sifid` falso (no requiere el servicio real).
+
+### ventana (M5)
+* `ui/` = frontend estático (sin build step si se puede: HTML+CSS+JS módulos ES) con:
+  asistente de 4 pasos (paneles → secuencia → parámetros → correr), progreso en vivo
+  (SSE o polling a `/runs/{id}`), tabla de candidatos con score y desglose, y chat lateral
+  con el agente.
+* `ui/tauri/` con `tauri.conf.json` + `src-tauri/` mínimo apuntando al sidecar `sifid`.
+* `ui/mock/server.py`: servidor de maqueta con datos de ejemplo para poder ver y probar la UI
+  acá (no hay webkit2gtk en este host: **el binario se compila en Windows/CI**, documentarlo).
+* Verificación acá: `python3 ui/mock/server.py` + screenshot con `agent-browser` o Playwright
+  de las 4 pantallas; guardar PNGs en `ui/docs/screens/`.
+
+### empaquetado (M8)
+* `packaging/pyinstaller/sifid.spec` + `packaging/pyinstaller/sifi.spec`: sidecar one-dir
+  (one-file tarda mucho en arrancar y rompe con binarios externos).
+* `packaging/vendor/<plat>/` con los binarios de bowtie/RNAplfold y el script que los baja.
+* `.github/workflows/build.yml`: matrix `windows-latest` + `ubuntu-latest` → corre tests,
+  compila sidecars, arma `.msi` (Tauri) / `.AppImage`+`.deb`, y sube artefactos al release.
+* `scripts/build_windows.ps1` (PowerShell) para poder compilar a mano en Windows.
+* Verificación acá: `bash scripts/build_linux.sh` produce `dist/sifi-desk-linux/` arrancable
+  (`dist/sifi-desk-linux/sifid --help`).
