@@ -1,10 +1,23 @@
 # Vigilancia de novedades — configuración del frente M7
 #
-# Cada `query` es un tema que el agente revisa solo. `text` es lo que se manda a la API
-# (Crossref/PubMed); `keywords` es el filtro local (bioRxiv no tiene búsqueda) y también
-# sirve para explicar por qué un paper entró: el digest lista los términos que matchearon.
-# `why` es la frase que ve el usuario en "por qué importa". Si no sabés por qué está ahí,
-# está mal configurada la query.
+# Cada `query` es un tema que el agente revisa solo. Tres campos definen qué entra:
+#
+#   topic_any    grupo OR: el paper tiene que hablar de alguno de estos temas.
+#   context_any  grupo OR: y además tiene que estar en este contexto.
+#                Los dos grupos se combinan con AND → (RNAi|dsRNA) AND (insect|pest).
+#   keywords     términos que se muestran en el digest ("términos: RNAi, dsRNA").
+#                Si no hay topic_any/context_any se usan como único grupo OR.
+#
+# `text` es lo que se manda a Crossref (búsqueda por relevancia).
+# `pubmed_term` usa sintaxis de PubMed (con [tiab]); hace falta porque PubMed hace **AND**
+# de todas las palabras y el `text` suelto ("RNAi dsRNA insect pest control") pedía un paper
+# con las cinco y devolvía cero. El rango de fechas lo agrega el código.
+# `why` es la frase que ve el usuario en "por qué importa": si no sabés por qué está ahí,
+# la query está mal configurada.
+#
+# `strict: true` (default) descarta lo que no pase el filtro de arriba. Crossref ordena por
+# relevancia pero igual cuela papers de otro tema; bioRxiv no busca, así que se baja la
+# ventana y se filtra localmente con estos mismos grupos.
 
 schema: sifi.watch.config/1
 
@@ -27,33 +40,59 @@ inventory:
 
 limits:
   per_source: 25     # máximo de ítems que se piden a cada fuente por query
-  biorxiv_max_pages: 8   # 8 × 100 preprints de la ventana para filtrar localmente
+  biorxiv_max_pages: 60  # 60 × 30 preprints ≈ toda la ventana semanal (la 1ª corrida
+                         # tarda ~1-2 min; después sale de caché 24 h)
 
 queries:
   - id: rnai-insect-pest
     text: "RNAi dsRNA insect pest control"
+    pubmed_term: '(RNAi[tiab] OR dsRNA[tiab] OR siRNA[tiab] OR "RNA interference"[tiab]) AND (insect*[tiab] OR pest*[tiab] OR Hemiptera[tiab] OR aphid*[tiab] OR whitefl*[tiab] OR coleopter*[tiab] OR lepidopter*[tiab] OR mite*[tiab])'
     why: "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
-    keywords: [RNAi, dsRNA, siRNA, insect, insecto, pest, plaga, Hemiptera]
+    topic_any: [RNAi, "RNA interference", dsRNA, siRNA, "gene silencing"]
+    context_any: [insect, pest, plaga, Hemiptera, aphid, whitefly, "fruit fly", Drosophila,
+                  Spodoptera, Helicoverpa, Plutella, Diaphorina, Dalbulus, Bemisia,
+                  coleopter, lepidopter, mite, tick]
+    keywords: [RNAi, dsRNA, siRNA, insect, pest, Hemiptera]
+    sources: [crossref, pubmed, biorxiv]
 
   - id: dsrna-delivery
-    text: "dsRNA delivery insect nanocarrier"
-    why: "Cómo entra el dsRNA al insecto: define si un candidato in silico es aplicable en campo."
-    keywords: [dsRNA, delivery, nanoparticle, nanocarrier, formulation, insect]
+    text: "dsRNA delivery insect"
+    pubmed_term: 'dsRNA[tiab] AND (delivery[tiab] OR nanocarrier*[tiab] OR nanoparticle*[tiab] OR formulation[tiab] OR uptake[tiab] OR "topical application"[tiab] OR feeding[tiab]) AND (insect*[tiab] OR plant*[tiab] OR crop*[tiab] OR pest*[tiab] OR Hemiptera[tiab] OR aphid*[tiab])'
+    why: "Cómo entra el dsRNA al insecto (o a la planta): define si un candidato in silico es aplicable en campo."
+    topic_any: [dsRNA]
+    context_any: [delivery, nanocarrier, nanoparticle, formulation, uptake,
+                  "topical application", feeding, spray]
+    keywords: [dsRNA, delivery, nanocarrier, nanoparticle, formulation]
+    sources: [crossref, pubmed, biorxiv]
 
   - id: dalbulus-maidis
-    text: "Dalbulus maidis"
+    text: "Dalbulus maidis corn leafhopper"
+    pubmed_term: '("Dalbulus maidis"[tiab] OR "corn leafhopper"[tiab] OR chicharrita[tiab] OR (Dalbulus[tiab] AND maidis[tiab]))'
     why: "Vector de mollicutes del maíz: blanco principal de los paneles del producto."
-    keywords: [Dalbulus maidis, corn leafhopper, chicharrita, maize, corn, mollicute]
+    topic_any: ["Dalbulus maidis", "corn leafhopper", chicharrita, "Dalbulus"]
+    context_any: [maidis]
+    keywords: [Dalbulus maidis, corn leafhopper, chicharrita, mollicute]
+    sources: [crossref, pubmed, biorxiv]
 
   - id: off-target-rnai
     text: "off-target prediction siRNA"
+    pubmed_term: '("off-target"[tiab] OR offtarget[tiab] OR "off target"[tiab]) AND (siRNA[tiab] OR dsRNA[tiab] OR RNAi[tiab]) AND (predict*[tiab] OR design[tiab] OR specificity[tiab] OR "in silico"[tiab])'
     why: "Métodos nuevos de predicción de off-target: candidatos a mejorar el scoring."
-    keywords: [off-target, offtarget, off target, siRNA, prediction, specificity]
+    topic_any: ["off-target", offtarget, "off target"]
+    context_any: [siRNA, dsRNA, RNAi, "RNA interference"]
+    keywords: ["off-target", siRNA, dsRNA, RNAi]
+    sources: [crossref, pubmed, biorxiv]
 
   - id: rna-fitopatogenos
     text: "dsRNA plant pathogen control"
+    pubmed_term: '(dsRNA[tiab] OR "RNA interference"[tiab] OR RNAi[tiab] OR "gene silencing"[tiab]) AND ("plant pathogen*"[tiab] OR phytopathogen*[tiab] OR "plant disease*"[tiab] OR "crop protection"[tiab] OR "plant virus*"[tiab] OR Botrytis[tiab] OR Fusarium[tiab] OR Phytophthora[tiab] OR "powdery mildew"[tiab] OR "root-knot nematode"[tiab] OR "host-induced gene silencing"[tiab])'
     why: "RNAi contra fitopatógenos: uso alternativo de los mismos paneles y criterios."
-    keywords: [dsRNA, plant pathogen, fungus, fungal, oomycete, phytopathogen, crop protection]
+    topic_any: [dsRNA, RNAi, "RNA interference", "gene silencing", HIGS, SIGS]
+    context_any: ["plant pathogen", phytopathogen, "plant disease", "crop protection",
+                  "plant virus", Botrytis, Fusarium, Phytophthora, "powdery mildew",
+                  "root-knot nematode", "host-induced gene silencing"]
+    keywords: [dsRNA, "plant pathogen", fungus, oomycete, nematode]
+    sources: [crossref, pubmed, biorxiv]
 
   # Vigilante "upstream": ¿salió versión nueva de siFi? Si cambia el algoritmo hay que
   # re-correr la suite dorada antes de promover nada.

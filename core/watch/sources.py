@@ -89,6 +89,32 @@ def _term_pattern(term: str) -> re.Pattern:
     return re.compile(r"(?<![a-z0-9])" + r"\s+".join(words) + r"(?:s|es)?(?![a-z0-9])")
 
 
+def relevance_hits(text: str, query: Dict[str, Any],
+                   require_context: bool = True) -> Tuple[bool, List[str]]:
+    """¿Este texto entra en la query? Devuelve (entra, términos que matchearon).
+
+    Modelo: `topic_any` y `context_any` son grupos OR que se combinan con AND.
+    Ej.: (RNAi|dsRNA) AND (insect|pest). Si no hay grupos, se usan las `keywords`
+    como un único grupo OR (comportamiento viejo).
+    """
+    topic = list(query.get("topic_any") or [])
+    context = list(query.get("context_any") or [])
+    keywords = list(query.get("keywords") or [])
+    if not topic and not context:
+        hits = matched_terms(text, keywords)
+        return (bool(hits) if keywords else True), hits
+
+    topic_hits = matched_terms(text, topic)
+    context_hits = matched_terms(text, context)
+    ok = True
+    if topic:
+        ok = ok and bool(topic_hits)
+    if context and require_context:
+        ok = ok and bool(context_hits)
+    hits = list(dict.fromkeys(topic_hits + context_hits))
+    return ok, hits
+
+
 def matched_terms(text: str, keywords: Sequence[str]) -> List[str]:
     hay = normalize_text(text)
     hits = []
@@ -322,7 +348,7 @@ def make_item(
         "url": url or "",
         "authors": authors or "",
         "venue": venue or "",
-        "abstract": (abstract or "").strip(),
+        "abstract": (abstract or "").strip()[:1200],
         "query_id": query_id,
         "query": query_text,
         "why": why,
@@ -418,6 +444,15 @@ def fetch_crossref(
         when = (_iso_from_parts((rec.get("issued") or {}).get("date-parts"))
                 or _iso_from_parts((rec.get("published-online") or {}).get("date-parts"))
                 or _iso_from_parts((rec.get("published-print") or {}).get("date-parts")))
+        if when[:4].isdigit() and int(when[:4]) > until.year:
+            continue  # metadato roto de Crossref (años 2107+): no es una novedad
+        abstract = re.sub(r"<[^>]+>", " ", rec.get("abstract") or "")
+        # Con abstract se exige tema + contexto; sin abstract (Crossref suele no traerlo)
+        # alcanza con el tema, si no se pierden papers buenos por falta de metadata.
+        ok, terms = relevance_hits(title + " " + abstract, query,
+                                   require_context=bool(abstract.strip()))
+        if not ok and query.get("strict", True):
+            continue  # Crossref ordena por relevancia pero igual cuela ruido
         items.append(make_item(
             source="crossref",
             title=re.sub(r"<[^>]+>", "", title),
@@ -432,8 +467,7 @@ def fetch_crossref(
             why=query.get("why", ""),
             extra={"matched_by": [{"query_id": query.get("id", ""), "query": query.get("text", ""),
                                    "why": query.get("why", "")}],
-                   "matched_terms": matched_terms(title + " " + (rec.get("abstract") or ""),
-                                                  query.get("keywords") or []),
+                   "matched_terms": terms,
                    "score": rec.get("score")},
         ))
     return items
@@ -444,11 +478,13 @@ def fetch_crossref(
 # --------------------------------------------------------------------------- #
 
 def _pubmed_term(query: Dict[str, Any], since: date, until: date) -> str:
+    """Término final: lo configurado (o el `text`) + la ventana de fechas de publicación."""
     if query.get("pubmed_term"):
-        return str(query["pubmed_term"])
-    base = query["text"]
-    if not re.search(r"\b(AND|OR|NOT)\b", base):
-        base = f"({base})"
+        base = str(query["pubmed_term"]).strip()
+    else:
+        base = query["text"]
+        if not re.search(r"\b(AND|OR|NOT)\b", base):
+            base = f"({base})"
     return f'{base} AND ("{since.isoformat()}"[PDAT] : "{until.isoformat()}"[PDAT])'
 
 
@@ -508,7 +544,7 @@ def fetch_pubmed(
             why=query.get("why", ""),
             extra={"matched_by": [{"query_id": query.get("id", ""), "query": query.get("text", ""),
                                    "why": query.get("why", "")}],
-                   "matched_terms": matched_terms(title, query.get("keywords") or [])},
+                   "matched_terms": relevance_hits(title, query)[1]},
         ))
     return items
 
@@ -547,7 +583,6 @@ def fetch_biorxiv(
 ) -> List[Dict[str, Any]]:
     """La API de bioRxiv no busca: baja la ventana (100 por página) y filtra localmente."""
     until = until or today_utc()
-    keywords = query.get("keywords") or [query.get("text", "")]
     found: List[Dict[str, Any]] = []
     cursor = 0
     total = None
@@ -562,8 +597,8 @@ def fetch_biorxiv(
         for rec in collection:
             title = (rec.get("title") or "").strip()
             abstract = (rec.get("abstract") or "").strip()
-            hits = matched_terms(title + " " + abstract, keywords)
-            if not hits:
+            ok, hits = relevance_hits(title + " " + abstract, query)
+            if not ok:
                 continue
             doi = (rec.get("doi") or "").lower()
             version = str(rec.get("version") or "1")

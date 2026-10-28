@@ -1,0 +1,740 @@
+{
+ "schema": "sifi.watch.digest/1",
+ "generated_at": "2026-10-28T19:36:18Z",
+ "since": "2026-10-21",
+ "since_arg": "7d",
+ "until": "2026-10-28",
+ "offline": false,
+ "queries": [
+  {
+   "id": "rnai-insect-pest",
+   "text": "RNAi dsRNA insect pest control",
+   "n_fetched": 20,
+   "errors": []
+  },
+  {
+   "id": "dsrna-delivery",
+   "text": "dsRNA delivery insect",
+   "n_fetched": 4,
+   "errors": []
+  },
+  {
+   "id": "dalbulus-maidis",
+   "text": "Dalbulus maidis corn leafhopper",
+   "n_fetched": 0,
+   "errors": []
+  },
+  {
+   "id": "off-target-rnai",
+   "text": "off-target prediction siRNA",
+   "n_fetched": 2,
+   "errors": []
+  },
+  {
+   "id": "rna-fitopatogenos",
+   "text": "dsRNA plant pathogen control",
+   "n_fetched": 3,
+   "errors": []
+  },
+  {
+   "id": "upstream-sifi",
+   "text": "siFi upstream releases",
+   "n_fetched": 0,
+   "errors": []
+  }
+ ],
+ "counts": {
+  "fetched": 29,
+  "in_window": 29,
+  "dropped_old": 0,
+  "new": 26,
+  "inventory_entries": 0
+ },
+ "items": [
+  {
+   "title": "Nanocellulose-Integrated BioClay to Improve Stability and Efficacy in RNA Interference-Mediated Antiviral Protection of Plants",
+   "source": "pubmed",
+   "date": "2026-10-28",
+   "doi": "10.1021/acsami.6c12944",
+   "pmid": "42879675",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42879675/",
+   "authors": "Jiang S; Liang J; Robinson K",
+   "venue": "ACS applied materials & interfaces",
+   "abstract": "",
+   "query_id": "dsrna-delivery",
+   "query": "dsRNA delivery insect",
+   "why": "Cómo entra el dsRNA al insecto (o a la planta): define si un candidato in silico es aplicable en campo.",
+   "matched_by": [
+    {
+     "query_id": "dsrna-delivery",
+     "query": "dsRNA delivery insect",
+     "why": "Cómo entra el dsRNA al insecto (o a la planta): define si un candidato in silico es aplicable en campo."
+    },
+    {
+     "query_id": "rna-fitopatogenos",
+     "query": "dsRNA plant pathogen control",
+     "why": "RNAi contra fitopatógenos: uso alternativo de los mismos paneles y criterios."
+    }
+   ],
+   "matched_terms": [
+    "RNA interference"
+   ],
+   "id": "doi:10.1021/acsami.6c12944",
+   "resumen": "Nanocellulose-Integrated BioClay to Improve Stability and Efficacy in RNA Interference-Mediated Antiviral Protection of Plants — Relevante: Cómo entra el dsRNA al insecto (o a la planta): define si un candidato in silico es aplicable en campo. — doi:10.1021/acsami.6c12944"
+  },
+  {
+   "title": "Fusion dsRNA Enhances RNAi Efficiency and Broadens\nthe Insecticidal Spectrum",
+   "source": "crossref",
+   "date": "2026-10-28",
+   "doi": "10.1021/acs.jafc.6c11603",
+   "pmid": "",
+   "url": "https://doi.org/10.1021/acs.jafc.6c11603",
+   "authors": "Chen, Jiasheng; Tan, Jiayu; Chen, Yulu",
+   "venue": "Journal of Agricultural and Food Chemistry",
+   "abstract": "Abstract \n                   RNA interference (RNAi) technology provides a precise strategy for green control of agricultural pests; however, its low efficiency and high cost still constrain its application. Constructing multitarget fusion dsRNA can significantly improve insecticidal efficiency. Using Tribolium castaneum as a model organism, three highly efficient silencing genes (RpS3, VhaSFD, and EF1) were screened. The results showed that the fusion dsRNA construct dsRVE–3 × 200 bp (200 bp per gene) had the most stable silencing performance, with an LD50 significantly lower than that of the single-gene dsRpS3. Based on the optimized parameters, a fusion dsRNA (named dsNLS) targeting Nilaparvata lugens, Locusta migratoria, and Sogatella furcifera was constructed. dsNLS was significantly superior to naked dsRNA in controlling these three pests, with mortality rates of 69.1%, 71.3%, and 93.4%, respectively, and was safe for nontarget organisms. This study confirms that fusion dsRNA can improve the insecticidal efficiency of RNAi and provides new perspectives for dsRNA design.",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [
+    "RNAi",
+    "RNA interference",
+    "dsRNA",
+    "pest"
+   ],
+   "score": 19.115269,
+   "id": "doi:10.1021/acs.jafc.6c11603",
+   "resumen": "Fusion dsRNA Enhances RNAi Efficiency and Broadens\nthe Insecticidal Spectrum — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1021/acs.jafc.6c11603"
+  },
+  {
+   "title": "Decoupled Adult and Larval Host Preferences in Tephritid Fruit Flies with a Conserved Oviposition Attractant",
+   "source": "pubmed",
+   "date": "2026-10-28",
+   "doi": "10.1021/acs.jafc.6c09170",
+   "pmid": "42949353",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42949353/",
+   "authors": "Xu X; Ma T; Zhang L",
+   "venue": "Journal of agricultural and food chemistry",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1021/acs.jafc.6c09170",
+   "resumen": "Decoupled Adult and Larval Host Preferences in Tephritid Fruit Flies with a Conserved Oviposition Attractant — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1021/acs.jafc.6c09170"
+  },
+  {
+   "title": "Reduction of aflatoxin contamination in maize kernels mediated by host-induced gene silencing",
+   "source": "pubmed",
+   "date": "2026-10-27",
+   "doi": "10.1073/pnas.2620406123",
+   "pmid": "42911867",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42911867/",
+   "authors": "Ahmed A; Cavanaugh K; Baldrich P",
+   "venue": "Proceedings of the National Academy of Sciences of the United States of America",
+   "abstract": "",
+   "query_id": "rna-fitopatogenos",
+   "query": "dsRNA plant pathogen control",
+   "why": "RNAi contra fitopatógenos: uso alternativo de los mismos paneles y criterios.",
+   "matched_by": [
+    {
+     "query_id": "rna-fitopatogenos",
+     "query": "dsRNA plant pathogen control",
+     "why": "RNAi contra fitopatógenos: uso alternativo de los mismos paneles y criterios."
+    }
+   ],
+   "matched_terms": [
+    "gene silencing",
+    "host-induced gene silencing"
+   ],
+   "id": "doi:10.1073/pnas.2620406123",
+   "resumen": "Reduction of aflatoxin contamination in maize kernels mediated by host-induced gene silencing — Relevante: RNAi contra fitopatógenos: uso alternativo de los mismos paneles y criterios. — doi:10.1073/pnas.2620406123"
+  },
+  {
+   "title": "Keeping an Eye on Plasticity Genes: Insulin/TOR Pathway Components Mediating Nutritional Plasticity of Eyes Within and Between Sex",
+   "source": "biorxiv",
+   "date": "2026-10-27",
+   "doi": "10.1101/2025.08.31.673361",
+   "pmid": "",
+   "url": "https://www.biorxiv.org/content/10.1101/2025.08.31.673361v2",
+   "authors": "Heffernan, S.;  Etchells Foisy, E.;  Saleebaan, K.;  Rajakumar, R.",
+   "venue": "genetics",
+   "abstract": "The eyes of insects exhibit extreme morphological variation through changes in size and shape. While the model organism Drosophila melanogaster has been used to elucidate the underlying gene networks and cell-signalling pathways that regulate the patterning and growth of the eye, insight into the regulators of nutrient-dependent sizing and allometry within and between the sexes remains poorly understood. Using a screen approach of the well characterized and ancient Insulin/TOR pathway, we show that perturbations of different nodes of this pathway modulate the impact of nutritional variation on the sizing and scaling of the eye to varying degrees, and that this is further influenced by sex. When starved, wild-type flies decrease in eye size and body size proportionately in females, yet males change eye-to-body size disproportionately. Subsequently we used previously validated RNAi lines to knockdown each component of the Insulin/TOR pathway in an eye-specific manner to characterize their individual influence in modulating nutritional plasticity of eye sizing. Surprisingly, this resulted in a range of size and scaling variation, components modulating the plastic response on eye size ",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [
+    "RNAi",
+    "insect",
+    "Drosophila"
+   ],
+   "preprint": true,
+   "id": "doi:10.1101/2025.08.31.673361",
+   "resumen": "Keeping an Eye on Plasticity Genes: Insulin/TOR Pathway Components Mediating Nutritional Plasticity of Eyes Within and Between Sex — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1101/2025.08.31.673361"
+  },
+  {
+   "title": "A proline-rich Kazal-type serine protease inhibitor is essential for survival and oocyte development in the brown planthopper, Nilaparvata lugens",
+   "source": "pubmed",
+   "date": "2026-10-27",
+   "doi": "10.1016/j.jinsphys.2026.105091",
+   "pmid": "42946202",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42946202/",
+   "authors": "Zhang Z; Ren J; Liu C",
+   "venue": "Journal of insect physiology",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1016/j.jinsphys.2026.105091",
+   "resumen": "A proline-rich Kazal-type serine protease inhibitor is essential for survival and oocyte development in the brown planthopper, Nilaparvata lugens — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1016/j.jinsphys.2026.105091"
+  },
+  {
+   "title": "A novel venom protein from the parasitoid Pteromalus puparum suppresses host melanization by targeting multiple components of the prophenoloxidase cascade",
+   "source": "pubmed",
+   "date": "2026-10-27",
+   "doi": "10.1111/1744-7917.70383",
+   "pmid": "42947446",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42947446/",
+   "authors": "Wang B; Jin R; Fang Q",
+   "venue": "Insect science",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1111/1744-7917.70383",
+   "resumen": "A novel venom protein from the parasitoid Pteromalus puparum suppresses host melanization by targeting multiple components of the prophenoloxidase cascade — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1111/1744-7917.70383"
+  },
+  {
+   "title": "TcFur1, a furin 1 ortholog in Tribolium castaneum, regulates reproduction and carbohydrate metabolism without affecting lipid homeostasis",
+   "source": "pubmed",
+   "date": "2026-10-26",
+   "doi": "10.1111/imb.70071",
+   "pmid": "42934163",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42934163/",
+   "authors": "Sanches-Almeida J; Porto LL; Majerowicz D",
+   "venue": "Insect molecular biology",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1111/imb.70071",
+   "resumen": "TcFur1, a furin 1 ortholog in Tribolium castaneum, regulates reproduction and carbohydrate metabolism without affecting lipid homeostasis — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1111/imb.70071"
+  },
+  {
+   "title": "Novel neonicotinoid flupyradifurone exhibits sublethal toxicity to natural enemies ladybeetles Propylea japonica by disturbing multi-level metabolic systems",
+   "source": "pubmed",
+   "date": "2026-10-26",
+   "doi": "10.1016/j.jhazmat.2026.144028",
+   "pmid": "42945666",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42945666/",
+   "authors": "Li W; Zheng J; Ma Y",
+   "venue": "Journal of hazardous materials",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1016/j.jhazmat.2026.144028",
+   "resumen": "Novel neonicotinoid flupyradifurone exhibits sublethal toxicity to natural enemies ladybeetles Propylea japonica by disturbing multi-level metabolic systems — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1016/j.jhazmat.2026.144028"
+  },
+  {
+   "title": "Identification of insecticidal double-stranded RNAs targeting the proteasome pathway in the hop flea beetle Psylliodes attenuata using dsRIP",
+   "source": "biorxiv",
+   "date": "2026-10-26",
+   "doi": "10.64898/2026.10.23.759960",
+   "pmid": "",
+   "url": "https://www.biorxiv.org/content/10.64898/2026.10.23.759960v1",
+   "authors": "Cedden, D.;  Guney, G.;  Plathner, P.;  Scholten, S.;  Rostas, M.;  Kroenauer, C.",
+   "venue": "zoology",
+   "abstract": "The hop flea beetle, Psylliodes attenuata, is a major pest of hop (Humulus lupulus), an important crop for the brewing industry. Restrictions on chemical insecticides and insecticide resistance create a need for alternative control strategies. RNA interference (RNAi) uses double-stranded RNA (dsRNA) to silence essential pest genes and cause insecticidal effects. In this study, we aimed to establish P. attenuata as an RNAi-based pest control target. We generated a transcriptome assembly using a public RNA sequencing dataset and used the dsRIP web platform to identify essential gene targets and design effective dsRNAs. Three dsRNAs targeting proteasome subunits were tested in feeding bioassays by applying them to hop leaf disks. The treatments caused significant mortality of up to 64% and feeding inhibition of up to 45%. Sequencing of small RNAs bound to the RNA-induced silencing complex identified predominantly 21-nucleotide small interfering RNAs produced from the orally delivered dsRNAs, supporting activation of the RNAi pathway. Additional RNA sequencing of adults enabled assembly of a higher-quality transcriptome with 89% BUSCO completeness for future RNAi studies. Overall, the ",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    },
+    {
+     "query_id": "dsrna-delivery",
+     "query": "dsRNA delivery insect",
+     "why": "Cómo entra el dsRNA al insecto (o a la planta): define si un candidato in silico es aplicable en campo."
+    }
+   ],
+   "matched_terms": [
+    "RNAi",
+    "RNA interference",
+    "dsRNA",
+    "insect",
+    "pest",
+    "feeding"
+   ],
+   "preprint": true,
+   "id": "doi:10.64898/2026.10.23.759960",
+   "resumen": "Identification of insecticidal double-stranded RNAs targeting the proteasome pathway in the hop flea beetle Psylliodes attenuata using dsRIP — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.64898/2026.10.23.759960"
+  },
+  {
+   "title": "Functional interplay between retinoid X receptor and juvenile hormone analog regulates parthenogenetic offspring production in Artemia",
+   "source": "pubmed",
+   "date": "2026-10-26",
+   "doi": "10.1242/jeb.251768",
+   "pmid": "42929430",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42929430/",
+   "authors": "Xie J; Liu W; Li Z",
+   "venue": "The Journal of experimental biology",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1242/jeb.251768",
+   "resumen": "Functional interplay between retinoid X receptor and juvenile hormone analog regulates parthenogenetic offspring production in Artemia — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1242/jeb.251768"
+  },
+  {
+   "title": "RTS,S-induced off-target antibody responses in malaria-naïve adults associated with protection against controlled human malaria infection",
+   "source": "crossref",
+   "date": "2026-10-24",
+   "doi": "10.1038/s41541-026-01600-y",
+   "pmid": "",
+   "url": "https://doi.org/10.1038/s41541-026-01600-y",
+   "authors": "Friedman-Klabanoff, DeAnna J.; Jensen, Travis L.; Gelber, Casey E.",
+   "venue": "npj Vaccines",
+   "abstract": "",
+   "query_id": "off-target-rnai",
+   "query": "off-target prediction siRNA",
+   "why": "Métodos nuevos de predicción de off-target: candidatos a mejorar el scoring.",
+   "matched_by": [
+    {
+     "query_id": "off-target-rnai",
+     "query": "off-target prediction siRNA",
+     "why": "Métodos nuevos de predicción de off-target: candidatos a mejorar el scoring."
+    }
+   ],
+   "matched_terms": [
+    "off-target"
+   ],
+   "score": 8.824097,
+   "id": "doi:10.1038/s41541-026-01600-y",
+   "resumen": "RTS,S-induced off-target antibody responses in malaria-naïve adults associated with protection against controlled human malaria infection — Relevante: Métodos nuevos de predicción de off-target: candidatos a mejorar el scoring. — doi:10.1038/s41541-026-01600-y"
+  },
+  {
+   "title": "Neurofibromin Regulates Sleep Consolidation via Cholinergic Neurons in a Drosophila Model of Neurofibromatosis 1",
+   "source": "biorxiv",
+   "date": "2026-10-24",
+   "doi": "10.64898/2026.10.20.760518",
+   "pmid": "",
+   "url": "https://www.biorxiv.org/content/10.64898/2026.10.20.760518v1",
+   "authors": "Atsoniou, K.;  Georganta, E.-M.;  Pfeifer, K.;  Palmer, R.;  Samiotaki, M.;  Skoulakis, E. M.",
+   "venue": "neuroscience",
+   "abstract": "Neurofibromatosis type 1 (NF1) patients frequently present with fragmented, poor-quality sleep, but the neural circuits and molecular mechanisms underlying this deficit remain undefined. Using Drosophila, we show that loss of the NF1 ortholog dNf1 recapitulates the human phenotype: null mutants exhibit markedly reduced total sleep with blunted nighttime consolidation, reflected in fewer and shorter sleep bouts and elevated inter-bout activity, a recessive phenotype reproduced by independent null alleles and by pan-neuronal RNAi knockdown. Despite the broad expression of dNf1 across the adult CNS, including the mushroom bodies, ellipsoid body, dorsal fan-shaped body, and GABAergic neurons, cell-type-restricted knockdown showed the protein is dispensable for sleep regulation in each of these populations. Instead, dNf1 loss specifically in cholinergic neurons, the most abundant neuronal class in the fly brain, was sufficient to reproduce the deficient, fragmented sleep of null mutants, and restoring wild-type dNf1 to cholinergic neurons of null animals was both necessary and sufficient to rescue sleep. Mechanistically, cholinergic expression of the GAP-related domain (GRD) alone, whic",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [
+    "RNAi",
+    "Drosophila"
+   ],
+   "preprint": true,
+   "id": "doi:10.64898/2026.10.20.760518",
+   "resumen": "Neurofibromin Regulates Sleep Consolidation via Cholinergic Neurons in a Drosophila Model of Neurofibromatosis 1 — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.64898/2026.10.20.760518"
+  },
+  {
+   "title": "Meloidogyne enterolobii effector transthyretin-like protein 1 targets plant heat shock protein 90 to manipulate host immunity and promote nematode parasitism",
+   "source": "pubmed",
+   "date": "2026-10-24",
+   "doi": "10.1016/j.ijbiomac.2026.155025",
+   "pmid": "42925966",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42925966/",
+   "authors": "Zhang X; Shen H; Sun W",
+   "venue": "International journal of biological macromolecules",
+   "abstract": "",
+   "query_id": "rna-fitopatogenos",
+   "query": "dsRNA plant pathogen control",
+   "why": "RNAi contra fitopatógenos: uso alternativo de los mismos paneles y criterios.",
+   "matched_by": [
+    {
+     "query_id": "rna-fitopatogenos",
+     "query": "dsRNA plant pathogen control",
+     "why": "RNAi contra fitopatógenos: uso alternativo de los mismos paneles y criterios."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1016/j.ijbiomac.2026.155025",
+   "resumen": "Meloidogyne enterolobii effector transthyretin-like protein 1 targets plant heat shock protein 90 to manipulate host immunity and promote nematode parasitism — Relevante: RNAi contra fitopatógenos: uso alternativo de los mismos paneles y criterios. — doi:10.1016/j.ijbiomac.2026.155025"
+  },
+  {
+   "title": "LmABCG-4C regulates cuticular barriers in both tarsi and body integument in locusts",
+   "source": "pubmed",
+   "date": "2026-10-24",
+   "doi": "10.1111/1744-7917.70364",
+   "pmid": "42926327",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42926327/",
+   "authors": "Liu J; Yang Y; Su Y",
+   "venue": "Insect science",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1111/1744-7917.70364",
+   "resumen": "LmABCG-4C regulates cuticular barriers in both tarsi and body integument in locusts — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1111/1744-7917.70364"
+  },
+  {
+   "title": "Development of Circadian Circuitry Underlying Feeding-Fasting Rhythms in Drosophila Larvae",
+   "source": "biorxiv",
+   "date": "2026-10-24",
+   "doi": "10.64898/2026.10.23.761381",
+   "pmid": "",
+   "url": "https://www.biorxiv.org/content/10.64898/2026.10.23.761381v1",
+   "authors": "Halder, N.;  McEnaney, C.;  Hood, S. E.;  Poe, A. R.",
+   "venue": "neuroscience",
+   "abstract": "Many organisms do not exhibit strong daily behavioral rhythms early in life. The consolidation of sleep and feeding to specific times of the day does not emerge until later in development. Disruptions to circadian behaviors in early life can lead to dysregulation of both neural development and metabolic homeostasis. However, the circuit mechanisms regulating feeding rhythm development are unknown. Here, we characterize the neural circuitry responsible for driving the development of feeding-fasting rhythms in early 3rd instar (L3) Drosophila larvae. We find that inactivation of both larval s-LNv circadian pacemaker neurons and SIFamide (SIFa) neurons in the pars intercerebralis disrupts feeding rhythm development. Additionally, our data indicate feeding rhythms likely emerge due to circuit connections forming between s-LNvs and SIFa neurons at the L3 stage. Finally, we show that reductions in signaling between s-LNv and SIFa neurons interfere with normal behavioral rhythm development in L3. Specifically, RNA interference-induced reductions in pigment-dispersing factor (pdf) signaling and SIFa signaling disrupt diurnal differences in both feeding and sleep, resulting in a loss of beh",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [
+    "RNA interference",
+    "Drosophila"
+   ],
+   "preprint": true,
+   "id": "doi:10.64898/2026.10.23.761381",
+   "resumen": "Development of Circadian Circuitry Underlying Feeding-Fasting Rhythms in Drosophila Larvae — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.64898/2026.10.23.761381"
+  },
+  {
+   "title": "Species-specific dsEGFP-derived small RNA profiles reveal divergence from computational siRNA predictions in insects: Implications for a new siRNA selection strategy",
+   "source": "pubmed",
+   "date": "2026-10-23",
+   "doi": "10.1016/j.jinsphys.2026.105089",
+   "pmid": "42918488",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42918488/",
+   "authors": "Oh J; Zhu KY",
+   "venue": "Journal of insect physiology",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [
+    "siRNA",
+    "insect"
+   ],
+   "id": "doi:10.1016/j.jinsphys.2026.105089",
+   "resumen": "Species-specific dsEGFP-derived small RNA profiles reveal divergence from computational siRNA predictions in insects: Implications for a new siRNA selection strategy — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1016/j.jinsphys.2026.105089"
+  },
+  {
+   "title": "Sublethal lambda-cyhalothrin suppresses reproductive hormone secretion through NCX3-mediated calcium depletion in male Chrysoperla sinica",
+   "source": "pubmed",
+   "date": "2026-10-22",
+   "doi": "10.1016/j.jhazmat.2026.143944",
+   "pmid": "42925704",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42925704/",
+   "authors": "Wang Z; Wang N; Gong S",
+   "venue": "Journal of hazardous materials",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1016/j.jhazmat.2026.143944",
+   "resumen": "Sublethal lambda-cyhalothrin suppresses reproductive hormone secretion through NCX3-mediated calcium depletion in male Chrysoperla sinica — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1016/j.jhazmat.2026.143944"
+  },
+  {
+   "title": "Primer: Orbiviruses",
+   "source": "pubmed",
+   "date": "2026-10-22",
+   "doi": "10.1128/jvi.01325-26",
+   "pmid": "42910934",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42910934/",
+   "authors": "Roy P",
+   "venue": "Journal of virology",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1128/jvi.01325-26",
+   "resumen": "Primer: Orbiviruses — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1128/jvi.01325-26"
+  },
+  {
+   "title": "Functional characterization of the ecdysone receptor (EcR) in egg diapause termination and embryonic development in Calliptamus italicus (orthoptera: Acrididae)",
+   "source": "pubmed",
+   "date": "2026-10-22",
+   "doi": "10.1002/ps.71409",
+   "pmid": "42921925",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42921925/",
+   "authors": "He W; Ye X; Leng C",
+   "venue": "Pest management science",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1002/ps.71409",
+   "resumen": "Functional characterization of the ecdysone receptor (EcR) in egg diapause termination and embryonic development in Calliptamus italicus (orthoptera: Acrididae) — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1002/ps.71409"
+  },
+  {
+   "title": "Dual targeting of the ecdysone receptor complex enhances RNAi efficacy through impairment of both development and reproduction in the Colorado potato beetle",
+   "source": "crossref",
+   "date": "2026-10-22",
+   "doi": "10.1127/entomologia/4240",
+   "pmid": "",
+   "url": "https://doi.org/10.1127/entomologia/4240",
+   "authors": "Tariq, Haneef; Gökçe, Ayhan; Hashmi, Muneeb Hassan",
+   "venue": "Entomologia Generalis",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [
+    "RNAi"
+   ],
+   "score": 10.23529,
+   "id": "doi:10.1127/entomologia/4240",
+   "resumen": "Dual targeting of the ecdysone receptor complex enhances RNAi efficacy through impairment of both development and reproduction in the Colorado potato beetle — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1127/entomologia/4240"
+  },
+  {
+   "title": "A planthopper-secreted miRNA facilitates viral infection by disrupting plant growth-defense balance in rice",
+   "source": "pubmed",
+   "date": "2026-10-22",
+   "doi": "10.1016/j.molp.2026.10.011",
+   "pmid": "42922029",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42922029/",
+   "authors": "Zhang B; Jia S; Zhu Y",
+   "venue": "Molecular plant",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1016/j.molp.2026.10.011",
+   "resumen": "A planthopper-secreted miRNA facilitates viral infection by disrupting plant growth-defense balance in rice — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1016/j.molp.2026.10.011"
+  },
+  {
+   "title": "A UCP1-IRES-Cre knock-in mouse enables specific brown adipocyte targeting without CNS off-target expression",
+   "source": "crossref",
+   "date": "2026-10-22",
+   "doi": "10.1038/s41598-026-74773-0",
+   "pmid": "",
+   "url": "https://doi.org/10.1038/s41598-026-74773-0",
+   "authors": "Meyer, Joshua; Williams, Jaclyn; Bailey, Jennifer",
+   "venue": "Scientific Reports",
+   "abstract": "",
+   "query_id": "off-target-rnai",
+   "query": "off-target prediction siRNA",
+   "why": "Métodos nuevos de predicción de off-target: candidatos a mejorar el scoring.",
+   "matched_by": [
+    {
+     "query_id": "off-target-rnai",
+     "query": "off-target prediction siRNA",
+     "why": "Métodos nuevos de predicción de off-target: candidatos a mejorar el scoring."
+    }
+   ],
+   "matched_terms": [
+    "off-target"
+   ],
+   "score": 12.35434,
+   "id": "doi:10.1038/s41598-026-74773-0",
+   "resumen": "A UCP1-IRES-Cre knock-in mouse enables specific brown adipocyte targeting without CNS off-target expression — Relevante: Métodos nuevos de predicción de off-target: candidatos a mejorar el scoring. — doi:10.1038/s41598-026-74773-0"
+  },
+  {
+   "title": "Foliar Application of dsRNA Suppresses Watermelon Bud Necrosis Virus Infection and Symptom Development in Nicotiana benthamiana and Cowpea Plants",
+   "source": "crossref",
+   "date": "2026-10-21",
+   "doi": "10.3390/plants15203237",
+   "pmid": "42943189",
+   "url": "https://doi.org/10.3390/plants15203237",
+   "authors": "Gupta, Dipinte; Gnanasekaran, Prabu; Singh, Oinam Washington",
+   "venue": "Plants",
+   "abstract": "Watermelon production is significantly affected by watermelon bud necrosis virus (WBNV), an economically important orthotospovirus in the Indian subcontinent. RNA interference (RNAi)-based approaches offer promising strategies for developing broad-spectrum antiviral resistance in susceptible plants. In this study, we evaluated the efficacy of foliar application of double-stranded RNA (dsRNA) and hairpin RNA (hpRNA) derived from the full-length NSs gene of WBNV against WBNV infection in two host plants, Nicotiana benthamiana and cowpea (Vigna unguiculata). Fluorescein-labeled dsRNA of NSs gene (dsNSs) was tracked in N. benthamiana plants, where dsNSs translocated from the treated leaf to adjacent leaves, stem, and roots. Naked dsNSs was no longer detectable in treated leaves at 5 days post-inoculation (dpi), whereas mesoporous silica nanoparticle-conjugated dsNSs (dsNSs-MSNP) remained detectable in the treated leaves beyond 5 dpi, indicating enhanced stability. Following WBNV inoculation, N. benthamiana plants treated with hairpin of NSs gene (hpNSs), dsNSs, and dsNSs-MSNP exhibited 112, 303, and 370 fold reduction in viral RNA accumulation, respectively. Although these treatments d",
+   "query_id": "dsrna-delivery",
+   "query": "dsRNA delivery insect",
+   "why": "Cómo entra el dsRNA al insecto (o a la planta): define si un candidato in silico es aplicable en campo.",
+   "matched_by": [
+    {
+     "query_id": "dsrna-delivery",
+     "query": "dsRNA delivery insect",
+     "why": "Cómo entra el dsRNA al insecto (o a la planta): define si un candidato in silico es aplicable en campo."
+    }
+   ],
+   "matched_terms": [
+    "dsRNA",
+    "nanoparticle"
+   ],
+   "score": 9.913151,
+   "id": "doi:10.3390/plants15203237",
+   "resumen": "Foliar Application of dsRNA Suppresses Watermelon Bud Necrosis Virus Infection and Symptom Development in Nicotiana benthamiana and Cowpea Plants — Relevante: Cómo entra el dsRNA al insecto (o a la planta): define si un candidato in silico es aplicable en campo. — doi:10.3390/plants15203237"
+  },
+  {
+   "title": "DGAT1, but Not DGAT2, Is Required for Ovarian Lipid Storage and Egg Hatchability in Rhodnius prolixus",
+   "source": "pubmed",
+   "date": "2026-10-21",
+   "doi": "10.1016/j.ibmb.2026.104682",
+   "pmid": "42906644",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42906644/",
+   "authors": "Selim L; Braz V; Santos-Araújo S",
+   "venue": "Insect biochemistry and molecular biology",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [],
+   "id": "doi:10.1016/j.ibmb.2026.104682",
+   "resumen": "DGAT1, but Not DGAT2, Is Required for Ovarian Lipid Storage and Egg Hatchability in Rhodnius prolixus — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1016/j.ibmb.2026.104682"
+  },
+  {
+   "title": "Both Membrane-Bound and Soluble Alkaline Phosphatases Bind Cry1Ca to Potentiate Its Toxicity in Spodoptera litura",
+   "source": "pubmed",
+   "date": "2026-10-21",
+   "doi": "10.1021/acs.jafc.6c06572",
+   "pmid": "42905012",
+   "url": "https://pubmed.ncbi.nlm.nih.gov/42905012/",
+   "authors": "Li J; Wei WT; Xiang L",
+   "venue": "Journal of agricultural and food chemistry",
+   "abstract": "",
+   "query_id": "rnai-insect-pest",
+   "query": "RNAi dsRNA insect pest control",
+   "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto.",
+   "matched_by": [
+    {
+     "query_id": "rnai-insect-pest",
+     "query": "RNAi dsRNA insect pest control",
+     "why": "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    }
+   ],
+   "matched_terms": [
+    "Spodoptera"
+   ],
+   "id": "doi:10.1021/acs.jafc.6c06572",
+   "resumen": "Both Membrane-Bound and Soluble Alkaline Phosphatases Bind Cry1Ca to Potentiate Its Toxicity in Spodoptera litura — Relevante: RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto. — doi:10.1021/acs.jafc.6c06572"
+  }
+ ],
+ "warnings": []
+}
