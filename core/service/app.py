@@ -84,9 +84,46 @@ def _build_params(req: RunRequest):
         raise HTTPException(status_code=400, detail=f"parámetros inválidos: {exc}") from exc
 
 
-def _resolve_db(req: RunRequest, panels_root: str) -> tuple[dict, List[dict], str, str]:
-    """Devuelve (public_db, paneles, db_dir, db_name)."""
+def _resolve_panel(spec, panels_root: str) -> dict:
+    """Un panel del registro -> {panel, db_dir, db_name} listo para bowtie."""
     from sifi.panels import PanelError, PanelsRegistry
+
+    if not os.path.exists(spec.index_path + ".1.ebwt"):
+        raise HTTPException(status_code=400,
+                            detail=f"el panel {spec.id} {spec.version} no tiene índice bowtie"
+                                   f" completo ({spec.path})")
+    return {"panel": spec.id, "db_dir": spec.path, "db_name": spec.index_prefix,
+            "version": spec.version, "role": spec.rol, "n_seqs": spec.n_seqs,
+            "fingerprint": spec.fingerprint}
+
+
+def _resolve_db(req: RunRequest, panels_root: str) -> tuple[dict, List[dict], str, str,
+                                                           Optional[List[dict]]]:
+    """Devuelve (public_db, paneles, db_dir, db_name, panels_para_bowtie)."""
+    from sifi.panels import PanelError, PanelsRegistry
+
+    if req.panel_ids:
+        if req.panel_id or req.db_dir or req.db_name:
+            raise HTTPException(status_code=400,
+                                detail="usá panel_ids O panel_id O db_dir+db_name, no varios")
+        if len(set(req.panel_ids)) != len(req.panel_ids):
+            raise HTTPException(status_code=400, detail="panel_ids tiene repetidos")
+        reg = PanelsRegistry(root=panels_root)
+        targets: List[dict] = []
+        public_panels: List[dict] = []
+        for pid in req.panel_ids:
+            try:
+                spec = reg.get(pid, req.panel_version)
+            except PanelError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            targets.append(_resolve_panel(spec, panels_root))
+            public_panels.append({"id": spec.id, "version": spec.version, "n_seqs": spec.n_seqs,
+                                  "fingerprint": spec.fingerprint, "role": spec.rol})
+        first = targets[0]
+        public = {"dir": first["db_dir"], "name": first["db_name"], "panel_id": first["panel"],
+                  "panel_version": first.get("version"), "fingerprint": first.get("fingerprint"),
+                  "multi": True}
+        return public, public_panels, first["db_dir"], first["db_name"], targets
 
     if req.panel_id:
         if req.db_dir or req.db_name:
@@ -105,7 +142,7 @@ def _resolve_db(req: RunRequest, panels_root: str) -> tuple[dict, List[dict], st
                   "fingerprint": spec.fingerprint}
         panels = [{"id": spec.id, "version": spec.version, "n_seqs": spec.n_seqs,
                    "fingerprint": spec.fingerprint, "role": spec.rol}]
-        return public, panels, spec.path, spec.index_prefix
+        return public, panels, spec.path, spec.index_prefix, None
 
     if not req.db_dir or not req.db_name:
         raise HTTPException(status_code=400,
@@ -120,7 +157,7 @@ def _resolve_db(req: RunRequest, panels_root: str) -> tuple[dict, List[dict], st
                                    f"(¿--db-name correcto?)")
     public = {"dir": db_dir, "name": req.db_name, "panel_id": None,
               "panel_version": None, "fingerprint": None}
-    return public, [], db_dir, req.db_name
+    return public, [], db_dir, req.db_name, None
 
 
 def _resolve_tools(req: RunRequest):
@@ -208,7 +245,7 @@ def create_app(data_dir: Optional[str] = None,
 
         params = _build_params(req)
         tools = _resolve_tools(req)
-        db_public, panel_list, db_dir, db_name = _resolve_db(req, panels_root)
+        db_public, panel_list, db_dir, db_name, panel_targets = _resolve_db(req, panels_root)
 
         if req.main_target_mode == "explicit" and not req.main_targets:
             raise HTTPException(status_code=400,
@@ -250,6 +287,8 @@ def create_app(data_dir: Optional[str] = None,
                 "tools": tools.as_dict(),
                 "main_targets": req.main_targets,
                 "main_target_mode": req.main_target_mode,
+                "panels": panel_targets,
+                "panel_roles": {p["id"]: p["role"] for p in panel_list if p.get("role")},
                 "records_total": records_total,
                 "extra_meta": {
                     "service": {"name": SERVICE_NAME, "version": __version__,

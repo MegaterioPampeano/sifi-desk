@@ -25,6 +25,8 @@ class RunRequest(BaseModel):
     panel_version: Optional[str] = None
     db_dir: Optional[str] = None
     db_name: Optional[str] = None
+    # --- multi-panel: N paneles del registro en una sola corrida (cada hit queda etiquetado) ---
+    panel_ids: Optional[List[str]] = Field(None, description="ids de panel; cada hit se etiqueta con su panel")
 
     # --- parámetros del algoritmo (defaults = GUI original) ---
     sirna_size: int = Field(21, ge=3, le=200)

@@ -29,6 +29,8 @@ def _add_common(p: argparse.ArgumentParser) -> None:
     p.add_argument("-q", "--query", required=True, help="FASTA de entrada")
     p.add_argument("-d", "--db-dir", required=True, help="Directorio del índice bowtie")
     p.add_argument("--db-name", required=True, help="Nombre base del índice (sin .ebwt)")
+    p.add_argument("--panel", action="append", default=None, metavar="NOMBRE=/DIR:INDICE",
+                   help="multi-panel: repetible; cada hit queda etiquetado con su panel")
     p.add_argument("-o", "--out", default="out", help="Directorio de salida")
     p.add_argument("--mismatches", type=int, default=0, help="Mismatches permitidos (0-3, default 0)")
     p.add_argument("--sirna-size", type=int, default=21)
@@ -69,11 +71,28 @@ def _run(args, params: SifiParams) -> int:
     tools = discover(args.bowtie, args.rnaplfold)
     mode = "auto" if args.main_target == "auto" else "explicit"
     targets = None if mode == "auto" else [t.strip() for t in args.main_target.split(",") if t.strip()]
+    panels = _parse_panels(getattr(args, "panel", None))
     manifest = run_once(args.query, args.db_dir, args.db_name, params, tools, args.out,
-                        main_targets=targets, main_target_mode=mode)
+                        main_targets=targets, main_target_mode=mode, panels=panels)
     if not args.quiet:
         print(json.dumps(_resumen(manifest), indent=2, ensure_ascii=False))
     return 0 if all(r.get("error") is None for r in manifest["records"]) else 2
+
+
+def _parse_panels(raw) -> Optional[list]:
+    """`--panel maiz=/dir:idx` (repetible) -> [{panel, db_dir, db_name}, ...]."""
+    if not raw:
+        return None
+    out = []
+    for item in raw:
+        if "=" not in item:
+            raise SystemExit(f"--panel inválido: {item!r} (formato: nombre=/dir:indice)")
+        name, loc = item.split("=", 1)
+        if ":" not in loc:
+            raise SystemExit(f"--panel inválido: {item!r} (falta :indice)")
+        db_dir, db_name = loc.rsplit(":", 1)
+        out.append({"panel": name.strip(), "db_dir": db_dir.strip(), "db_name": db_name.strip()})
+    return out
 
 
 def _resumen(m: dict) -> dict:

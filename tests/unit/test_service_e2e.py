@@ -146,3 +146,46 @@ def test_cancelar_corriendo_mata_el_arbol(make_client, tmp_path, toy_db):
         health = c.get("/health").json()
         assert health["worker"]["current_run"] is None
         assert health["queue"]["cancelled"] == 1
+
+
+def test_corrida_multi_panel(make_client, tmp_path):
+    """POST /runs con panel_ids: una sola corrida, hits etiquetados con su panel."""
+    from sifi.panels import PanelSpec, PanelsRegistry
+
+    reg = PanelsRegistry(root=str(tmp_path / "panels"), bowtie_build=H._find("bowtie-build"))
+    reg.ingest(PanelSpec("maiz", nombre="Maíz", rol="no_blanco", version="v1"), H.TOY_FA)
+
+    seq = "".join(l.strip() for l in open(H.QUERY_FA, encoding="utf-8") if not l.startswith(">"))
+    diana = seq[30:51]
+    mutada = diana[:10] + ("A" if diana[10] != "A" else "T") + diana[11:]
+    otro = tmp_path / "simbionte.fa"
+    otro.write_text(f">DianaPerfecta\n{diana}\n>DianaMutada\n{mutada}\n", encoding="utf-8")
+    reg.ingest(PanelSpec("simbionte", nombre="Simbionte", rol="no_blanco", version="v1"),
+               str(otro))
+
+    app = make_client()
+    with TestClient(app) as c:
+        r = c.post("/runs", json={"mode": "design", "query_path": H.QUERY_FA,
+                                 "panel_ids": ["maiz", "simbionte"], "mismatches": 1})
+        assert r.status_code == 201, r.text
+        rid = r.json()["run_id"]
+        done = H.wait_for(c, rid, {"done", "error"}, timeout=180)
+        assert done["status"] == "done", done
+
+        res = c.get(f"/runs/{rid}/results").json()
+        filas = res["records"][0]["sirnas"]
+        assert {f["panel"] for f in filas} == {"maiz", "simbionte"}
+        assert [p["panel"] for p in res["panels"]] == ["maiz", "simbionte"]
+        # el blanco principal (gen consultado) vive en el panel maíz
+        en_maiz = [f for f in filas if f["panel"] == "maiz"]
+        assert any(f["is_off_target"] is False for f in en_maiz)
+
+
+def test_panel_ids_no_se_mezcla_con_db_directa(make_client, toy_db):
+    app = make_client()
+    with TestClient(app) as c:
+        r = c.post("/runs", json={"mode": "design", "query_path": H.QUERY_FA,
+                                 "panel_ids": ["x"], "db_dir": toy_db[0],
+                                 "db_name": toy_db[1]})
+        assert r.status_code == 400
+        assert "panel_ids" in r.json()["detail"]

@@ -21,7 +21,7 @@ import warnings
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence
+from typing import Callable, Iterable, List, Optional, Sequence
 
 import numpy as np
 from Bio import SeqIO
@@ -80,6 +80,8 @@ class SifiPipeline:
         work_dir: str,
         main_targets: Optional[Sequence[str]] = None,
         main_target_mode: str = "explicit",   # "explicit" | "auto"
+        panels: Optional[Sequence[dict]] = None,
+        progress: Optional[Callable[[int, int, str], None]] = None,
     ) -> None:
         self.bowtie_db = bowtie_db
         self.db_location = os.path.abspath(db_location)
@@ -94,6 +96,10 @@ class SifiPipeline:
         self.work_dir = os.path.abspath(work_dir)
         self.main_targets = list(main_targets) if main_targets else None
         self.main_target_mode = main_target_mode
+        # multi-panel: [{panel, db_dir, db_name}, ...]; None = una sola base (comportamiento original)
+        self.panels = [dict(p) for p in panels] if panels else None
+        self.progress = progress
+        self._main_panel: Optional[str] = None
 
         # estado por registro (equivalente a los atributos mutables del original)
         self.len_seq = 0
@@ -106,13 +112,27 @@ class SifiPipeline:
     # ------------------------------------------------------------------ run
     def run(self) -> List[PipelineResult]:
         """Procesa todos los registros del FASTA de entrada."""
+        records = list(SeqIO.parse(self.query_sequences, "fasta"))
+        total = len(records)
         results: List[PipelineResult] = []
-        for seq_record in SeqIO.parse(self.query_sequences, "fasta"):
-            results.append(self._run_one(str(seq_record.id), str(seq_record.seq)))
+        for i, seq_record in enumerate(records):
+            name = str(seq_record.id)
+            self._progress(i, total, name)
+            results.append(self._run_one(name, str(seq_record.seq)))
+            self._progress(i + 1, total, name)
         if not results:
             results.append(PipelineResult(
                 query_name="", query_sequence="", error="El FASTA de entrada no contiene registros."))
         return results
+
+    def _progress(self, done: int, total: int, name: str) -> None:
+        """Avisa el avance sin poder romper la corrida (un callback no tumba el núcleo)."""
+        if self.progress is None:
+            return
+        try:
+            self.progress(done, total, name)
+        except Exception:  # noqa: BLE001 - el progreso nunca es motivo de falla
+            log.debug("el callback de progreso falló en %r", name, exc_info=True)
 
     def _run_one(self, query_name: str, query_sequence: str) -> PipelineResult:
         logger = logging.LoggerAdapter(log, {"query": query_name})
@@ -129,8 +149,11 @@ class SifiPipeline:
         # 2. siRNAs de tamaño fijo a multi-FASTA (+ versión TSV)
         sirna_file, tab_file_name = self.create_sirnas(query_sequence, self.p.sirna_size)
 
-        # 3. bowtie contra la DB
-        bowtie_data = self.run_bowtie(sirna_file, self.bowtie_db, self.p.mismatches)
+        # 3. bowtie contra la DB (o contra todas las bases de los paneles)
+        if self.panels:
+            bowtie_data = self.run_bowtie_panels(sirna_file, self.panels, self.p.mismatches)
+        else:
+            bowtie_data = self.run_bowtie(sirna_file, self.bowtie_db, self.p.mismatches)
         self.bowtie_data_l = self.bowtie_to_lst(bowtie_data)
 
         # 4. RNAplfold (accesibilidad)
@@ -198,17 +221,37 @@ class SifiPipeline:
                 '<query>_' / '<query>|'); si no hay coincidencia, None (todo es off-target).
         """
         if self.main_target_mode == "explicit":
+            self._main_panel = self._panel_of(self.main_targets or ())
             return self.main_targets
 
         all_targets = Counter(player[2] for player in self.bowtie_data_l)
         if query_name in all_targets:
-            return [query_name]
-        pref = [t for t in all_targets if t.startswith(query_name + "_") or t.startswith(query_name + "|")]
-        if len(pref) == 1:
-            return pref
-        log.warning("main_target auto: no pude identificar el blanco principal para %r (%d hits)",
-                    query_name, len(all_targets))
-        return pref or None
+            chosen = [query_name]
+        else:
+            pref = [t for t in all_targets
+                    if t.startswith(query_name + "_") or t.startswith(query_name + "|")]
+            if len(pref) == 1:
+                chosen = pref
+            else:
+                log.warning("main_target auto: no pude identificar el blanco principal para %r (%d hits)",
+                            query_name, len(all_targets))
+                chosen = pref or None
+        self._main_panel = self._panel_of(chosen or ())
+        return chosen
+
+    def _panel_of(self, hit_names: Iterable[str]) -> Optional[str]:
+        """Panel al que pertenece el blanco principal (None si no aplica o es ambiguo).
+
+        Con varias bases, el mismo nombre de gen puede existir en más de un panel: el
+        blanco principal sólo cuenta en el panel donde vive la secuencia consultada.
+        """
+        if not self.panels:
+            return None
+        wanted = set(hit_names or ())
+        if not wanted:
+            return None
+        paneles = {row[8] for row in self.bowtie_data_l if len(row) > 8 and row[2] in wanted}
+        return paneles.pop() if len(paneles) == 1 else None
 
     # ------------------------------------------------------------- helpers
     def bowtie_to_lst(self, bowtie_data: Iterable[str]) -> List[list]:
@@ -252,19 +295,48 @@ class SifiPipeline:
         return file_name, tab_file_name
 
     # -------------------------------------------------------------- bowtie
-    def run_bowtie(self, sequence: str, database_name: str, mismatches: int) -> List[str]:
+    def run_bowtie(self, sequence: str, database_name: str, mismatches: int,
+                   db_location: Optional[str] = None, out_name: str = "bowtie.out") -> List[str]:
         """bowtie -a -v N -y <db> -f <sirnas> <out>  (idéntico al original)."""
-        out = os.path.join(self.tmp_dir, "bowtie.out")
+        db_location = self.db_location if db_location is None else os.path.abspath(db_location)
+        out = os.path.join(self.tmp_dir, out_name)
         cmd = [self.tools.bowtie, "-a", "-v", str(mismatches), "-y",
-               os.path.join(self.db_location, database_name), "-f", sequence, out]
+               os.path.join(db_location, database_name), "-f", sequence, out]
         log.debug("bowtie: %s", " ".join(cmd))
-        proc = subprocess.run(cmd, cwd=self.db_location, capture_output=True, text=True)
+        proc = subprocess.run(cmd, cwd=db_location, capture_output=True, text=True)
         if proc.returncode not in (0, 1):  # bowtie: 1 == sin alineamientos
             raise RuntimeError(f"bowtie falló (rc={proc.returncode}): {proc.stderr.strip()[:500]}")
         if not os.path.exists(out):
             return []
         with open(out, "r", encoding="utf-8") as fh:
             return fh.readlines()
+
+    def run_bowtie_panels(self, sequence: str, panels: Sequence[dict],
+                          mismatches: int) -> List[str]:
+        """Corre bowtie contra el índice de cada panel y etiqueta cada hit con su panel.
+
+        La etiqueta viaja como novena columna (las ocho de bowtie no se tocan), así el
+        resto del pipeline no cambia: ``data_to_json`` la lee y la publica en la fila.
+        """
+        rows: List[str] = []
+        for i, pnl in enumerate(panels):
+            pid = str(pnl.get("panel") or pnl.get("id") or pnl.get("db_name") or f"panel{i + 1}")
+            data = self.run_bowtie(sequence, pnl["db_name"], mismatches,
+                                   db_location=pnl.get("db_dir"),
+                                   out_name=f"bowtie_{i}.out")
+            for line in data:
+                if not line.strip():
+                    continue
+                # bowtie -v escribe 7 columnas; el pipeline agrega 0 (mismatches) si falta.
+                # Normalizamos a 8 ANTES de agregar el panel, para que la novena sea el panel
+                # y no se pise la columna de mismatches.
+                parts = line.rstrip("\n").split("\t")
+                if len(parts) == 7:
+                    parts.append("0")
+                parts.append(pid)
+                rows.append("\t".join(parts))
+            log.debug("panel %s: %d hits", pid, len(data))
+        return rows
 
     # ---------------------------------------------------------- rnaplfold
     def run_rnaplfold(self, query_name: str, sequence_file: str):
@@ -393,9 +465,14 @@ class SifiPipeline:
                 query_position = int(sirna_name.split("sirna")[1])
                 sirna_sequence = data_split[4]
                 missmatches = data_split[7]
+                panel = data_split[8].strip() if len(data_split) > 8 else None
 
                 if p.mode_code == 0:
-                    off_target = hit_name not in (main_targets or [])
+                    if self.panels and main_targets and self._main_panel:
+                        # multi-panel: el blanco principal sólo cuenta en su propio panel
+                        off_target = not (panel == self._main_panel and hit_name in main_targets)
+                    else:
+                        off_target = hit_name not in (main_targets or [])
                 else:
                     off_target = None
             else:
@@ -407,6 +484,7 @@ class SifiPipeline:
                 hit_name = False
                 reference_strand_pos = None
                 missmatches = None
+                panel = None
 
             if strand == "+":
                 # antisentido = secuencia 2 posiciones atrás; los primeros 2 no se pueden calcular
@@ -440,17 +518,25 @@ class SifiPipeline:
                     "reference_strand_pos": reference_strand_pos,
                     "strand": strand,
                     "mismatches": missmatches,
+                    **({"panel": panel} if self.panels else {}),
                 })
         return json_lst
 
     # ------------------------------------------------------------- resumen
     @staticmethod
     def summarize(json_lst: List[dict]) -> dict:
-        hits = Counter(row["hit_name"] for row in json_lst)
-        eff = Counter(row["hit_name"] for row in json_lst if row["is_efficient"])
+        # con multi-panel, el mismo gen puede existir en dos bases: la clave lleva el panel
+        has_panel = any(r.get("panel") for r in json_lst)
+        key = (lambda r: (r.get("panel") or "", r["hit_name"])) if has_panel \
+            else (lambda r: r["hit_name"])
+        hits = Counter(key(r) for r in json_lst)
+        eff = Counter(key(r) for r in json_lst if r["is_efficient"])
         table = []
-        for name, total in hits.most_common():
-            table.append({"hit_name": name, "hits": total, "efficient": eff.get(name, 0)})
+        for k, total in hits.most_common():
+            row = {"hit_name": k[1] if has_panel else k, "hits": total, "efficient": eff.get(k, 0)}
+            if has_panel:
+                row = {"panel": k[0], **row}
+            table.append(row)
         return {
             "n_rows": len(json_lst),
             "n_efficient_rows": sum(1 for r in json_lst if r["is_efficient"]),

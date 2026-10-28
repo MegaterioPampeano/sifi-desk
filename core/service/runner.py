@@ -45,6 +45,16 @@ def run_spec(spec: dict) -> int:
         tools = ToolPaths(**spec["tools"])
 
         _emit({"event": "progress", "phase": "running", "done": 0, "total": total})
+        seen = {"done": 0}
+
+        def _progress(done: int, tot: int, name: str) -> None:
+            # un evento por registro: la UI ve avanzar el gen en curso
+            if done == seen["done"] and done != 0:
+                return
+            seen["done"] = done
+            _emit({"event": "progress", "phase": "running", "done": done,
+                   "total": tot or total, "record": name})
+
         manifest = run_once(
             spec["query_path"],
             spec["db_dir"],
@@ -55,6 +65,9 @@ def run_spec(spec: dict) -> int:
             main_targets=spec.get("main_targets"),
             main_target_mode=spec.get("main_target_mode", "auto"),
             extra_meta=spec.get("extra_meta") or {},
+            panels=spec.get("panels"),
+            panel_roles=spec.get("panel_roles"),
+            progress_cb=_progress,
         )
         records = len(manifest.get("records") or [])
         _emit({"event": "manifest", "run_id": manifest.get("run_id"),

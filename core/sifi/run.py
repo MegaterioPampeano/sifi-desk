@@ -52,12 +52,20 @@ def run_once(
     extra_meta: Optional[dict] = None,
     panel_roles: Optional[dict] = None,
     score_params: Optional[dict] = None,
+    panels: Optional[Sequence[dict]] = None,
+    progress_cb=None,
 ) -> dict:
-    """Corre el pipeline sobre `query_path` y escribe el manifest + results.json."""
+    """Corre el pipeline sobre `query_path` y escribe el manifest + results.json.
+
+    `panels`: lista opcional de ``{panel, db_dir, db_name}``. Con varias bases se corre
+    bowtie contra cada una y cada hit queda etiquetado con su panel; el resto del cálculo
+    (accesibilidad, ΔG, eficiencia, scoring) es el mismo de siempre y corre una sola vez.
+    """
     os.makedirs(out_dir, exist_ok=True)
     work = os.path.join(out_dir, "_work")
     pipe = SifiPipeline(db_name, db_dir, query_path, params, tools, work,
-                        main_targets=main_targets, main_target_mode=main_target_mode)
+                        main_targets=main_targets, main_target_mode=main_target_mode,
+                        panels=panels, progress=progress_cb)
     try:
         results: List[PipelineResult] = pipe.run()
     finally:
@@ -85,6 +93,13 @@ def run_once(
         "extra": extra_meta or {},
     }
     sp = score_params if score_params is not None else _scoring.load_params()
+    if panels:
+        manifest["panels"] = [
+            {"panel": p.get("panel") or p.get("id") or p.get("db_name"),
+             "dir": os.path.abspath(p["db_dir"]), "name": p["db_name"],
+             "fingerprint": _db_fingerprint(p["db_dir"], p["db_name"])}
+            for p in panels
+        ]
     manifest["scoring"] = {
         "schema": sp.get("schema"),
         "version": sp.get("version"),
@@ -157,8 +172,9 @@ TSV_COLS = ["query_name", "sirna_name", "sirna_position", "sirna_sequence", "is_
 
 
 def _write_tsv(manifest: dict, path: str) -> None:
+    rows = [r for rec in manifest["records"] for r in rec.get("sirnas", [])]
+    cols = TSV_COLS + (["panel"] if any(r.get("panel") for r in rows) else [])
     with open(path, "w", encoding="utf-8") as fh:
-        fh.write("\t".join(TSV_COLS) + "\n")
-        for rec in manifest["records"]:
-            for row in rec.get("sirnas", []):
-                fh.write("\t".join(str(row.get(c, "")) for c in TSV_COLS) + "\n")
+        fh.write("\t".join(cols) + "\n")
+        for row in rows:
+            fh.write("\t".join(str(row.get(c, "")) for c in cols) + "\n")
