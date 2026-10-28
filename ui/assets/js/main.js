@@ -6,6 +6,7 @@ import { initProgress, followRun, stop as stopProgress } from "./progress.js";
 import { initResults, showResults } from "./results.js";
 import { initDetail } from "./detail.js";
 import { initChat, actualizarContexto } from "./chat.js";
+import { initNews, cargarNews } from "./news.js";
 import { esc, fechaCorta, entero, num, ESTADOS } from "./format.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -33,7 +34,7 @@ function aplicarTema(t) {
 // ------------------------------------------------------------------ navegación
 function setView(nombre) {
   state.view = nombre;
-  for (const v of ["wizard", "progress", "results", "runs"]) {
+  for (const v of ["wizard", "progress", "results", "runs", "news"]) {
     $(`#view-${v}`).classList.toggle("hidden", v !== nombre);
   }
   $$(".navlink").forEach((b) => b.classList.toggle("is-active", b.dataset.nav === nombre));
@@ -47,6 +48,7 @@ function initNav() {
       const v = b.dataset.nav;
       if (v === "results" && !state.results) return;
       if (v === "runs") cargarCorridas();
+      if (v === "news") cargarNews();
       setView(v);
     });
   });
@@ -74,24 +76,30 @@ function volverAlAsistente() {
 async function cargarSalud() {
   const svc = $("#svc");
   const txt = $("#svc-text");
+  const banner = $("#svc-offline");
   try {
     const h = await api.health();
     svc.classList.remove("err");
     svc.classList.add("ok");
     txt.textContent = `${h.servicio || "sifid"} · ${h.modo || "local"}`;
-    svc.title = `servicio ok · ${h.n_paneles ?? "?"} paneles · ${h.corridas ?? 0} corridas`;
-  } catch {
+    svc.title = `servicio ok · ${h.n_paneles ?? "—"} paneles · ${h.corridas ?? 0} corridas`;
+    if (banner) banner.classList.add("hidden");
+  } catch (err) {
     svc.classList.remove("ok");
     svc.classList.add("err");
     txt.textContent = "sin servicio";
-    svc.title = "No se pudo consultar GET /health";
+    svc.title = err.message;
+    if (banner) {
+      banner.classList.remove("hidden");
+      banner.innerHTML = `<strong>Sin servicio local.</strong> ${esc(err.message)}`;
+    }
   }
 }
 
 async function cargarPaneles() {
   try {
-    const data = await api.panels();
-    setPanels(data.panels || []);
+    const paneles = await api.panels();
+    setPanels(paneles || []);
   } catch (err) {
     $("#panel-grid").innerHTML = `<div class="readout-empty">No se pudo cargar la lista de paneles: ${esc(err.message)}</div>`;
     toast(err.message, true);
@@ -137,8 +145,7 @@ async function cargarCorridas() {
   const cont = $("#runs-list");
   cont.innerHTML = `<div class="readout-empty">Consultando GET /runs…</div>`;
   try {
-    const data = await api.runs();
-    const runs = data.runs || [];
+    const runs = (await api.runs()) || [];
     if (!runs.length) {
       cont.innerHTML = `<div class="readout-empty">No hay corridas todavía. Empezá por el asistente.</div>`;
       return;
@@ -156,7 +163,7 @@ function filaRun(r) {
   const st = r.status || "queued";
   const pct = r.progress?.pct ?? 0;
   const desc = [
-    (r.panels || []).join(", ") || "sin paneles",
+    ((r.panels || []).map((p) => (typeof p === "string" ? p : p.nombre || p.id)).join(", ")) || "sin paneles",
     `${r.mode || "design"} · ${r.mismatches ?? "—"} mm`,
     r.query_path ? r.query_path.split(/[\\/]/).pop() : "",
     r.started_at ? fechaCorta(r.started_at) : "",
@@ -216,6 +223,7 @@ async function main() {
   initResults({ onNewRun: volverAlAsistente });
   initDetail();
   initChat();
+  initNews();
 
   const chatPref = localStorage.getItem("sifi.chat");
   if (chatPref === "closed" || (!chatPref && window.innerWidth < 980)) {

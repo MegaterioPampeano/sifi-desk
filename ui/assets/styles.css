@@ -599,3 +599,20 @@ table.hits tr.mm1 td { background: var(--mid-soft); }
 
 .map-gene + .map-gene { margin-top: 12px; }
 .map-gene .map-scale { margin-bottom: 4px; margin-top: 0; }
+
+/* --------------------------------------------------------------- novedades */
+.notice.err { border-left-color: var(--bad); background: var(--bad-soft); color: var(--ink-2); }
+.notice.err strong { color: var(--bad); }
+.notice.warn { display: block; border-left-color: var(--mid); background: var(--mid-soft); }
+.notice + .notice { margin-top: 8px; }
+.warn-text { color: var(--mid); }
+.news-list { display: grid; gap: 10px; margin-top: 14px; }
+.news-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 16px; box-shadow: var(--shadow);
+}
+.news-card h3 { margin: 0 0 4px; font-size: 14px; line-height: 1.35; color: var(--ink); font-weight: 600; }
+.news-card p { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.news-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; justify-content: space-between; }
+.news-foot { margin-top: 10px; }
+select.input.sm { padding: 5px 8px; font-size: 12px; }

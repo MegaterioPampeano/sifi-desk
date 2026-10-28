@@ -159,3 +159,34 @@ def test_list_filtra_por_estado(client, toy_db):
     assert [x["run_id"] for x in client.get("/runs?status=queued").json()["runs"]] == [a["run_id"]]
     assert client.get("/runs?status=zzz").status_code == 400
     assert client.get("/runs?limit=0").status_code == 422
+
+
+def test_auth_token_obligatorio(tmp_path):
+    app = create_app(data_dir=str(tmp_path / "d"), panels_root=str(tmp_path / "p"),
+                     start_worker=False, token="s3creto", require_auth=True)
+    with TestClient(app) as c:
+        assert c.get("/health").status_code == 200
+        assert c.get("/panels").status_code == 401
+        r = c.get("/panels", headers={"x-sifi-token": "otro"})
+        assert r.status_code == 401
+        ok = c.get("/panels", headers={"x-sifi-token": "s3creto"})
+        assert ok.status_code == 200
+        # preflight CORS no lleva token y no puede romper el navegador
+        assert c.options("/panels", headers={"Origin": "http://127.0.0.1:8000",
+                                             "Access-Control-Request-Method": "GET"}
+                         ).status_code in (200, 204)
+        # la UI estática es pública para poder cargar la página; la API no
+        assert c.get("/openapi.json").status_code == 401
+
+
+def test_news_nunca_500(tmp_path):
+    app = create_app(data_dir=str(tmp_path / "d"), panels_root=str(tmp_path / "p"),
+                     start_worker=False, token="t", require_auth=True,
+                     news_config=str(tmp_path / "no-existe.yaml"))
+    with TestClient(app) as c:
+        r = c.get("/news?since=7d&offline=1", headers={"x-sifi-token": "t"})
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert d["counts"]["new"] == 0
+        assert d["warnings"]
+        assert d["service"]["ok"] is True

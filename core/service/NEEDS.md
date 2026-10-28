@@ -57,3 +57,13 @@ El servicio hoy trata `rc != 0` como `error` de la corrida salvo que el runner h
 un manifest (el runner sale 0 igual). Si la CLI pasa a distinguir "corrida con registros
 fallidos" de "corrida rota", el servicio puede reflejarlo en `status` (`done` con
 `warnings`) en vez de tener que inferirlo del manifest.
+
+## M9 (integración de la ventana)
+* `GET /news` hereda el inventario global de `watch`: si otra herramienta corre `watch`
+  sin `--no-update-inventory`, la ventana puede dejar de ver ítems ya marcados. Hoy la
+  ventana siempre usa `--no-update-inventory` y muestra "nuevos vs inventario vacío".
+* El agente (`/agent/chat`) sigue viviendo en el frente del agente; la UI ya muestra un
+  error claro si el endpoint no existe, pero no hay streaming ni historial en `sifid`.
+* `ui` no puede leer `SIFID_URL`/`SIFID_TOKEN` del entorno del proceso: los recibe por
+  `window.__SIFI_CONFIG__` (inyectado al servir la UI) o `?api=&token=`. El lanzador
+  nativo debe hacer esa inyección.
