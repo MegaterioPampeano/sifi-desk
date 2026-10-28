@@ -17,7 +17,7 @@
 
 - [x] M0 fundaciones (repo, vendor, licencias, notas)
 - [x] M1 core headless + test diferencial idéntico al original
-- [~] **M2 dominio (paneles + scoring)** ← en curso
+- [~] **M2 dominio (paneles + scoring)** ← en curso (2.3)
 - [ ] M3 servicio local `sifid`
 - [ ] M4 agente dsh + plugins
 - [ ] M5 ventana nativa
@@ -25,18 +25,36 @@
 - [ ] M7 novedades/actualizaciones
 - [ ] M8 distribución
 
-## Paso actual: 2.2 — scoring v2
+## Paso actual: 2.3 — comparación contra el shortlist histórico de chicharrita
 
-Implementar el scoring sobre `results.json`: componentes E (eficiencia), R (riesgo),
-S (especificidad), T (que sale de la eficiencia de siFi) y D (diseño), con pesos
-versionados y desglose explicable por candidato (ver `docs/ROADMAP.md`).
+Tomar el shortlist de candidatos que ya tenemos de chicharrita, correr el core headless
+sobre las mismas secuencias y documentar en qué coincide y en qué se aparta
+(`docs/COMPARACION.md`), incluyendo el scoring v2 vs el histórico. El objetivo no es
+"que gane" el nuevo: es saber por qué cambian los números antes de mostrárselos a nadie.
 
-* [ ] Definir `core/sifi/score.yaml` (pesos + umbrales) y versionarlo.
-* [ ] `core/sifi/scoring.py`: `score_candidates(results, params) -> list[dict]` con el
-      desglose por componente, no sólo el total.
-* [ ] Test con un `results.json` fixture: monotonicidad (mejor eficiencia ⇒ mejor score)
-      y que el desglose cierre contra el total con los pesos declarados.
+* [ ] Armar el set de secuencias de entrada (mismo FASTA que el pipeline histórico).
+* [ ] Correr el core y el scoring v2; guardar `results.json` + scores como artefactos.
+* [ ] Tabla de diferencias por candidato (posición, eficiencia, hits, score) y explicación
+      de las divergencias (parámetros de RNAplfold, versión de panel, pesos).
 * [ ] Commit.
+
+## Hecho: 2.2 — scoring v2 (`core/sifi/scoring.py`)
+
+* [x] `core/sifi/score.yaml` con pesos E 40 · R 15 · S 15 · T 15 · D 15 (suman 100, se valida),
+      umbrales de banda y parámetros por eje. `version: 2` viaja en cada resultado.
+* [x] `score_candidates(results, params?, panel_roles?)` → lista ordenada con `total` (0..100),
+      `banda`, `notas` y `desglose` por eje (valor, peso, aporte y detalle).
+* [x] Ejes: E = accesibilidad + hebra + extremo (0.5/0.25/0.25); T = `is_efficient` (+ `score`
+      de siFi si viene); S = decaimiento por hits distintos; R = severidad del peor hit según
+      mismatches × rol del panel (patógeno no resta, humano/no-blanco sí); D = GC, homopolímeros
+      y extremo 5'.
+* [x] Acepta el manifest de `run.py` (`records[].sirnas[]`), el esquema canónico (`sirnas[].hits[]`)
+      o una lista de filas; agrupa por siRNA y descarta el main target como off-target.
+* [x] `NA` en accesibilidad se marca (`sin_accesibilidad`) y usa el valor declarado, no cero.
+* [x] Test: 14 casos (`tests/unit/test_scoring.py`) con fixture `tests/data/results_fixture.json`:
+      cierre del desglose contra el total, monotonía (0.90 > 0.60 > 0.20 de accesibilidad),
+      hit perfecto en humano, hit en patógeno, rol desconocido conservador, override de pesos.
+* [x] Commit (`55a1956`).
 
 ## Hecho: 2.1 — registro de paneles (`core/sifi/panels.py`)
 
@@ -51,7 +69,6 @@ versionados y desglose explicable por candidato (ver `docs/ROADMAP.md`).
 
 ### Siguientes (en orden, no adelantar)
 
-2.3 comparación contra el shortlist histórico de chicharrita (documentar diferencias)
 3.1 esqueleto de `sifid` (FastAPI, cola SQLite, endpoints de ROADMAP §5.3)
 3.2 cancelación + reanudación (matar el proceso a mitad → estado `interrupted`)
 4.1 scaffold de `agent/` con dsh pinneado + `cordis.yml`
@@ -64,3 +81,4 @@ versionados y desglose explicable por candidato (ver `docs/ROADMAP.md`).
 | 2026-10-28 18:10 | M0/M1 | port idéntico al original en 6 configuraciones |
 | 2026-10-28 18:20 | M2 · panel build/list/show | índice bowtie1 + meta.yaml con sha256 (431d362) |
 | 2026-10-28 18:35 | M2 · 2.1 | PanelSpec + PanelsRegistry (ingest idempotente, resolve multi-panel) + 7 tests (cc10041) |
+| 2026-10-28 18:50 | M2 · 2.2 | scoring v2: score.yaml + score_candidates con desglose E/R/S/T/D, 14 tests (55a1956) |
