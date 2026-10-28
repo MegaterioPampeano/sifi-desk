@@ -13,16 +13,30 @@ import sys
 def _bootstrap_path() -> None:
     if getattr(sys, "frozen", False):
         return
-    core = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-        os.path.abspath(__file__)))), "core")
-    if core not in sys.path:
-        sys.path.insert(0, core)
+    repo = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))))
+    for extra in (os.path.join(repo, "core"),
+                  os.path.join(repo, "packaging", "agent")):   # agent_doctor
+        if extra not in sys.path:
+            sys.path.insert(0, extra)
 
 
 def main(argv=None) -> int:
     _bootstrap_path()
+    argv = list(sys.argv[1:] if argv is None else argv)
     from cli import main as cli_main
-    return cli_main(argv)
+    if argv[:1] != ["doctor"]:
+        return cli_main(argv)
+    rc = cli_main(argv)
+    try:
+        from agent_doctor import default_root, report as agent_report
+        meipass = getattr(sys, "_MEIPASS", None)
+        bundle = os.path.dirname(meipass) if meipass else None
+        arc = agent_report(bundle or default_root())
+    except Exception as exc:  # el agente nunca rompe doctor
+        print(f"· agente: no se pudo verificar ({exc.__class__.__name__}: {exc})")
+        arc = 0
+    return rc or arc
 
 
 if __name__ == "__main__":

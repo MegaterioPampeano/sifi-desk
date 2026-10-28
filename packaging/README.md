@@ -13,13 +13,22 @@ firma; si aparece, hay que rehacer `packaging/pyinstaller/*.spec` con
 
 | artefacto | comando | sale en | contenido |
 |---|---|---|---|
-| bundle de escritorio (Linux) | `bash scripts/build_linux.sh` | `dist/sifi-desk-linux/` | `sifid`, `sifi`, `_internal/`, `packaging/vendor/linux-x86_64/`, `licenses/` |
+| bundle de escritorio (Linux) | `bash scripts/build_linux.sh` | `dist/sifi-desk-linux/` | `sifid`, `sifi`, `sifid-<triple>`, `_internal/`, `agent/`, `packaging/vendor/linux-x86_64/`, `licenses/` |
 | bundle de escritorio (Windows) | `powershell -File scripts/build_windows.ps1` | `dist/sifi-desk-windows/` | ídem con `.exe` |
-| `.zip` para repartir (Windows) | idem (paso 4b) | `dist/sifi-desk-windows.zip` | el bundle completo + `LEEME.txt` |
+| `.zip` para repartir (Windows) | idem (paso 5b) | `dist/sifi-desk-windows.zip` | el bundle completo + `LEEME.txt` |
 | `.deb` | `bash scripts/build_linux.sh --deb` | `dist/sifi-desk_<ver>_amd64.deb` | bundle en `/opt/sifi-desk` + lanzadores en `/usr/bin` |
-| `.AppImage` | `bash scripts/package_appimage.sh dist/sifi-desk-linux` | `dist/*.AppImage` | bundle + `AppRun` (necesita `appimagetool`) |
-| `.msi` (Tauri) | `scripts/build_windows.ps1` (sin `-SkipMsi`) | `ui/src-tauri/target/release/bundle/msi/*.msi` | sólo si existe `ui/tauri.conf.json` + Rust |
+| `.AppImage` | `bash scripts/build_linux.sh --appimage` (o `scripts/package_appimage.sh`) | `dist/sifi-desk-x86_64.AppImage` | bundle + `AppRun`; `appimagetool` se baja pinneado a `packaging/.tools/` |
+| `.msi` (Tauri) | `scripts/build_windows.ps1` (sin `-SkipMsi`) | `ui/tauri/src-tauri/target/release/bundle/msi/*.msi` | sólo si existe `ui/tauri/tauri.conf.json` + Rust |
 | CLI sola (servidores) | `python3 -m PyInstaller packaging/pyinstaller/sifi.spec` | `dist/sifi-cli/` | `sifi` sin FastAPI/uvicorn |
+
+El bundle lleva **también el agente** (`agent/`: perfil de dsh + `sifi-tools` +
+persona + las 7 tools). Su runtime (Node 22+ y el árbol de dsh, 884 MB) **no** se
+embebe: es prerrequisito y `sifi doctor` lo verifica. Decisión y mediciones:
+`packaging/agent/README.md`.
+
+El sidecar se copia además como `sifid-<target-triple>` (D6): es el nombre que
+Tauri busca para `externalBin`, y en Linux se deja también en
+`ui/tauri/src-tauri/binaries/`.
 
 Los dos sidecars (`sifid.spec`, `sifi.spec`) son **one-dir, nunca one-file**:
 one-file descomprime en un `/tmp` nuevo en cada arranque (3-5 s), deja basura y
@@ -37,20 +46,26 @@ falla):
 
 ```bash
 pip3 install --user --break-system-packages pyinstaller        # o un venv
-bash scripts/fetch_binaries.sh                                 # binarios → packaging/vendor/<plat>/
+bash scripts/build_vendor_linux.sh                             # bowtie + RNAplfold (sha256 fijado)
 bash scripts/build_linux.sh                                    # tests + build + smoke real
-ls -la dist/sifi-desk-linux/                                   # sifid, sifi, _internal, packaging, licenses
+ls -la dist/sifi-desk-linux/                                   # sifid, sifi, sidecar, agent, _internal, packaging, licenses
 ```
 
-`scripts/build_linux.sh` hace, en orden: tests, chequeo de binarios, PyInstaller,
-ensamblado (UI compilada si existe) y un **smoke de verdad**: arma el índice de
-juguete con el `bowtie-build` del bundle, corre `sifi design` y corre la misma
-corrida **por la API** (eso ejercita el runner congelado, `sifid --runner`, que es
-la parte que `--help` no prueba). Flags: `--no-tests`, `--no-smoke`, `--cli-only`,
-`--deb`.
+`scripts/build_linux.sh` hace, en orden: tests, **binarios externos (obligatorios)**,
+PyInstaller, ensamblado (UI compilada si existe, agente, sidecar Tauri) y un
+**smoke de verdad**: arma el índice de juguete con el `bowtie-build` del bundle,
+corre `sifi design` y corre la misma corrida **por la API** (eso ejercita el
+runner congelado, `sifid --runner`, que es la parte que `--help` no prueba). Si
+faltan binarios o el smoke no puede correr, **el build falla**: un instalable que
+no diseña nada no se publica. Flags: `--no-tests`, `--no-smoke`, `--cli-only`,
+`--deb`, `--appimage`.
+
+Único modo de saltear los binarios (bundles de desarrollo, no se publican):
+`SIFI_VENDOR_OPTIONAL=1 bash scripts/build_linux.sh`. Es una decisión explícita
+del que corre el build, no un fallback automático.
 
 En Windows, el equivalente es `scripts/build_windows.ps1` (`-NoTests`, `-SkipMsi`,
-`-NoZip`, `-FetchOnly`, `-Python <exe>`).
+`-NoZip`, `-FetchOnly`, `-VendorOptional`, `-Python <exe>`).
 
 ## Probar el artefacto
 
@@ -104,15 +119,17 @@ packaging/vendor/linux-x86_64/    bowtie 1.3.1, bowtie-build, bowtie-align-s,
 packaging/vendor/win32-AMD64/     ídem (.exe) — se arma en Windows/CI
 ```
 
-Se bajan con `scripts/fetch_binaries.sh` (o `packaging/vendor/fetch_binaries.sh`,
-que es el de verdad; el de `scripts/` sólo delega). Estrategias: `SIFI_VENDOR_SRC`,
-`build/` del checkout, `PATH` y por último descarga (bowtie desde GitHub Releases;
-ViennaRNA desde `SIFI_VIENNA_URL`).
+Se arman con `scripts/build_vendor_linux.sh` (o `packaging/vendor/build_vendor_windows.sh`
+en Windows), que compilan/bajan desde fuentes **con sha256 fijado en
+`packaging/vendor/pins.sh`**: bowtie 1.3.1 (zip oficial en Linux; compilado en
+Windows porque el release no trae binarios win) y RNAplfold 2.7.2 (siempre
+compilado del tarball, porque no hay binario estático oficial). Si un hash no
+coincide, el build **aborta**.
 
 **No se versionan** (son ~30 MB Linux / ~35 MB Windows y tienen licencias
-propias). Consecuencia: un CI limpio sin red para esos hosts produce un bundle
-**sin** bowtie/RNAplfold (`SIFI_VENDOR_OPTIONAL=1`, el workflow lo tolera y el
-smoke se saltea). Es el agujero #1 a cerrar: ver `packaging/TODO.md`.
+propias), pero tampoco se tolera su ausencia: `packaging/vendor/<plat>/` es
+artefacto de build, se cachea en CI (`actions/cache` sobre `build/dl` y
+`build/vendor`) y su falta es un error, no un warning.
 
 `core/sifi/tools.py` resuelve `packaging/vendor/<plat>/` **primero** y sin
 variables de entorno: congelado, `sifi/tools.py` vive en
@@ -122,9 +139,12 @@ variables de entorno: congelado, `sifi/tools.py` vive en
 
 ## CI (`.github/workflows/build.yml`)
 
-`test` (matrix ubuntu/windows) → `build-linux` (.deb + .AppImage + bundle) y
-`build-windows` (.zip + `.msi` si hay `ui/tauri.conf.json`) → artefactos subidos;
-en tags `v*`, `release` adjunta los binarios al release.
+`vendor-linux` (compila binarios con hashes fijados) → `test` (matrix
+ubuntu/windows) → `build-linux` (.deb + .AppImage + bundle + verificación de que
+el perfil del agente monta) y `build-windows` (.zip + `.msi` si hay
+`ui/tauri/tauri.conf.json`) → artefactos subidos; en tags `v*`, `release` adjunta
+los binarios al release. El workflow **no** define `SIFI_VENDOR_OPTIONAL`: si los
+binarios no se pueden preparar, el CI se pone rojo (a propósito).
 
 ## Qué falta para firmar
 
