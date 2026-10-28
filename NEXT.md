@@ -27,27 +27,26 @@
 
 ## Paso actual: 2.2 — scoring v2
 
-Implementar el scoring sobre `results.json` (ver `docs/ROADMAP.md`): componentes
-E (eficiencia), R (riesgo), T (T sale de la eficiencia de siFi), S (especificidad) y
-D (diseño), con pesos versionados y salida explicable por candidato.
+Implementar el scoring sobre `results.json`: componentes E (eficiencia), R (riesgo),
+S (especificidad), T (que sale de la eficiencia de siFi) y D (diseño), con pesos
+versionados y desglose explicable por candidato (ver `docs/ROADMAP.md`).
 
-* [ ] Definir la estructura de `score.yaml` (pesos + umbrales) y versionarla.
+* [ ] Definir `core/sifi/score.yaml` (pesos + umbrales) y versionarlo.
 * [ ] `core/sifi/scoring.py`: `score_candidates(results, params) -> list[dict]` con el
-      desglose por componente (no sólo el total).
+      desglose por componente, no sólo el total.
 * [ ] Test con un `results.json` fixture: monotonicidad (mejor eficiencia ⇒ mejor score)
-      y que el desglose sume el total con los pesos declarados.
+      y que el desglose cierre contra el total con los pesos declarados.
 * [ ] Commit.
 
-Implementar `core/domain/panels.py`:
+## Hecho: 2.1 — registro de paneles (`core/sifi/panels.py`)
 
-* [x] `PanelSpec` (id, nombre, rol, fuente, versión, sha256 del FASTA, sha256 del índice).
+* [x] `PanelSpec` (id, nombre, rol, fuente, versión, sha256 del FASTA y del índice).
 * [x] `PanelsRegistry` que lee/escribe `panels/<id>/<version>/meta.yaml`.
-* [x] `ingest(panel_spec, fasta_path)` → copia el FASTA, corre `bowtie-build`, calcula
-      fingerprints, escribe `meta.yaml` y devuelve el `PanelSpec` resultante.
-* [x] `resolve(panel_ids)` → lista de rutas de índice listas para bowtie; error claro si
-      falta alguno.
-* [x] Test: ingestar `tests/data/toy.fa` como panel `toy`, verificar fingerprint estable
-      (mismo resultado si se ingesta dos veces) y detección de cambio si cambia el FASTA.
+* [x] `ingest(panel_spec, fasta_path)` → normaliza y copia el FASTA, corre `bowtie-build`,
+      calcula fingerprints, escribe `meta.yaml` y devuelve el `PanelSpec`.
+* [x] `resolve(panel_ids)` → prefijos de índice bowtie en orden; error claro si falta alguno.
+* [x] Test: `toy.fa` como panel `toy`, fingerprint estable al reingestar y cambio detectado
+      si cambia el FASTA (`tests/unit/test_panels.py`, 7 tests).
 * [x] Commit (`cc10041`).
 
 ### Siguientes (en orden, no adelantar)
