@@ -33,6 +33,13 @@ if ! curl -sf -m 2 "http://127.0.0.1:$PORT/health" >/dev/null; then
   exit 1
 fi
 URL="http://127.0.0.1:$PORT/?token=$TOKEN"
+
+# Ventana propia (GTK + WebKit) si hay sesión gráfica; si no, navegador.
+if [ "${SIFID_WINDOW:-1}" = "1" ] && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] \
+   && python3 -c "import gi; gi.require_version('WebKit2','4.1')" 2>/dev/null; then
+  exec "$(dirname "${BASH_SOURCE[0]}")/sifi_desk_window.py" "$URL"
+fi
+
 if ! xdg-open "$URL" >/dev/null 2>&1; then
   command -v firefox >/dev/null && { firefox "$URL" >/dev/null 2>&1 & exit 0; }
   echo "$URL"
