@@ -1,0 +1,181 @@
+{
+ "status": "ok",
+ "message-type": "work",
+ "message": {
+  "DOI": "10.3390/plants15203237",
+  "title": [
+   "Foliar Application of dsRNA Suppresses Watermelon Bud Necrosis Virus Infection and Symptom Development in Nicotiana benthamiana and Cowpea Plants"
+  ],
+  "author": [
+   {
+    "given": "Dipinte",
+    "family": "Gupta",
+    "sequence": "first",
+    "affiliation": [
+     {
+      "name": "Advanced Centre for Plant Virology, Division of Plant Pathology, Indian Agricultural Research Institute, New Delhi 110012, India"
+     },
+     {
+      "name": "Department of Plant Pathology, Washington State University, Pullman, WA 99164, USA"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   },
+   {
+    "ORCID": "https://orcid.org/0000-0002-8713-2991",
+    "authenticated-orcid": false,
+    "given": "Prabu",
+    "family": "Gnanasekaran",
+    "sequence": "additional",
+    "affiliation": [
+     {
+      "name": "Department of Plant Pathology, Washington State University, Pullman, WA 99164, USA"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   },
+   {
+    "ORCID": "https://orcid.org/0000-0001-8556-8700",
+    "authenticated-orcid": false,
+    "given": "Oinam Washington",
+    "family": "Singh",
+    "sequence": "additional",
+    "affiliation": [
+     {
+      "name": "Advanced Centre for Plant Virology, Division of Plant Pathology, Indian Agricultural Research Institute, New Delhi 110012, India"
+     },
+     {
+      "name": "Indian Council of Agriculture Research, Central Institute for Cotton Research, Regional Station, Sirsa 125055, Haryana, India"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   },
+   {
+    "given": "Suryakant",
+    "family": "Manik",
+    "sequence": "additional",
+    "affiliation": [
+     {
+      "name": "Advanced Centre for Plant Virology, Division of Plant Pathology, Indian Agricultural Research Institute, New Delhi 110012, India"
+     },
+     {
+      "name": "Indian Council of Agriculture Research, Indian Institute of Agricultural Biotechnology, Ranchi 834003, Jharkhand, India"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   },
+   {
+    "given": "Anirban",
+    "family": "Roy",
+    "sequence": "additional",
+    "affiliation": [
+     {
+      "name": "Advanced Centre for Plant Virology, Division of Plant Pathology, Indian Agricultural Research Institute, New Delhi 110012, India"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   },
+   {
+    "given": "Bikash",
+    "family": "Mandal",
+    "sequence": "additional",
+    "affiliation": [
+     {
+      "name": "Advanced Centre for Plant Virology, Division of Plant Pathology, Indian Agricultural Research Institute, New Delhi 110012, India"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   }
+  ],
+  "container-title": [
+   "Plants"
+  ],
+  "issued": {
+   "date-parts": [
+    [
+     2026,
+     10,
+     21
+    ]
+   ]
+  },
+  "abstract": "<jats:p>Watermelon production is significantly affected by watermelon bud necrosis virus (WBNV), an economically important orthotospovirus in the Indian subcontinent. RNA interference (RNAi)-based approaches offer promising strategies for developing broad-spectrum antiviral resistance in susceptible plants. In this study, we evaluated the efficacy of foliar application of double-stranded RNA (dsRNA) and hairpin RNA (hpRNA) derived from the full-length NSs gene of WBNV against WBNV infection in two host plants, Nicotiana benthamiana and cowpea (Vigna unguiculata). Fluorescein-labeled dsRNA of NSs gene (dsNSs) was tracked in N. benthamiana plants, where dsNSs translocated from the treated leaf to adjacent leaves, stem, and roots. Naked dsNSs was no longer detectable in treated leaves at 5 days post-inoculation (dpi), whereas mesoporous silica nanoparticle-conjugated dsNSs (dsNSs-MSNP) remained detectable in the treated leaves beyond 5 dpi, indicating enhanced stability. Following WBNV inoculation, N. benthamiana plants treated with hairpin of NSs gene (hpNSs), dsNSs, and dsNSs-MSNP exhibited 112, 303, and 370 fold reduction in viral RNA accumulation, respectively. Although these treatments delayed symptom development, all inoculated plants eventually showed the viral symptoms in N. benthamiana. Similarly, treatment of Vigna unguiculata cv. Pusa Komal (cowpea) plants with hpNSs, dsNSs, and dsNSs-MSNP resulted in reduced viral load, where dsNSs-MSNP provided the maximum reduction up to 208 fold. The dsNSs provided 100% reduction in development of systemic symptoms of bud necrosis disease in the treated cowpea plants. Collectively, these findings demonstrate that foliar application of nanoparticle-conjugated dsRNA targeting the full-length NSs gene can effectively suppress WBNV infection and provide enhanced protection against disease development in cowpea.</jats:p>",
+  "license": [
+   {
+    "start": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       21
+      ]
+     ],
+     "date-time": "2026-10-21T00:00:00Z",
+     "timestamp": 1792540800000
+    },
+    "content-version": "vor",
+    "delay-in-days": 0,
+    "URL": "https://creativecommons.org/licenses/by/4.0/"
+   },
+   {
+    "start": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       21
+      ]
+     ],
+     "date-time": "2026-10-21T00:00:00Z",
+     "timestamp": 1792540800000
+    },
+    "content-version": "tdm",
+    "delay-in-days": 0,
+    "URL": "https://creativecommons.org/licenses/by/4.0/"
+   }
+  ],
+  "link": [
+   {
+    "URL": "https://www.mdpi.com/2223-7747/15/20/3237/pdf",
+    "content-type": "unspecified",
+    "content-version": "vor",
+    "intended-application": "similarity-checking"
+   }
+  ],
+  "publisher": "MDPI AG",
+  "volume": "15",
+  "page": "3237",
+  "article-number": null,
+  "type": "journal-article"
+ }
+}

@@ -1,0 +1,94 @@
+{
+ "doi": "10.3390/plants15203237",
+ "is_oa": true,
+ "oa_status": "gold",
+ "journal_is_oa": true,
+ "journal_name": "Plants",
+ "title": "Foliar Application of dsRNA Suppresses Watermelon Bud Necrosis Virus Infection and Symptom Development in Nicotiana benthamiana and Cowpea Plants",
+ "year": 2026,
+ "best_oa_location": {
+  "endpoint_id": null,
+  "evidence": "deprecated",
+  "host_type": "publisher",
+  "is_best": true,
+  "license": "cc-by",
+  "oa_date": "2026-10-21",
+  "pmh_id": null,
+  "repository_institution": null,
+  "updated": "deprecated",
+  "url": "https://doi.org/10.3390/plants15203237",
+  "url_for_landing_page": "https://doi.org/10.3390/plants15203237",
+  "url_for_pdf": null,
+  "version": "publishedVersion"
+ },
+ "oa_locations": [
+  {
+   "endpoint_id": null,
+   "evidence": "deprecated",
+   "host_type": "publisher",
+   "is_best": true,
+   "license": "cc-by",
+   "oa_date": "2026-10-21",
+   "pmh_id": null,
+   "repository_institution": null,
+   "updated": "deprecated",
+   "url": "https://doi.org/10.3390/plants15203237",
+   "url_for_landing_page": "https://doi.org/10.3390/plants15203237",
+   "url_for_pdf": null,
+   "version": "publishedVersion"
+  }
+ ],
+ "z_authors": [
+  {
+   "author_position": "first",
+   "is_corresponding": false,
+   "raw_affiliation_strings": [
+    "Advanced Centre for Plant Virology, Division of Plant Pathology, Indian Agricultural Research Institute, New Delhi 110012, India",
+    "Department of Plant Pathology, Washington State University, Pullman, WA 99164, USA"
+   ],
+   "raw_author_name": "Dipinte Gupta"
+  },
+  {
+   "author_position": "middle",
+   "is_corresponding": false,
+   "raw_affiliation_strings": [
+    "Department of Plant Pathology, Washington State University, Pullman, WA 99164, USA"
+   ],
+   "raw_author_name": "Prabu Gnanasekaran"
+  },
+  {
+   "author_position": "middle",
+   "is_corresponding": false,
+   "raw_affiliation_strings": [
+    "Advanced Centre for Plant Virology, Division of Plant Pathology, Indian Agricultural Research Institute, New Delhi 110012, India",
+    "Indian Council of Agriculture Research, Central Institute for Cotton Research, Regional Station, Sirsa 125055, Haryana, India"
+   ],
+   "raw_author_name": "Oinam Washington Singh"
+  },
+  {
+   "author_position": "middle",
+   "is_corresponding": false,
+   "raw_affiliation_strings": [
+    "Advanced Centre for Plant Virology, Division of Plant Pathology, Indian Agricultural Research Institute, New Delhi 110012, India",
+    "Indian Council of Agriculture Research, Indian Institute of Agricultural Biotechnology, Ranchi 834003, Jharkhand, India"
+   ],
+   "raw_author_name": "Suryakant Manik"
+  },
+  {
+   "author_position": "middle",
+   "is_corresponding": true,
+   "raw_affiliation_strings": [
+    "Advanced Centre for Plant Virology, Division of Plant Pathology, Indian Agricultural Research Institute, New Delhi 110012, India"
+   ],
+   "raw_author_name": "Anirban Roy"
+  },
+  {
+   "author_position": "last",
+   "is_corresponding": true,
+   "raw_affiliation_strings": [
+    "Advanced Centre for Plant Virology, Division of Plant Pathology, Indian Agricultural Research Institute, New Delhi 110012, India"
+   ],
+   "raw_author_name": "Bikash Mandal"
+  }
+ ]
+}
