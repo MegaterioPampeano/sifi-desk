@@ -1,5 +1,6 @@
 // Pantalla de resultados: tabla ordenable, mapa del gen y acceso al detalle.
 import { state } from "./state.js";
+import { api } from "./api.js";
 import { openDetail } from "./detail.js";
 import { esc, num, entero, fecha, bandLabel, bandClass, EJES, roleLabel } from "./format.js";
 
@@ -59,11 +60,37 @@ export function initResults({ onNewRun }) {
   });
 
   $("#btn-new").addEventListener("click", onNewRun);
-  $("#btn-export").addEventListener("click", () => {
+  $("#btn-export").addEventListener("click", exportarPdf);
+}
+
+async function exportarPdf() {
+  const btn = $("#btn-export");
+  const id = state.results?.run_id || state.runId;
+  if (!id) return;
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Generando…";
+  try {
+    const { blob, filename } = await api.report(id, "pdf");
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || `informe-${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
     document.dispatchEvent(new CustomEvent("sifi:toast", {
-      detail: { msg: "El frente de reportes todavía no expone POST /reports.", err: true },
+      detail: { msg: `Informe descargado: ${a.download}` },
     }));
-  });
+  } catch (err) {
+    document.dispatchEvent(new CustomEvent("sifi:toast", {
+      detail: { msg: `No se pudo generar el informe: ${err.message}`, err: true },
+    }));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
 }
 
 export function showResults(res) {
@@ -90,7 +117,8 @@ export function renderAll() {
   renderTabs();
   renderMap();
   renderTable();
-  $("#btn-export").title = "El frente de reportes todavía no expone POST /reports";
+  $("#btn-export").title = "Descargar el informe PDF generado por el servicio";
+  $("#btn-export").disabled = !(res.run_id && res.source !== "mock");
 }
 
 function renderTiles() {

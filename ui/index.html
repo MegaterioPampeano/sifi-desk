@@ -24,6 +24,7 @@
     <nav class="topnav" aria-label="Secciones">
       <button type="button" class="navlink is-active" data-nav="wizard">Asistente</button>
       <button type="button" class="navlink" data-nav="runs">Corridas</button>
+      <button type="button" class="navlink" data-nav="news">Novedades</button>
       <button type="button" class="navlink" data-nav="results" id="nav-results" disabled>Resultados</button>
     </nav>
 
@@ -44,6 +45,7 @@
   </header>
 
   <main class="main" id="main">
+    <div class="notice err hidden" id="svc-offline" role="alert"></div>
 
     <!-- ===================== ASISTENTE ===================== -->
     <section class="view" id="view-wizard">
@@ -309,6 +311,28 @@
         </div>
         <div class="table-foot muted small" id="table-foot">—</div>
       </div>
+    </section>
+
+    <!-- ===================== NOVEDADES ===================== -->
+    <section class="view hidden" id="view-news">
+      <div class="view-head">
+        <div>
+          <p class="eyebrow">Vigilancia científica</p>
+          <h1>Novedades</h1>
+          <p class="lede">Literatura reciente que vigila el servicio. Se cachea; si no hay red, se muestra el último digest disponible.</p>
+        </div>
+        <div class="view-actions">
+          <label class="sr-only" for="news-since">Ventana</label>
+          <select id="news-since" class="input sm">
+            <option value="7d">7 días</option>
+            <option value="2w">2 semanas</option>
+            <option value="30d">30 días</option>
+          </select>
+          <button type="button" class="btn ghost" id="btn-news-refresh">Actualizar</button>
+        </div>
+      </div>
+      <p class="muted small" id="news-status"></p>
+      <div class="news-list" id="news-list"></div>
     </section>
 
     <!-- ===================== CORRIDAS ===================== -->

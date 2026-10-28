@@ -19,12 +19,16 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import secrets
+import socket
 import sys
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from . import SERVICE_NAME, __version__
 from .models import CancelResponse, RunRequest
@@ -172,10 +176,25 @@ def _resolve_tools(req: RunRequest):
 # --------------------------------------------------------------------------- #
 # app
 # --------------------------------------------------------------------------- #
+DEFAULT_UI_DIR = os.path.join(os.path.dirname(CORE_DIR), "ui")
+
+
+def _free_port(host: str) -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((host, 0))
+        return int(sock.getsockname()[1])
+
+
 def create_app(data_dir: Optional[str] = None,
                panels_root: Optional[str] = None,
                runner_argv: Optional[List[str]] = None,
-               start_worker: bool = True) -> FastAPI:
+               start_worker: bool = True,
+               token: Optional[str] = None,
+               require_auth: bool = False,
+               ui_dir: Optional[str] = None,
+               news_config: Optional[str] = None,
+               news_cache_dir: Optional[str] = None,
+               news_inventory: Optional[str] = None) -> FastAPI:
     data_dir = os.path.abspath(data_dir or DEFAULT_DATA_DIR)
     panels_root = os.path.abspath(panels_root or DEFAULT_PANELS_ROOT)
     runs_dir = os.path.join(data_dir, "runs")
@@ -199,12 +218,47 @@ def create_app(data_dir: Optional[str] = None,
     app = FastAPI(title="sifid", version=__version__,
                   description="Servicio local de siFi-Desk (cola de corridas)",
                   lifespan=lifespan)
+    app.state.token = token
+    app.state.require_auth = bool(require_auth and token)
+
+    # La UI puede servirse desde otro origen en desarrollo (`?api=`), así que
+    # el servicio acepta CORS local. El token sigue siendo obligatorio.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["Content-Disposition"],
+    )
+
+    def _ui_public(path: str) -> bool:
+        if not (ui_dir and os.path.isdir(ui_dir)):
+            return False
+        return path in ("/", "/index.html", "/favicon.ico") or path.startswith("/assets/")
+
+    @app.middleware("http")
+    async def auth_middleware(request: Request, call_next):
+        if app.state.require_auth:
+            path = request.url.path
+            if request.method != "OPTIONS" and path != "/health" and not _ui_public(path):
+                got = request.headers.get("x-sifi-token") or ""
+                if not secrets.compare_digest(got, app.state.token or ""):
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "falta o no coincide el header x-sifi-token"},
+                    )
+        return await call_next(request)
+
     app.state.store = store
     app.state.worker = worker
     app.state.data_dir = data_dir
     app.state.panels_root = panels_root
     app.state.runs_dir = runs_dir
     app.state.start_worker = start_worker
+    app.state.news_config = news_config
+    app.state.news_cache_dir = news_cache_dir
+    app.state.news_inventory = news_inventory
+    app.state.ui_dir = ui_dir
 
     # ---------------------------------------------------------------- salud
     @app.get("/health")
@@ -364,10 +418,105 @@ def create_app(data_dir: Optional[str] = None,
             manifest = json.load(fh)
         return JSONResponse(content=manifest)
 
+    # -------------------------------------------------------------- informe
+    @app.get("/runs/{run_id}/report")
+    def get_report(run_id: str, fmt: str = Query("pdf")):
+        fmt = (fmt or "pdf").lower().lstrip(".")
+        if fmt not in ("pdf", "html"):
+            raise HTTPException(status_code=400,
+                                detail=f"fmt inválido: {fmt!r} (usar pdf o html)")
+        raw = store.raw(run_id)
+        if raw is None:
+            raise HTTPException(status_code=404, detail=f"no existe la corrida {run_id!r}")
+        if raw["status"] != "done":
+            raise HTTPException(
+                status_code=409,
+                detail=f"la corrida {run_id!r} está en estado {raw['status']!r};"
+                       " el informe sólo se genera sobre corridas terminadas")
+        manifest_path = raw["result_path"]
+        if not manifest_path or not os.path.isfile(manifest_path):
+            raise HTTPException(status_code=500,
+                                detail=f"el manifest de {run_id!r} se perdió")
+        report_dir = os.path.join(os.path.dirname(manifest_path), "report")
+        out_path = os.path.join(report_dir, f"informe-{run_id}.{fmt}")
+        try:
+            fresh = (os.path.isfile(out_path)
+                     and os.path.getmtime(out_path) >= os.path.getmtime(manifest_path))
+            if not fresh:
+                from report.render import render
+                out_path = render([manifest_path], out_dir=report_dir, fmt=fmt,
+                                  filename=f"informe-{run_id}")
+        except Exception as exc:
+            raise HTTPException(status_code=500,
+                                detail=f"no se pudo generar el informe {fmt}: {exc}") from exc
+        if not os.path.isfile(out_path):
+            raise HTTPException(status_code=500, detail="el informe no quedó en disco")
+        media = "application/pdf" if fmt == "pdf" else "text/html; charset=utf-8"
+        return FileResponse(out_path, media_type=media,
+                            filename=os.path.basename(out_path))
+
+    # --------------------------------------------------- resultados para UI
+    @app.get("/runs/{run_id}/view")
+    def get_view(run_id: str) -> JSONResponse:
+        raw = store.raw(run_id)
+        if raw is None:
+            raise HTTPException(status_code=404, detail=f"no existe la corrida {run_id!r}")
+        if raw["status"] != "done":
+            raise HTTPException(
+                status_code=409,
+                detail=f"la corrida {run_id!r} está en estado {raw['status']!r};"
+                       " los resultados sólo están disponibles en 'done'")
+        path = raw["result_path"]
+        if not path or not os.path.isfile(path):
+            raise HTTPException(status_code=500,
+                                detail=f"el manifest de {run_id!r} se perdió ({path!r})")
+        with open(path, encoding="utf-8") as fh:
+            manifest = json.load(fh)
+        spec = store.spec(run_id) or {}
+        run = {"run_id": run_id, "request": spec.get("public") or {}}
+        from .view import ui_results
+        payload = ui_results(manifest, run)
+        payload["manifest_path"] = None  # no filtrar rutas del disco a la UI
+        return JSONResponse(content=payload)
+
+    # -------------------------------------------------------------- novedades
+    @app.get("/news")
+    def get_news(since: str = Query("7d"), offline: bool = Query(False),
+                 refresh: bool = Query(False)) -> dict:
+        from .news import get_news as _news
+        try:
+            return _news(data_dir, since=since, offline=offline, refresh=refresh,
+                         config=news_config, cache_dir=news_cache_dir,
+                         inventory=news_inventory)
+        except Exception as exc:  # la UI nunca tiene que ver un 500 acá
+            from .news import empty_digest
+            return empty_digest(since, offline, f"sin novedades ahora: {exc}")
+
+    # ------------------------------------------------------------------- UI
+    def _ui_index() -> Optional[HTMLResponse]:
+        index = os.path.join(ui_dir, "index.html") if ui_dir else ""
+        if not index or not os.path.isfile(index):
+            return None
+        with open(index, encoding="utf-8") as fh:
+            return HTMLResponse(fh.read())
+
     @app.get("/")
-    def root() -> dict:
+    def root():
+        page = _ui_index()
+        if page is not None:
+            return page
         return {"service": SERVICE_NAME, "version": __version__,
                 "docs": "/docs", "health": "/health"}
+
+    @app.get("/index.html")
+    def index_html():
+        page = _ui_index()
+        if page is None:
+            raise HTTPException(status_code=404, detail="la UI no está instalada")
+        return page
+
+    if ui_dir and os.path.isdir(ui_dir):
+        app.mount("/", StaticFiles(directory=ui_dir, html=True), name="ui")
 
     return app
 
@@ -378,24 +527,54 @@ def create_app(data_dir: Optional[str] = None,
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="sifid",
                                  description="Servicio local de siFi-Desk (FastAPI)")
-    ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--port", type=int, default=8765,
+                    help="puerto local (0 = elegir uno libre; default: %(default)s)")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--data-dir", default=DEFAULT_DATA_DIR,
                     help="cola SQLite + corridas (default: %(default)s)")
     ap.add_argument("--panels-root", default=DEFAULT_PANELS_ROOT,
                     help="registro de paneles (default: %(default)s)")
+    ap.add_argument("--ui-dir", default=None,
+                    help="carpeta de la ventana (default: ./ui si existe)")
+    ap.add_argument("--token", default=None,
+                    help="token fijo (default: efímero por proceso, o SIFID_TOKEN)")
+    ap.add_argument("--no-auth", action="store_true",
+                    help="DESACTIVA la autenticación: sólo para tests locales; "
+                         "cualquier proceso de la máquina puede usar la API")
+    ap.add_argument("--news-config", default=None, help="watch.yaml alternativo")
+    ap.add_argument("--news-cache-dir", default=None, help="caché HTTP de watch")
+    ap.add_argument("--news-inventory", default=None, help="inventario de novedades")
     ap.add_argument("--log-level", default="info")
     ap.add_argument("--no-worker", action="store_true",
                     help="no ejecutar corridas (sólo API; para depurar la cola)")
     args = ap.parse_args(argv)
 
+    token = None if args.no_auth else (args.token or os.environ.get("SIFID_TOKEN")
+                                       or secrets.token_urlsafe(24))
+    port = args.port if args.port else _free_port(args.host)
+    ui_dir = args.ui_dir
+    if ui_dir is None and os.path.isdir(DEFAULT_UI_DIR):
+        ui_dir = DEFAULT_UI_DIR
+
     import uvicorn
 
     app = create_app(data_dir=args.data_dir, panels_root=args.panels_root,
-                     start_worker=not args.no_worker)
-    print(f"{SERVICE_NAME} {__version__} en http://{args.host}:{args.port}"
-          f"  (data-dir={os.path.abspath(args.data_dir)})", flush=True)
-    uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level)
+                     start_worker=not args.no_worker, token=token,
+                     require_auth=not args.no_auth, ui_dir=ui_dir,
+                     news_config=args.news_config,
+                     news_cache_dir=args.news_cache_dir,
+                     news_inventory=args.news_inventory)
+
+    # Contrato D4: la ventana descubre URL y token por stdout, no por args fijos.
+    print(f"SIFID_URL=http://{args.host}:{port}", flush=True)
+    if token:
+        print(f"SIFID_TOKEN={token}", flush=True)
+    else:
+        print("SIFID_AUTH=disabled (--no-auth: API sin token, sólo para tests)",
+              flush=True)
+    print(f"{SERVICE_NAME} {__version__}  (data-dir={os.path.abspath(args.data_dir)})",
+          file=sys.stderr, flush=True)
+    uvicorn.run(app, host=args.host, port=port, log_level=args.log_level)
     return 0
 
 

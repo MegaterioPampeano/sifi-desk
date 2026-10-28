@@ -14,8 +14,33 @@ cd core
 python3 -m service.app --port 8765 --data-dir /tmp/sifid
 ```
 
-Opciones: `--host` (default `127.0.0.1`), `--panels-root` (default `~/.sifidesk/panels`),
+Opciones: `--host` (default `127.0.0.1`), `--port` (`0` = libre), `--panels-root`
+(default `~/.sifidesk/panels`), `--ui-dir` (ventana; por defecto `./ui` si existe),
 `--log-level`, `--no-worker` (sólo API, para depurar la cola).
+
+### Auth y descubrimiento (D4)
+
+Al arrancar, `sifid` genera un **token efímero por proceso** e imprime por stdout,
+en este orden:
+
+```
+SIFID_URL=http://127.0.0.1:8765
+SIFID_TOKEN=4gvYPPk...
+```
+
+La ventana (o el sidecar nativo) lee esas dos líneas; no hay puerto ni token fijos.
+Todos los endpoints exigen el header `x-sifi-token`, **excepto** `/health` y los
+archivos estáticos de la UI (`/`, `/index.html`, `/assets/*`), que son públicos para
+poder cargar la pantalla. El token se puede fijar con `--token` o `SIFID_TOKEN`.
+
+`--no-auth` desactiva el token **sólo para tests locales**: es inseguro, cualquier
+proceso de la máquina puede encolar corridas y leer resultados. En ese caso se imprime
+`SIFID_AUTH=disabled` y no se imprime token.
+
+Si `--ui-dir` apunta a la ventana, `sifid` la sirve en `/` (público para poder
+cargar la página). El token **no** se inyecta en el HTML: lo aporta el lanzador
+nativo por `window.__SIFI_CONFIG__` o, en desarrollo, `/?token=…`; sin token la UI
+muestra el banner de 401 en vez de llamar a la API a ciegas.
 También sirve `PYTHONPATH=core python3 -m service.app ...` desde la raíz del repo.
 
 Los binarios se descubren como en la CLI: `SIFI_BOWTIE`, `SIFI_RNAPLFOLD`, `build/` del
@@ -32,6 +57,9 @@ checkout o `PATH`. `SIFI_PANELS_ROOT` / `SIFID_DATA_DIR` también se leen del en
 | GET | `/runs/{id}` | detalle: estado, fase, progreso, timestamps, error, request |
 | POST | `/runs/{id}/cancel` | cancela (ver abajo) |
 | GET | `/runs/{id}/results` | manifest `sifi.results/1` (sólo si `done`) |
+| GET | `/runs/{id}/view` | manifest adaptado a la ventana (candidatos + hits por panel) |
+| GET | `/runs/{id}/report?fmt=pdf\|html` | informe de `core/report` (409 si no terminó) |
+| GET | `/news?since=7d&offline=&refresh=` | digest de `core/watch` cacheado (nunca 500) |
 
 `POST /runs` — cuerpo (todos los campos están en `service/models.py`):
 
@@ -59,6 +87,17 @@ En modo `offtarget` se aplican los mismos defaults que `sifi offtarget` de la CL
 
 La query **se copia** al run dir al encolar: la corrida queda reproducible aunque el
 archivo original cambie o desaparezca.
+
+## Informe y novedades
+
+* `GET /runs/{id}/report` usa `report.render.render()` tal cual (no reimplementa el
+  informe), lo cachea en `runs/<id>/out/report/informe-<id>.<fmt>` y lo devuelve con
+  `Content-Disposition`. Si la corrida no está `done` responde **409**; `fmt` fuera de
+  `pdf|html` es **400**.
+* `GET /news` corre `watch` en un subproceso con timeout (`SIFID_NEWS_TIMEOUT`, 10 s),
+  cachea el digest 15 min (`SIFID_NEWS_TTL`) y **no consume** el inventario. Si la red
+  falla o tarda, reintenta `--offline`, y si tampoco hay caché devuelve **200** con un
+  digest vacío y `warnings` (la UI muestra "sin novedades ahora").
 
 ## Estados
 
@@ -101,6 +140,7 @@ para no matar por PID reciclado) mata el grupo y marca `error: interrupted: ...`
     stderr.log                   stderr del runner (trazas del core)
     out/results.json             manifest sifi.results/1
     out/sirnas.tsv
+    out/report/informe-<run_id>.pdf  (cacheado por /report)
 ```
 
 ## Tests

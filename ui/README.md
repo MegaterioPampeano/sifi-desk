@@ -113,3 +113,36 @@ python3 -m pytest -q tests
 
 Los tests de la maqueta viven en `tests/unit/test_ui_mock.py` y levantan el
 servidor en un puerto efímero.
+
+## Contra el servicio real (`sifid`)
+
+La ventana ya no está atada a `ui/mock/server.py`. Al arrancar:
+
+```bash
+cd core && python3 -m service.app --port 0 --ui-dir ../ui
+# SIFID_URL=http://127.0.0.1:PORT
+# SIFID_TOKEN=…
+```
+
+`sifid` sirve la UI en `http://127.0.0.1:PORT/`, pero no publica el token en el
+HTML (cualquier proceso local podría leerlo). Abrí `http://127.0.0.1:PORT/?token=…`
+en desarrollo; el lanzador nativo inyecta `window.__SIFI_CONFIG__` con el token que
+leyó del stdout. Así quedan disponibles `/report` y `/news`.
+
+Servida desde otro origen (desarrollo):
+
+```
+http://localhost:8000/?api=http://127.0.0.1:PORT&token=…
+```
+
+La elección se guarda en `sessionStorage`. Sin `?api=` ni `__SIFI_CONFIG__` se usa el
+mismo origen (mock o servicio, según quién sirva la página). Un fallo de red/401 se
+muestra como banner claro ("Sin servicio local"), no como error de consola.
+
+* **Generar informe** descarga `GET /runs/{id}/report?fmt=pdf` (blob con
+  `x-sifi-token`).
+* **Novedades** consume `GET /news?since=7d`; si el servicio contesta `warnings`
+  (sin red) se muestran como aviso y, sin ítems, "Sin novedades ahora".
+
+Capturas de la integración real en `ui/docs/screens/real-*.png` (servicio real, dos
+paneles de juguete, corrida multi-panel) y `real-informe.pdf`.

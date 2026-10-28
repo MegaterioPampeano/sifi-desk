@@ -189,3 +189,48 @@ def test_panel_ids_no_se_mezcla_con_db_directa(make_client, toy_db):
                                  "db_name": toy_db[1]})
         assert r.status_code == 400
         assert "panel_ids" in r.json()["detail"]
+
+
+def test_reporte_pdf_y_html(make_client, toy_db):
+    app = make_client()
+    with TestClient(app) as c:
+        run = c.post("/runs", json=_payload(toy_db)).json()
+        rid = run["run_id"]
+        done = H.wait_for(c, rid, {"done", "error"})
+        assert done["status"] == "done", done
+
+        pdf = c.get(f"/runs/{rid}/report?fmt=pdf")
+        assert pdf.status_code == 200, pdf.text
+        assert pdf.headers["content-type"].startswith("application/pdf")
+        assert pdf.content.startswith(b"%PDF")
+        assert "informe-" in pdf.headers.get("content-disposition", "")
+
+        html = c.get(f"/runs/{rid}/report?fmt=html")
+        assert html.status_code == 200
+        assert "text/html" in html.headers["content-type"]
+        assert b"siFi" in html.content or b"sifi" in html.content.lower()
+
+        view = c.get(f"/runs/{rid}/view")
+        assert view.status_code == 200, view.text
+        payload = view.json()
+        assert payload["schema"] == "sifi.ui.results/1"
+        rec = payload["records"][0]
+        assert rec["gene"]["id"] and rec["gene"]["longitud"]
+        cand = rec["candidates"][0]
+        for key in ("id", "seq", "pos", "total", "banda", "gc", "hits"):
+            assert key in cand, key
+
+        assert c.get(f"/runs/{rid}/report?fmt=docx").status_code == 400
+        assert c.get("/runs/no-existe/report").status_code == 404
+
+
+def test_reporte_409_si_no_termino(make_client, toy_db, tmp_path):
+    # runner que se queda colgado: la corrida existe pero no terminó
+    runner = tmp_path / "slow.py"
+    runner.write_text("import time\ntime.sleep(60)\n")
+    app = make_client([sys.executable, str(runner)])
+    with TestClient(app) as c:
+        run = c.post("/runs", json=_payload(toy_db)).json()
+        r = c.get(f"/runs/{run['run_id']}/report?fmt=pdf")
+        assert r.status_code == 409, r.text
+        c.post(f"/runs/{run['run_id']}/cancel")
