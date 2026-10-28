@@ -1,0 +1,11 @@
+# Deps mínimas para compilar los sidecars y correr los tests en CI (no hay
+# pyproject.toml todavía; si se agrega, esto pasa a `pip install -e .[dev]`).
+numpy
+biopython
+pyyaml
+fastapi
+uvicorn
+pydantic>=2
+httpx
+pytest
+pyinstaller>=6.6

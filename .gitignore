@@ -8,3 +8,4 @@ tests/data/*.ebwt
 tests/data/*.bt2
 *.log
 .DS_Store
+dist/
