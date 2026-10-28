@@ -18,8 +18,11 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from sifi import SifiParams, __version__
+from sifi import panels as panelmod
 from sifi.run import run_once
 from sifi.tools import discover
+
+PANELS_ROOT = os.environ.get("SIFI_PANELS_ROOT", os.path.expanduser("~/.sifidesk/panels"))
 
 
 def _add_common(p: argparse.ArgumentParser) -> None:
@@ -92,6 +95,32 @@ def _resumen(m: dict) -> dict:
     return out
 
 
+def cmd_panel(args) -> int:
+    root = args.panels_root
+    if args.action == "add":
+        tools = discover(args.bowtie, args.rnaplfold)
+        meta = panelmod.build_panel(
+            args.panel_id, args.fasta, root, bowtie_build=args.bowtie_build or tools.bowtie_build or "bowtie-build",
+            nombre=args.nombre or "", rol=args.rol, fuente=args.fuente or "",
+            notas=args.notas or "", version=args.version)
+        print(json.dumps(meta, indent=2, ensure_ascii=False))
+        return 0
+    if args.action == "list":
+        rows = panelmod.list_panels(root)
+        if not rows:
+            print(f"(no hay paneles en {root})")
+            return 0
+        for m in rows:
+            print(f"{m['id']:<18} {m['version']:<10} {m['rol']:<10} "
+                  f"{m['n_seqs']:>7} seqs  {m['fingerprint']}  {m['nombre']}")
+        return 0
+    if args.action == "show":
+        meta = panelmod.resolve_panel(root, args.panel_id, args.version)
+        print(json.dumps(meta, indent=2, ensure_ascii=False))
+        return 0
+    return 1
+
+
 def cmd_doctor(_args) -> int:
     try:
         tools = discover(_args.bowtie, _args.rnaplfold)
@@ -120,6 +149,21 @@ def main(argv=None) -> int:
     o = sub.add_parser("offtarget", help="predicción de off-targets de un trigger dado")
     _add_common(o)
     o.set_defaults(func=cmd_offtarget)
+
+    pan = sub.add_parser("panel", help="gestiona paneles (bases de secuencias) indexadas")
+    pan.add_argument("action", choices=["add", "list", "show"])
+    pan.add_argument("--panels-root", default=PANELS_ROOT)
+    pan.add_argument("--panel-id", default=None)
+    pan.add_argument("--fasta", default=None, help="FASTA del panel (action=add)")
+    pan.add_argument("--nombre", default=None)
+    pan.add_argument("--rol", default="no_blanco", choices=list(panelmod.ROLES))
+    pan.add_argument("--fuente", default=None)
+    pan.add_argument("--notas", default=None)
+    pan.add_argument("--version", default=None)
+    pan.add_argument("--bowtie-build", default=None)
+    pan.add_argument("--bowtie", default=None)
+    pan.add_argument("--rnaplfold", default=None)
+    pan.set_defaults(func=cmd_panel)
 
     doc = sub.add_parser("doctor", help="verifica binarios y entorno")
     doc.add_argument("--bowtie", default=None)
