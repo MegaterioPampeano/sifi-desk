@@ -422,16 +422,22 @@
             <button type="button" class="btn primary" id="llm-save">Guardar</button>
           </div>
           <p class="chip-line"><span class="chip" id="llm-chip">leyendo…</span></p>
-          <div class="modal-row two">
-            <label>Modelo
-              <input type="text" id="llm-modelo" value="deepseek-chat" spellcheck="false">
-            </label>
-            <label>Endpoint
-              <input type="text" id="llm-base" value="https://api.deepseek.com" spellcheck="false">
-            </label>
-          </div>
-          <p class="hint">Cualquier proveedor compatible con OpenAI sirve: cambiá el endpoint
-            (por ejemplo <span class="mono">https://openrouter.ai/api</span>) y el nombre del modelo.</p>
+          <details class="adv">
+            <summary>Avanzado: modelo y endpoint</summary>
+            <p class="hint">Sólo si usás otro proveedor. Estos dos campos no hacen nada por sí
+              solos: se aplican cuando guardás la clave. El endpoint es la dirección del servicio
+              y el modelo el nombre exacto que ese servicio espera.</p>
+            <div class="modal-row two">
+              <label>Modelo
+                <input type="text" id="llm-modelo" value="deepseek-chat" spellcheck="false">
+              </label>
+              <label>Endpoint
+                <input type="text" id="llm-base" value="https://api.deepseek.com" spellcheck="false">
+              </label>
+            </div>
+            <p class="hint">Compatible con OpenAI: DeepSeek, OpenRouter
+              (<span class="mono">https://openrouter.ai/api</span>), un vLLM local…</p>
+          </details>
           <div class="modal-actions">
             <button type="button" class="btn ghost" id="llm-test">Probar</button>
             <button type="button" class="btn ghost danger" id="llm-clear">Borrar clave</button>

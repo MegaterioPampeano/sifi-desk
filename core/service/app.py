@@ -551,10 +551,11 @@ def create_app(data_dir: Optional[str] = None,
 
     # ----------------------------------------------------------------- agente
     @app.post("/agent/chat")
-    def agent_chat(body: dict) -> dict:
+    def agent_chat(request: Request, body: dict) -> dict:
         from . import agent as _agent
         return _agent.chat(store, body.get("mensaje") or body.get("message") or "",
-                           body.get("run_id"), body.get("historial"))
+                           body.get("run_id"), body.get("historial"),
+                           base_url=str(request.base_url).rstrip("/"), token=token)
 
     # ------------------------------------------------------------------- UI
     def _ui_index() -> Optional[HTMLResponse]:

@@ -658,3 +658,13 @@ select.input.sm { padding: 5px 8px; font-size: 12px; }
 .modal-estado { font-size: .82rem; color: var(--mid); }
 .modal-estado.err { color: var(--bad); }
 .btn.danger { color: var(--bad); }
+
+/* tarjetas de herramientas del agente */
+.msg .tool.fail { border-color: var(--bad); }
+.msg .tool.fail .tname { color: var(--bad); }
+.msg .tool-head .targs { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg .tool-head .tms { flex: none; color: var(--faint); }
+.msg .tool-body pre { margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; }
+.msg .tool-body summary { cursor: pointer; color: var(--ink-2); }
+.modal details.adv { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+.modal details.adv summary { cursor: pointer; font-size: .82rem; color: var(--mid); }

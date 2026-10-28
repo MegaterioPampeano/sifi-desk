@@ -43,7 +43,7 @@ export function initChat() {
     if (chip) enviar(chip.dataset.q);
   });
 
-  burbuja("agent", "Soy el agente de siFi. Puedo explicar un ranking, revisar off-target o preparar el informe, siempre a partir del manifest de la corrida. Si algo no está en los datos, lo digo.");
+  burbuja("agent", "Soy el agente de siFi. Puedo explicar un ranking, revisar off-target, bajar un transcriptoma, armar un panel o lanzar una corrida. Trabajo en mi carpeta (~/.sifidesk/agente) y cada comando que ejecuto aparece abajo, con su salida. Lo que no hago: tocar el código de la app.");
   sugerencias(INICIAL);
   actualizarContexto();
 }
@@ -123,11 +123,30 @@ function burbuja(quien, texto, escribiendo = false) {
   return div;
 }
 
+// Cada herramienta que usa el agente vuelve como tarjeta: se ve el comando exacto
+// y su salida. Las salidas largas quedan plegadas para no tapar la conversación.
 function tarjetaTool(t) {
   const div = document.createElement("div");
-  div.className = "tool";
-  div.innerHTML = `<div class="tool-head"><span class="tname">${esc(t.nombre)}</span><span>${esc(JSON.stringify(t.args || {}))}</span></div>
-    <div class="tool-body">${esc(t.resultado || "")}</div>`;
+  div.className = `tool${t.ok === false ? " fail" : ""}`;
+  const args = t.args && Object.keys(t.args).length ? JSON.stringify(t.args) : "";
+  const salida = String(t.resultado || "(sin salida)");
+  const ms = t.ms ? ` · ${t.ms} ms` : "";
+  const head = document.createElement("div");
+  head.className = "tool-head";
+  head.innerHTML = `<span class="tname">${esc(t.nombre)}</span><span class="targs">${esc(args)}</span><span class="tms">${esc(ms)}</span>`;
+  div.appendChild(head);
+  if (salida.length > 420) {
+    const det = document.createElement("details");
+    det.innerHTML = `<summary>salida (${salida.length} caracteres)</summary><pre></pre>`;
+    det.querySelector("pre").textContent = salida;
+    det.className = "tool-body";
+    div.appendChild(det);
+  } else {
+    const body = document.createElement("div");
+    body.className = "tool-body";
+    body.textContent = salida;
+    div.appendChild(body);
+  }
   return div;
 }
 
