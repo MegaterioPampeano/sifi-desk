@@ -15,7 +15,7 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
-from gi.repository import Gtk, WebKit2  # noqa: E402
+from gi.repository import Gdk, Gtk, WebKit2  # noqa: E402
 
 TITULO = "siFi Desk"
 
@@ -23,7 +23,11 @@ TITULO = "siFi Desk"
 class Ventana(Gtk.Window):
     def __init__(self, url: str) -> None:
         super().__init__(title=TITULO)
-        self.set_default_size(1280, 840)
+        # en la tele (1360x768) una ventana fija se sale de pantalla: nos adaptamos
+        pantalla = Gdk.Screen.get_default()
+        ancho = int(pantalla.get_width() * 0.96) if pantalla else 1280
+        alto = int(pantalla.get_height() * 0.92) if pantalla else 840
+        self.set_default_size(min(1320, ancho), min(900, alto))
         self.set_position(Gtk.WindowPosition.CENTER)
 
         self.web = WebKit2.WebView()
