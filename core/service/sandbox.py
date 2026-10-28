@@ -30,11 +30,16 @@ RAIZ = os.path.expanduser(os.environ.get("SIFI_AGENT_WORKSPACE", "~/.sifidesk/ag
 TRABAJO = os.path.join(RAIZ, "trabajo")
 DESCARGAS = os.path.join(RAIZ, "descargas")
 
+# Datos del laboratorio: sólo lectura, para que el agente pueda citar lo que ya
+# calculamos (TSA de Dalbulus maidis, anotación contra Drosophila, shortlists).
+DATOS = [os.environ.get("SIFI_DATOS_ROOT", "/mnt/datos/biotech")]
+
 TIMEOUT_DEFECTO = 180
 MAX_SALIDA = 8000
 
 # Rutas del programa instalado: se pueden leer, nunca modificar.
 _PROTEGIDAS = [
+    "/mnt/datos/biotech",
     "/opt/sifi-desk",
     "/mnt/datos/proyectos/sifi-desk",
     os.path.expanduser("~/.openclaw"),
@@ -211,3 +216,137 @@ def inventario() -> Dict[str, Any]:
                 pass
     return {"raiz": RAIZ, "trabajo": listar(TRABAJO), "descargas": listar(DESCARGAS),
             "mb": round(total / 1e6, 1)}
+
+
+# --------------------------------------------------------------------------- #
+# datos del laboratorio (sólo lectura)
+# --------------------------------------------------------------------------- #
+def _datos_root() -> List[str]:
+    return [d for d in DATOS if os.path.isdir(d)]
+
+
+def buscar_gen(termino: str, maximo: int = 40) -> str:
+    """Busca un gen/proteína en lo que ya calculamos y devuelve las líneas con evidencia."""
+    termino = (termino or "").strip()
+    if len(termino) < 2:
+        raise Denegado("buscá con al menos dos caracteres")
+    patron = re.compile(re.escape(termino), re.I)
+    salida: List[str] = []
+    for raiz in _datos_root():
+        out = os.path.join(raiz, "out")
+        if not os.path.isdir(out):
+            continue
+        nombres = sorted(os.listdir(out), key=lambda n: (not n.endswith((".tsv", ".txt")), n))
+        for nombre in nombres:
+            if not nombre.endswith((".tsv", ".txt", ".json")):
+                continue
+            ruta = os.path.join(out, nombre)
+            try:
+                tam = os.path.getsize(ruta)
+                if tam > 40_000_000 or (nombre.endswith(".json") and tam > 2_000_000):
+                    continue
+                with open(ruta, encoding="utf-8", errors="replace") as fh:
+                    for i, linea in enumerate(fh, 1):
+                        if len(linea) > 2000:
+                            continue
+                        if patron.search(linea):
+                            salida.append(f"{nombre}:{i}: {linea.strip()[:300]}")
+                            if len(salida) >= maximo:
+                                break
+            except OSError:
+                continue
+            if len(salida) >= maximo:
+                break
+    if not salida:
+        return (f"sin coincidencias para '{termino}' en {', '.join(_datos_root()) or '(sin datos)'}. "
+                "Probá con el nombre de la proteína de Drosophila, el símbolo del gen "
+                "(por ejemplo BicC) o el ID del transcrito.")
+    return "\n".join(salida)
+
+
+def transcrito(ident: str, contexto: int = 0) -> str:
+    """Devuelve la secuencia de un transcrito del TSA de D. maidis (o un trozo)."""
+    if not re.match(r"^[A-Za-z0-9_.\-]+$", ident or ""):
+        raise Denegado("ID inválido")
+    for raiz in _datos_root():
+        for base, _d, files in os.walk(os.path.join(raiz, "data")):
+            for f in files:
+                if not f.endswith((".fna", ".fa", ".fasta")):
+                    continue
+                ruta = os.path.join(base, f)
+                try:
+                    if os.path.getsize(ruta) > 400_000_000:
+                        continue
+                    with open(ruta, encoding="utf-8", errors="replace") as fh:
+                        cabecera, buf = None, []
+                        for linea in fh:
+                            if linea.startswith(">"):
+                                if cabecera and ident in cabecera:
+                                    seq = "".join(buf)
+                                    if contexto:
+                                        return f"{cabecera.strip()}\n{seq[:contexto]}"
+                                    return f"{cabecera.strip()}\nlen={len(seq)}\n{seq}"
+                                cabecera, buf = linea, []
+                            else:
+                                buf.append(linea.strip())
+                        if cabecera and ident in cabecera:
+                            seq = "".join(buf)
+                            return f"{cabecera.strip()}\nlen={len(seq)}\n{seq}"
+                except OSError:
+                    continue
+    raise Denegado(f"no encontré el transcrito {ident} en los FASTA de {_datos_root()}")
+
+
+# --------------------------------------------------------------------------- #
+# web
+# --------------------------------------------------------------------------- #
+_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
+
+
+def _http_texto(url: str, timeout: int = 30, limite: int = 2_000_000) -> str:
+    req = urllib.request.Request(url, headers={"User-Agent": _UA,
+                                               "Accept-Language": "es,en;q=0.8"})
+    with urllib.request.urlopen(req, timeout=timeout) as res:
+        datos = res.read(limite)
+    return datos.decode("utf-8", "replace")
+
+
+def buscar_web(consulta: str, maximo: int = 6) -> str:
+    """Búsqueda web simple (DuckDuckGo HTML): títulos, URLs y fragmentos."""
+    consulta = (consulta or "").strip()
+    if not consulta:
+        raise Denegado("falta la consulta")
+    url = "https://html.duckduckgo.com/html/?q=" + urllib.parse.quote(consulta)
+    html = _http_texto(url)
+    bloques = re.findall(r'result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>.*?result__snippet"[^>]*>(.*?)</a>',
+                         html, re.S)
+    if not bloques:
+        bloques = [(u, t, "") for u, t in re.findall(
+            r'result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>', html, re.S)]
+    filas: List[str] = []
+    for href, titulo, snip in bloques[:maximo]:
+        if "uddg=" in href:
+            href = urllib.parse.unquote(re.search(r"uddg=([^&]+)", href).group(1))
+        filas.append(f"- {_limpio(titulo)}\n  {href}\n  {_limpio(snip)[:280]}")
+    return "\n".join(filas) or "sin resultados"
+
+
+def abrir_url(url: str, maximo: int = 6000) -> str:
+    """Trae una página y la devuelve como texto plano acotado."""
+    if not re.match(r"^https?://", url or ""):
+        raise Denegado("sólo http(s)")
+    html = _http_texto(url)
+    texto = re.sub(r"(?is)<(script|style|nav|footer|header)[^>]*>.*?</\1>", " ", html)
+    texto = re.sub(r"(?s)<[^>]+>", " ", texto)
+    texto = html_unescape(texto)
+    texto = re.sub(r"[ \t\r\f\v]+", " ", texto)
+    texto = re.sub(r"\n\s*\n+", "\n", texto)
+    return _recortar(texto.strip()[:maximo])
+
+
+def _limpio(fragmento: str) -> str:
+    return re.sub(r"\s+", " ", html_unescape(re.sub(r"(?s)<[^>]+>", "", fragmento))).strip()
+
+
+from html import unescape as html_unescape  # noqa: E402
+import urllib.parse  # noqa: E402

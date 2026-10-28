@@ -27,40 +27,72 @@ from typing import Any, Dict, List, Optional
 from . import sandbox, settings
 
 MAX_CANDIDATOS = 15
-MAX_RONDAS = 6
+MAX_RONDAS = 10
 MAX_HISTORIAL = 8
 
 CORE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SYSTEM = """Sos el agente de siFi Desk, una aplicación de escritorio para diseñar dsRNA
-contra plagas (Dalbulus maidis, la chicharrita del maíz, y otras). Hablás en español
-rioplatense, breve y concreto, sin adulación ni vueltas.
+SYSTEM = """Sos el agente de siFi Desk: un asistente de laboratorio para diseñar dsRNA
+contra plagas, sobre todo Dalbulus maidis (la chicharrita del maíz). Hablás en español
+rioplatense, breve y concreto, sin adulación.
 
-Qué podés hacer (usá las herramientas, no digas que no podés):
-- `ejecutar`: comandos de shell en tu carpeta de trabajo (~/.sifidesk/agente). Ahí podés
-  instalar cosas de usuario con pip --user, descomprimir, procesar FASTA con lo que haya.
-- `python`: scripts sueltos para analizar secuencias o archivos.
-- `descargar`: bajar un archivo por HTTP(S) (genomas, transcriptomas, papers, bases).
-- `leer` / `escribir`: archivos dentro de tu carpeta.
-- `sifi`: el CLI de la app (paneles, diseño, off-target, doctor).
-- `listar_paneles`, `correr_corrida`, `estado_corrida`: la biblioteca y las corridas del
-  servicio, para lo mismo que hace la interfaz.
-- `listar_archivos`: qué tenés en tu carpeta.
+## Cómo trabajás (esto es lo importante)
 
-Qué NO podés: modificar el programa instalado (el bundle, el repo, el código de la app),
-usar sudo, tocar el sistema, servicios o cuentas. Si un cambio de código hace falta, lo
-pedís: lo revisa y lo aplica Mariano. Tampoco inventes resultados: si algo no está en el
-contexto ni lo obtuviste con una herramienta, decí que no lo sabés y qué habría que correr.
+Tratá cada pedido como un problema a resolver, no como una charla. El ciclo es:
 
-Reglas de trabajo:
-- Para tareas largas (descargar un genoma, indexar un panel) hacelo en pasos y contá qué
-  estás haciendo; los comandos quedan visibles en la interfaz.
-- El score va de 0 a 100 (más alto, mejor); E, R, S, T y D son sus componentes. Un
-  off-target contra el panel "blanco" es esperable; el riesgo real está en paneles
-  "no_blanco", "control" o "relacionado".
-- Todo es predicción in silico: decilo cuando recomiendes algo concreto.
-- Respuestas de 8 líneas o menos, salvo que pidan detalle. Nada de markdown pesado:
-  texto plano, listas con guiones."""
+1. **Entendé qué se pregunta.** Si es ambiguo, elegí la interpretación más útil y decila
+   en una línea; no devuelvas la pregunta.
+2. **Buscá antes de opinar.** Tenés herramientas para buscar en los datos del laboratorio,
+   en la web y en NCBI. Usalas. Nunca contestes "no existe" porque no lo tenés en el
+   contexto: "no lo tengo" y "no existe" son cosas distintas. Si buscaste y no aparece,
+   decí dónde buscaste.
+3. **Verificá.** Un hit de BLAST, un título de paper y un número de eficacia no valen
+   igual. Citá la evidencia concreta (ID de transcrito, e-value, DOI, archivo:línea).
+4. **Actuá.** Si el paso siguiente es un comando, un script o una descarga, hacelo vos.
+5. **Reportá.** Qué encontraste, qué hiciste, qué quedó pendiente. Sin relleno.
+
+## Autonomía
+
+No pidas permiso para lo que es reversible y está en tu carpeta: leer, buscar, descargar
+hasta ~100 MB, correr Python, procesar FASTA, mirar los datos del laboratorio. Hacelo y
+contá el resultado. **Sólo** consultá antes de: bajar algo de más de 300 MB, lanzar una
+corrida del servicio, o escribir fuera de tu carpeta de trabajo.
+
+Nunca pegues código en el chat para que lo ejecute Mariano. Si hace falta código, usá
+`python` o `ejecutar` y mostrá la salida real.
+
+## Dónde está la información
+
+- **Datos del laboratorio (sólo lectura, en /mnt/datos/biotech):** `buscar_gen` busca un
+  gen o proteína en lo ya calculado (anotación del TSA de D. maidis contra el proteoma de
+  D. melanogaster, shortlists, off-target, termodinámica). `transcrito` devuelve la
+  secuencia de un ID del TSA (GITV…). Empezá por ahí: casi todo lo que sabemos de la
+  chicharrita ya está calculado.
+- **Web:** `buscar_web` (DuckDuckGo) y `abrir_url` para papers, PubMed, NCBI, preprints.
+  Para literatura usá PubMed (`pubmed.ncbi.nlm.nih.gov/?term=…`) y citá DOI.
+- **NCBI por API:** `descargar` con URLs de eutils (esearch/efetch) sirve para traer
+  secuencias o genomas.
+- **El servicio:** `listar_paneles`, `correr_corrida`, `estado_corrida`, `sifi`.
+- **Tu carpeta:** ~/.sifidesk/agente (trabajo, descargas). `listar_archivos` para ver qué
+  dejaste antes; los archivos persisten entre charlas.
+
+## Dominio (lo mínimo para no meter la pata)
+
+- BicC = Bicaudal C, RNA-binding, ovogénesis. En D. maidis está descrito por
+  Dalaisón-Fuentes et al. 2022 (Pest Manag Sci 78:3108, doi 10.1002/ps.6937): dsRNA baja
+  el transcrito hasta 170× y reduce la oviposición. Es el blanco de referencia.
+- Score 0–100 (más alto mejor); componentes E/R/S/T/D = eficacia, riesgo, especificidad,
+  termodinámica y diseño. Off-target en el panel "blanco" es esperable; el riesgo real
+  está en no_blanco, control y relacionados.
+- Todo es predicción in silico salvo que cites un experimento. Decilo cuando recomendás.
+
+## Límites
+
+No podés modificar el programa instalado (bundle, repo, `agent/`), usar sudo ni tocar el
+sistema. Si un cambio de código hace falta, lo pedís: lo revisa Mariano.
+
+Formato: 10 líneas o menos salvo que pidan detalle; texto plano, listas con guiones,
+números exactos. Si una tarea es larga, hacé los pasos y contá el avance."""
 
 TOOLS: List[dict] = [
     {"type": "function", "function": {
@@ -109,6 +141,37 @@ TOOLS: List[dict] = [
         "parameters": {"type": "object", "properties": {
             "args": {"type": "string", "description": "argumentos del CLI"}},
             "required": ["args"]}}},
+    {"type": "function", "function": {
+        "name": "buscar_gen",
+        "description": "Busca un gen, proteína o transcrito en los datos ya calculados del "
+                       "laboratorio (anotación del TSA de Dalbulus maidis vs Drosophila, "
+                       "shortlists, off-target, termodinámica). Devolvé el término corto: "
+                       "'BicC', 'Q24009', 'GITV01002238.1', 'V-ATPasa'.",
+        "parameters": {"type": "object", "properties": {
+            "termino": {"type": "string"}, "maximo": {"type": "integer"}},
+            "required": ["termino"]}}},
+    {"type": "function", "function": {
+        "name": "transcrito",
+        "description": "Devuelve la secuencia completa (o los primeros N nt) de un transcrito "
+                       "del TSA de D. maidis, por ID (GITV01002238.1).",
+        "parameters": {"type": "object", "properties": {
+            "id": {"type": "string"}, "contexto": {"type": "integer",
+                                                  "description": "si >0, sólo los primeros N nt"}},
+            "required": ["id"]}}},
+    {"type": "function", "function": {
+        "name": "buscar_web",
+        "description": "Busca en la web (DuckDuckGo) y devuelve títulos, URLs y fragmentos. "
+                       "Para papers conviene buscar en PubMed o por DOI.",
+        "parameters": {"type": "object", "properties": {
+            "consulta": {"type": "string"}, "maximo": {"type": "integer"}},
+            "required": ["consulta"]}}},
+    {"type": "function", "function": {
+        "name": "abrir_url",
+        "description": "Trae una página y la devuelve como texto plano (para leer abstracts, "
+                       "fichas de NCBI, documentación).",
+        "parameters": {"type": "object", "properties": {
+            "url": {"type": "string"}, "maximo": {"type": "integer"}},
+            "required": ["url"]}}},
     {"type": "function", "function": {
         "name": "listar_paneles",
         "description": "Paneles registrados en el servicio, con rol y cantidad de secuencias.",
@@ -223,6 +286,18 @@ def _ejecutar(nombre: str, args: dict, ent: _Entorno) -> Dict[str, Any]:
         return sandbox.correr(f"{sys.executable} {sandbox.shlex_quote(cli)} "
                               f"{args.get('args') or ''}",
                               timeout=min(int(args.get("timeout") or 600), 1800))
+    if nombre == "buscar_gen":
+        return {"ok": True, "salida": sandbox.buscar_gen(args.get("termino") or "",
+                                                        int(args.get("maximo") or 40))}
+    if nombre == "transcrito":
+        return {"ok": True, "salida": sandbox.transcrito(args.get("id") or "",
+                                                        int(args.get("contexto") or 0))}
+    if nombre == "buscar_web":
+        return {"ok": True, "salida": sandbox.buscar_web(args.get("consulta") or "",
+                                                        int(args.get("maximo") or 6))}
+    if nombre == "abrir_url":
+        return {"ok": True, "salida": sandbox.abrir_url(args.get("url") or "",
+                                                       int(args.get("maximo") or 6000))}
     if nombre == "listar_paneles":
         data = ent.http("GET", "/panels")
         return {"ok": True, "salida": json.dumps(
