@@ -41,7 +41,7 @@ plt.rcParams.update({
 
 
 def _save(fig, path: str) -> str:
-    fig.savefig(path, dpi=180, bbox_inches="tight", facecolor="white")
+    fig.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return path
 

@@ -10,6 +10,12 @@
     font-size: 6.8pt;
     color: #7c8890;
   }
+  @bottom-center {
+    content: "__TRAZA__";
+    font-family: "DejaVu Sans Mono", monospace;
+    font-size: 6.2pt;
+    color: #8a959c;
+  }
   @bottom-right {
     content: "pág. " counter(page) " / " counter(pages);
     font-family: "DejaVu Sans", sans-serif;
@@ -21,6 +27,7 @@
 @page cover {
   margin: 0;
   @bottom-left { content: none; }
+  @bottom-center { content: none; }
   @bottom-right { content: none; }
 }
 

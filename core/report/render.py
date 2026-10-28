@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Sequence
 
 import weasyprint
@@ -197,6 +198,22 @@ def _totales(runs: Sequence[RunView]) -> dict:
     }
 
 
+def _traza_pie(runs: Sequence[RunView], totales: dict) -> str:
+    """run_id corto + versión + fecha, obligatorio en el pie de cada página."""
+    primero = runs[0]
+    rid = primero.run_id if len(primero.run_id) <= 20 else primero.run_id[:10] + "…"
+    if len(runs) > 1:
+        rid = f"{rid} (+{len(runs) - 1})"
+    versiones = {run.core_version for run in runs}
+    version = runs[0].core_version if len(versiones) == 1 else "varias"
+    fecha = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return f"{rid} · core v{version} · {fecha}"
+
+
+def _css_escape(texto: str) -> str:
+    return texto.replace("\\", "\\\\").replace('"', '\\"')
+
+
 def build_context(runs: Sequence[RunView], figs: Dict[str, str]) -> dict:
     totales = _totales(runs)
     metodo = metodologia_rows(runs)
@@ -208,6 +225,7 @@ def build_context(runs: Sequence[RunView], figs: Dict[str, str]) -> dict:
         "generado": ahora_larga(),
         "report_version": REPORT_VERSION,
         "scoring_version": SCORING_VERSION,
+        "traza_pie": _traza_pie(runs, totales),
         "runs": runs,
         "multirun": len(runs) > 1,
         "totales": totales,
@@ -258,7 +276,7 @@ def render(results_json_list: Any, out_dir: str, fmt: str = "pdf",
 
     env = _env()
     with open(os.path.join(_TEMPLATES, "report.css"), encoding="utf-8") as fh:
-        ctx["css"] = fh.read()
+        ctx["css"] = fh.read().replace("__TRAZA__", _css_escape(ctx["traza_pie"]))
     html = env.get_template("report.html.j2").render(**ctx)
 
     name = filename or f"reporte.{fmt}"
