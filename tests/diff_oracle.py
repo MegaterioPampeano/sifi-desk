@@ -22,24 +22,31 @@ sys.path.insert(0, os.path.join(ROOT, "core"))
 
 from sifi import SifiParams, SifiPipeline, ToolPaths  # noqa: E402
 
-BOWTIE = os.path.join(ROOT, "build/bowtie-1.3.1-linux-x86_64/bowtie")
-RNAPLFOLD = os.path.join(ROOT, "build/vienna/bin/RNAplfold")
+BOWTIE = os.environ.get("SIFI_BOWTIE") or os.path.join(ROOT, "build/bowtie-1.3.1-linux-x86_64/bowtie")
+RNAPLFOLD = os.environ.get("SIFI_RNAPLFOLD") or os.path.join(ROOT, "build/vienna/bin/RNAplfold")
 DATA = os.path.join(ROOT, "tests/data")
 
 
-def run_original(mode: str, mismatches: int, main_targets: str, db: str, query: str) -> list:
-    """Corre el pipeline original en un subproceso y devuelve el JSON."""
+def run_original(mode: str, mismatches: int, main_targets: str, db: str, query: str,
+                 db_location: str | None = None) -> list:
+    """Corre el pipeline original en un subproceso y devuelve el JSON.
+
+    `db_location` es el directorio del índice (debe terminar en separador: el original
+    concatena con `+`). Por defecto, tests/data (comportamiento histórico).
+    """
+    db_location = DATA + os.sep if db_location is None else db_location
     tmp = tempfile.mkdtemp(prefix="oracle_")
-    path = os.pathsep.join([os.path.join(ROOT, "build/bowtie-1.3.1-linux-x86_64"),
-                             os.path.join(ROOT, "build/vienna/bin"), os.environ.get("PATH", "")])
+    bowtie_dir = os.path.dirname(os.path.abspath(BOWTIE))
+    vienna_dir = os.path.dirname(os.path.abspath(RNAPLFOLD))
+    path = os.pathsep.join([bowtie_dir, vienna_dir, os.environ.get("PATH", "")])
     env = dict(os.environ, TMPDIR=tmp, PATH=path, SIFI_MAIN_TARGETS=main_targets,
                PYTHONPATH=os.path.join(ROOT, "tests/oracle"))
     code = f"""
 import sys
 sys.path.insert(0, {os.path.join(ROOT, 'tests/oracle')!r})
 from sifi_pipeline_orig import SifiPipeline
-p = SifiPipeline({db!r}, {DATA + os.sep!r}, {query!r}, 21, {mismatches}, {mode == 'design'}, 8,
-                 {os.path.join(ROOT, 'build/vienna/bin')!r}, {os.path.join(ROOT, 'build/bowtie-1.3.1-linux-x86_64')!r},
+p = SifiPipeline({db!r}, {db_location!r}, {query!r}, 21, {mismatches}, {mode == 'design'}, 8,
+                 {vienna_dir!r}, {bowtie_dir!r},
                  {0 if mode == 'design' else 1},
                  True, {mode == 'design'}, 1.0, 0.1, {tmp!r}, True, False)
 out = p.run_pipeline
@@ -47,22 +54,36 @@ print('RESULT', out[5] if out else 'none')
 """
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env)
     jsons = [os.path.join(tmp, f) for f in os.listdir(tmp) if f.endswith(".json")]
+    err = ""
+    for line in proc.stdout.splitlines():
+        if line.startswith("RESULT"):
+            err = line[len("RESULT"):].strip()
+    if err in ("None", ""):
+        err = ""
+    # El original, cuando no hay hits en design, igual deja un JSON vacío y DESPUÉS
+    # devuelve error: se prioriza el error (igual que el port, que no deja JSON).
+    if err:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise RuntimeError(err)
     if not jsons:
-        raise RuntimeError(f"El original no generó JSON.\nstdout={proc.stdout[-2000:]}\nstderr={proc.stderr[-3000:]}")
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise RuntimeError(f"El original no generó JSON.\n"
+                           f"stdout={proc.stdout[-2000:]}\nstderr={proc.stderr[-3000:]}")
     with open(max(jsons, key=os.path.getsize)) as fh:
         data = json.load(fh)
     shutil.rmtree(tmp, ignore_errors=True)
     return data
 
 
-def run_port(mode: str, mismatches: int, main_targets: str, db: str, query: str) -> list:
+def run_port(mode: str, mismatches: int, main_targets: str, db: str, query: str,
+             db_location: str | None = None) -> list:
     params = SifiParams(
         mode=mode, mismatches=mismatches,
         end_check=(mode == "design"), accessibility_check=(mode == "design"),
     )
     tools = ToolPaths(bowtie=BOWTIE, rnaplfold=RNAPLFOLD)
     work = tempfile.mkdtemp(prefix="port_")
-    pipe = SifiPipeline(db, DATA, query, params, tools, work,
+    pipe = SifiPipeline(db, db_location or DATA, query, params, tools, work,
                         main_targets=[t for t in main_targets.split(",") if t],
                         main_target_mode="explicit")
     results = pipe.run()

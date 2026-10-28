@@ -78,3 +78,25 @@ Resultado al 2026-10-28 (gen sintético de 300 nt + decoy con 3 mismatches):
 
 Pendiente: (a) oráculo con el `.exe` real bajo Wine/Windows para cerrar la duda de
 versiones de librería del binario original; (b) genes reales de *Dalbulus maidis*.
+
+## 6. Paridad aleatoria (barrido, no un caso)
+
+El test de §5 prueba **un** transcrito. `tests/fuzz_parity.py` (target `make paridad`,
+fuera del ciclo corto) barre {secuencia} × {mismatches 0/1/2} × {design, offtarget} sobre
+20 transcritos sintéticos de 300-600 nt con GC planificado (30/45/60/70 %, incluido un
+homopolimérico A/T y uno rico en GC con repeticiones), semilla fija `20261028`.
+
+El índice se arma con tres copias por transcrito (`T` exacta, `A` ~1 mutación/45 nt,
+`B` ~1/22 nt con prefijo): sin copias mutadas el barrido sería trivial, porque una
+secuencia aleatoria no alinea y nunca se ejecutaría el camino de ΔG / off-target.
+
+Resultado al 2026-10-28: **120 corridas pareadas + 1 caso borde, 196.040 filas, 0
+diferencias**. `accessibility_value` con desvío máximo 0.0 (abs y rel): los dos lados
+parsean la misma `_lunp` y redondean igual. Detalle en `tests/paridad/REPORTE.md`
+(+ `resumen.json` para graficar).
+
+Controles para que el verde signifique algo: 11 casos de control negativo del comparador
+y `--mutate-float`, que perturba el port 1e-6 dentro del pipeline real y hace fallar el
+barrido con 102 diferencias (desvío rel. 1.0e-06).
+
+    python3 tests/fuzz_parity.py --seed 20261028 --jobs 4     # ~35 s, 4 procesos
