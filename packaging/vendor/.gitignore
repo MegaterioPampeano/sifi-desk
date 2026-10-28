@@ -1,0 +1,3 @@
+# Binarios externos: se bajan con fetch_binaries.sh, no se versionan.
+*/*
+!*/.gitkeep
