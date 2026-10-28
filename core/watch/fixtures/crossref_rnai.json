@@ -1,0 +1,975 @@
+{
+ "status": "ok",
+ "message-type": "work-list",
+ "message-version": "1.0.0",
+ "message": {
+  "facets": {},
+  "total-results": 8497,
+  "items": [
+   {
+    "published-print": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       8
+      ]
+     ]
+    },
+    "DOI": "10.1127/entomologia/4935",
+    "type": "journal-article",
+    "title": [
+     "RNAi-based control of spider mites via CPAPs: from target screening to nanocarrier-mediated dsRNA delivery"
+    ],
+    "author": [
+     {
+      "given": "Zhixin",
+      "family": "Jiang",
+      "sequence": "first",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Yuxuan",
+      "family": "Ye",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Yuhan",
+      "family": "Yang",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Jiayan",
+      "family": "Duan",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Sihan",
+      "family": "Chen",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Mingyu",
+      "family": "Zhao",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Lin",
+      "family": "He",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Kaiyang",
+      "family": "Feng",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     }
+    ],
+    "container-title": [
+     "Entomologia Generalis"
+    ],
+    "score": 28.626173,
+    "issued": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       8
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.1127/entomologia/4935"
+   },
+   {
+    "abstract": "<jats:title>Abstract</jats:title>\n                  <jats:p>Global agricultural pests continue to threaten crop productivity. Rising chemical resistance, environmental concerns, and the need for a sustainable food supply have increased interest in ecologically oriented pest control strategies. Furthermore, biological control has emerged as an essential component of sustainable agriculture, where habitat diversification and functional biodiversity can increase natural enemies' abundance, activity, and pest suppression. Recent studies indicate that insect microbiomes are essential for nutrition, immunity, growth, ecological adaptations, and interactions between insects and their natural enemies. Recent research suggests that microbial communities could impact host vulnerability to predators, parasitoids, and entomopathogenic fungi (EPF), which might subsequently influence biological control. Despite these progressions, functional biodiversity, natural enemy ecology, and insect microbiome research have historically developed as relatively separate fields of study. This review aims to synthesize current knowledge on ecological interactions among functional biodiversity, insect microbiomes, and biological control in agricultural systems. We examined the impact of habitat diversification on beneficial insects, the composition and functional role of microbiomes in relation to insect fitness, and the influence of microbial communities on the interaction between pests and biological control agents (BCAs). We then examined recent findings that have shown that environmental conditions, shaped by biodiversity, might affect microbiome assembly through mechanisms such as environmental microbial reservoirs, habitat complexity, and landscape‐scale processes. We propose an integrated approach in which functional biodiversity directly influences biological control through ecological interactions and indirectly through the microbiome's effects on pest‐natural enemy interactions. We state that biodiversity, microbiomes, and biological control are interconnected processes that should be regarded as integral components of agroecosystem functionality. Microbiome ecology may offer a new opportunity to enhance sustainable pest suppression and reduce chemical inputs in conservation biological management. Future research should focus on multitrophic, field‐based, and mechanistic investigations that advance microbiome‐informed biological control strategies for resilient and climate‐smart agriculture. © 2026 Society of Chemical Industry.</jats:p>",
+    "DOI": "10.1002/ps.71399",
+    "type": "journal-article",
+    "title": [
+     "Linking functional biodiversity, natural enemies, and insect microbiomes for sustainable biological control of agricultural pests"
+    ],
+    "author": [
+     {
+      "ORCID": "https://orcid.org/0009-0002-9429-8380",
+      "authenticated-orcid": false,
+      "given": "Kamran",
+      "family": "Haider",
+      "sequence": "first",
+      "affiliation": [
+       {
+        "name": "College of Plant Science and Technology Huazhong Agricultural University  Wuhan Hubei China"
+       },
+       {
+        "name": "Department of Entomology University of Agriculture, Faisalabad  Faisalabad Pakistan"
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "ORCID": "https://orcid.org/0000-0002-4189-5627",
+      "authenticated-orcid": false,
+      "given": "Dilawar",
+      "family": "Abbas",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "State Key Laboratory for Biology of Plant Diseases and Insect Pests, Institute of Plant Protection Chinese Academy of Agricultural Sciences  Beijing China"
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "ORCID": "https://orcid.org/0009-0006-3893-7423",
+      "authenticated-orcid": false,
+      "given": "Kamil",
+      "family": "Kabir",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Department of Entomology University of Agriculture, Faisalabad  Faisalabad Pakistan"
+       },
+       {
+        "name": "Sindh Agriculture University  Tandojam Pakistan"
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Muhammad Shamekh",
+      "family": "Ali",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "College of Plant Science and Technology Huazhong Agricultural University  Wuhan Hubei China"
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Ahmed Mahmoud",
+      "family": "Ismail",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Pests and Plant Diseases Unit College of Agricultural and Food Sciences, King Faisal University  Al‐Ahsa Saudi Arabia"
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Muhammad",
+      "family": "Sufian",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "College of Plant Science and Technology Huazhong Agricultural University  Wuhan Hubei China"
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     }
+    ],
+    "published-online": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       22
+      ]
+     ]
+    },
+    "container-title": [
+     "Pest Management Science"
+    ],
+    "score": 20.93742,
+    "issued": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       22
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.1002/ps.71399"
+   },
+   {
+    "abstract": "<jats:p>\n                    <jats:italic>Phytophthora</jats:italic>\n                    late blight remains one of the most devastating diseases of potatoes, posing persistent challenges to global food security and sustainable agriculture. Although RNA interference (RNAi) has emerged as a powerful and highly specific strategy for pathogen control, its practical application against\n                    <jats:italic>P. infestans</jats:italic>\n                    has largely remained at the proof-of-concept stage. This limitation does not result from a lack of suitable gene targets, but rather from challenges associated with the delivery, stability, and uptake of RNA molecules under field conditions. In this review, we outline current advances in RNAi-based approaches for the control of\n                    <jats:italic>P. infestans</jats:italic>\n                    , with a particular focus on spray-induced gene silencing (SIGS) and the potential of nanocarrier-based delivery systems. We summarize proof-of-concept studies targeting essential oomycete genes, discuss the molecular mechanisms underlying double-stranded RNA (dsRNA) uptake in plants and oomycetes, and critically evaluate the strengths and limitations of host-induced gene silencing (HIGS) and SIGS. Unlike recent reviews on nanocarrier-mediated RNA delivery, this manuscript provides a system-specific focus centered on the potato–\n                    <jats:italic>P. infestans</jats:italic>\n                    pathosystem and the unique biological features of the plant–oomycete interface. Central to this review is the argument that future success of RNAi-based disease management will require systems‑level optimization that integrates target selection, dsRNA design, formulation, delivery, and application timing, while emphasizing that delivery remains a major bottleneck for translation to field applications. We highlight how nanocarriers can enhance dsRNA stability, improve adhesion and cellular uptake, and enable controlled release, thereby transforming SIGS into a robust and environmentally sustainable plant protection strategy. Finally, we position RNAi-based nanobiopesticides within the broader European regulatory and sustainability landscape, emphasizing both regulatory feasibility and the importance of public trust and societal acceptance. Together, these insights position nanocarrier-enabled SIGS as a promising cornerstone of next-generation, sustainable late blight management.\n                  </jats:p>",
+    "DOI": "10.3389/fpls.2026.1967410",
+    "type": "journal-article",
+    "title": [
+     "Express delivery: dsRNA applications and RNAi nanocarrier systems to combat potato late blight"
+    ],
+    "author": [
+     {
+      "given": "Ellen",
+      "family": "Vandenbussche",
+      "sequence": "first",
+      "affiliation": [
+       {
+        "name": "Laboratory of Biochemistry and Glycobiology, Department Biotechnology, Ghent University",
+        "place": [
+         "Ghent, Belgium"
+        ]
+       },
+       {
+        "name": "Molecular Entomology Laboratory, Agrozoology, Department of Plants and Crops, Ghent University",
+        "place": [
+         "Ghent, Belgium"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Kristof",
+      "family": "De Schutter",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Molecular Entomology Laboratory, Agrozoology, Department of Plants and Crops, Ghent University",
+        "place": [
+         "Ghent, Belgium"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Els J. M.",
+      "family": "Van Damme",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Laboratory of Biochemistry and Glycobiology, Department Biotechnology, Ghent University",
+        "place": [
+         "Ghent, Belgium"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     }
+    ],
+    "published-online": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       19
+      ]
+     ]
+    },
+    "container-title": [
+     "Frontiers in Plant Science"
+    ],
+    "score": 20.458725,
+    "issued": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       19
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.3389/fpls.2026.1967410"
+   },
+   {
+    "published-print": {
+     "date-parts": [
+      [
+       2026,
+       10
+      ]
+     ]
+    },
+    "DOI": "10.1016/j.watbs.2025.100544",
+    "type": "journal-article",
+    "title": [
+     "Applications and challenges of dsRNA-mediated RNAi in aquaculture"
+    ],
+    "author": [
+     {
+      "given": "Lihui",
+      "family": "Meng",
+      "sequence": "first",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Xintong",
+      "family": "Zhang",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Min",
+      "family": "Zhou",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Yi",
+      "family": "Wu",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     },
+     {
+      "given": "Jinyong",
+      "family": "Zhang",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "role": "author",
+        "vocabulary": "crossref"
+       }
+      ]
+     }
+    ],
+    "container-title": [
+     "Water Biology and Security"
+    ],
+    "score": 20.40427,
+    "issued": {
+     "date-parts": [
+      [
+       2026,
+       10
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.1016/j.watbs.2025.100544"
+   },
+   {
+    "DOI": "10.3389/finsc.2026.2014558",
+    "type": "journal-article",
+    "title": [
+     "Editorial: Spread of pest and diseases of pollinators in a changing world"
+    ],
+    "author": [
+     {
+      "given": "Chuleui",
+      "family": "Jung",
+      "sequence": "first",
+      "affiliation": [
+       {
+        "name": "Department of Plant Medicals, Gyeongkuk National University",
+        "place": [
+         "Andong, Republic of Korea"
+        ]
+       },
+       {
+        "name": "Agricultural Research Institute, Gyeongkuk National University",
+        "place": [
+         "Andong, Republic of Korea"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Terd",
+      "family": "Disayathanoowat",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "SMART BEE SGDs Research Center, Department of Biology, Faculty of Science, Chiang Mai University",
+        "place": [
+         "Chiang Mai, Thailand"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     }
+    ],
+    "published-online": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       22
+      ]
+     ]
+    },
+    "container-title": [
+     "Frontiers in Insect Science"
+    ],
+    "score": 19.155346,
+    "issued": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       22
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.3389/finsc.2026.2014558"
+   },
+   {
+    "abstract": "<jats:title>Abstract</jats:title>\n                  <jats:p>RNA interference (RNAi) technology provides a precise strategy for green control of agricultural pests; however, its low efficiency and high cost still constrain its application. Constructing multitarget fusion dsRNA can significantly improve insecticidal efficiency. Using Tribolium castaneum as a model organism, three highly efficient silencing genes (RpS3, VhaSFD, and EF1) were screened. The results showed that the fusion dsRNA construct dsRVE–3 × 200 bp (200 bp per gene) had the most stable silencing performance, with an LD50 significantly lower than that of the single-gene dsRpS3. Based on the optimized parameters, a fusion dsRNA (named dsNLS) targeting Nilaparvata lugens, Locusta migratoria, and Sogatella furcifera was constructed. dsNLS was significantly superior to naked dsRNA in controlling these three pests, with mortality rates of 69.1%, 71.3%, and 93.4%, respectively, and was safe for nontarget organisms. This study confirms that fusion dsRNA can improve the insecticidal efficiency of RNAi and provides new perspectives for dsRNA design.</jats:p>",
+    "DOI": "10.1021/acs.jafc.6c11603",
+    "type": "journal-article",
+    "title": [
+     "Fusion dsRNA Enhances RNAi Efficiency and Broadens\nthe Insecticidal Spectrum"
+    ],
+    "author": [
+     {
+      "ORCID": "https://orcid.org/0009-0000-9200-8875",
+      "authenticated-orcid": true,
+      "given": "Jiasheng",
+      "family": "Chen",
+      "sequence": "first",
+      "affiliation": [
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       },
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Jiayu",
+      "family": "Tan",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       },
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Yulu",
+      "family": "Chen",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Hebei Normal University of Science & Technology , , ,",
+        "place": [
+         "Qinhuangdao, PR China, 066004"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Nan",
+      "family": "Jiang",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       },
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Yuntian",
+      "family": "Wu",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       },
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Tianhui",
+      "family": "Zhang",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       },
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Xuerou",
+      "family": "Wang",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       },
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "ORCID": "https://orcid.org/0000-0002-5377-6369",
+      "authenticated-orcid": true,
+      "given": "Su",
+      "family": "Liu",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       },
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "ORCID": "https://orcid.org/0000-0001-5327-4011",
+      "authenticated-orcid": true,
+      "given": "Maoye",
+      "family": "Li",
+      "sequence": "additional",
+      "affiliation": [
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       },
+       {
+        "name": "Anhui Agricultural University , , ,",
+        "place": [
+         "Hefei, PR China, 230036"
+        ]
+       }
+      ],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     }
+    ],
+    "published-online": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       28
+      ]
+     ]
+    },
+    "container-title": [
+     "Journal of Agricultural and Food Chemistry"
+    ],
+    "score": 19.11524,
+    "issued": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       28
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.1021/acs.jafc.6c11603"
+   },
+   {
+    "published-print": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       8
+      ]
+     ]
+    },
+    "DOI": "10.1127/entomologia/4381",
+    "type": "journal-article",
+    "title": [
+     "RNA interference (RNAi) for sustainable aphid control"
+    ],
+    "author": [
+     {
+      "given": "Meng-Zhu",
+      "family": "Shi",
+      "sequence": "first",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Jean‐Luc",
+      "family": "Gatti",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Sophie",
+      "family": "Tares",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Nicolas",
+      "family": "Desneux",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Jian-Yu",
+      "family": "Li",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     }
+    ],
+    "container-title": [
+     "Entomologia Generalis"
+    ],
+    "score": 18.942818,
+    "issued": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       8
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.1127/entomologia/4381"
+   },
+   {
+    "published-print": {
+     "date-parts": [
+      [
+       2026,
+       10
+      ]
+     ]
+    },
+    "DOI": "10.1016/j.cois.2026.101539",
+    "type": "journal-article",
+    "title": [
+     "Silencing resistance: RNAi as a next-generation strategy for combating insecticide resistance"
+    ],
+    "author": [
+     {
+      "given": "Karuppannasamy",
+      "family": "Ashok",
+      "sequence": "first",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Ramasamy",
+      "family": "Asokan",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Frédérique",
+      "family": "Hilliou",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     },
+     {
+      "given": "Mukesh Kumar",
+      "family": "Dhillon",
+      "sequence": "additional",
+      "affiliation": [],
+      "role": [
+       {
+        "vocabulary": "crossref",
+        "role": "author"
+       }
+      ]
+     }
+    ],
+    "container-title": [
+     "Current Opinion in Insect Science"
+    ],
+    "score": 18.839207,
+    "issued": {
+     "date-parts": [
+      [
+       2026,
+       10
+      ]
+     ]
+    },
+    "URL": "https://doi.org/10.1016/j.cois.2026.101539"
+   }
+  ],
+  "items-per-page": 8,
+  "query": {
+   "start-index": 0,
+   "search-terms": null
+  }
+ }
+}

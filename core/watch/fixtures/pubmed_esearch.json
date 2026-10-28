@@ -1,0 +1,36 @@
+{
+ "header": {
+  "type": "esearch",
+  "version": "0.3"
+ },
+ "esearchresult": {
+  "count": "52",
+  "retmax": "5",
+  "retstart": "0",
+  "idlist": [
+   "42940970",
+   "42940954",
+   "42940908",
+   "42939453",
+   "42934163"
+  ],
+  "translationset": [
+   {
+    "from": "insect",
+    "to": "\"insect's\"[All Fields] OR \"insecta\"[MeSH Terms] OR \"insecta\"[All Fields] OR \"insect\"[All Fields] OR \"insects\"[All Fields]"
+   },
+   {
+    "from": "pest control",
+    "to": "\"pest control\"[MeSH Terms] OR (\"pest\"[All Fields] AND \"control\"[All Fields]) OR \"pest control\"[All Fields]"
+   }
+  ],
+  "querytranslation": "\"RNAi\"[All Fields] AND (\"insect s\"[All Fields] OR \"insecta\"[MeSH Terms] OR \"insecta\"[All Fields] OR \"insect\"[All Fields] OR \"insects\"[All Fields]) AND (\"pest control\"[MeSH Terms] OR (\"pest\"[All Fields] AND \"control\"[All Fields]) OR \"pest control\"[All Fields]) AND 2026/09/01:2026/10/28[Date - Publication]",
+  "warninglist": {
+   "phrasesignored": [],
+   "quotedphrasesnotfound": [],
+   "outputmessages": [
+    "Unknown sort schema 'date' ignored"
+   ]
+  }
+ }
+}

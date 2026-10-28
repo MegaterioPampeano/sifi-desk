@@ -1,0 +1,64 @@
+# Vigilancia de novedades — configuración del frente M7
+#
+# Cada `query` es un tema que el agente revisa solo. `text` es lo que se manda a la API
+# (Crossref/PubMed); `keywords` es el filtro local (bioRxiv no tiene búsqueda) y también
+# sirve para explicar por qué un paper entró: el digest lista los términos que matchearon.
+# `why` es la frase que ve el usuario en "por qué importa". Si no sabés por qué está ahí,
+# está mal configurada la query.
+
+schema: sifi.watch.config/1
+
+# Contacto para el User-Agent (Crossref/NCBI lo piden). Se puede pisar con
+# SIFI_WATCH_CONTACT en el entorno.
+contact: sifi-desk@omnivac.science
+
+# Ventana por defecto si no se pasa --since.
+window_days: 7
+
+cache:
+  dir: ""            # vacío = $XDG_CACHE_HOME/sifi-desk/watch (o ~/.cache/...)
+  ttl_hours: 24      # una corrida por día; el resto sale de caché
+  timeout_s: 25
+  retries: 3
+  backoff_s: 1.0
+
+inventory:
+  path: ""           # vacío = <cache.dir>/inventory.json
+
+limits:
+  per_source: 25     # máximo de ítems que se piden a cada fuente por query
+  biorxiv_max_pages: 8   # 8 × 100 preprints de la ventana para filtrar localmente
+
+queries:
+  - id: rnai-insect-pest
+    text: "RNAi dsRNA insect pest control"
+    why: "RNAi en insectos plaga: sustrato directo de los diseños de dsRNA del producto."
+    keywords: [RNAi, dsRNA, siRNA, insect, insecto, pest, plaga, Hemiptera]
+
+  - id: dsrna-delivery
+    text: "dsRNA delivery insect nanocarrier"
+    why: "Cómo entra el dsRNA al insecto: define si un candidato in silico es aplicable en campo."
+    keywords: [dsRNA, delivery, nanoparticle, nanocarrier, formulation, insect]
+
+  - id: dalbulus-maidis
+    text: "Dalbulus maidis"
+    why: "Vector de mollicutes del maíz: blanco principal de los paneles del producto."
+    keywords: [Dalbulus maidis, corn leafhopper, chicharrita, maize, corn, mollicute]
+
+  - id: off-target-rnai
+    text: "off-target prediction siRNA"
+    why: "Métodos nuevos de predicción de off-target: candidatos a mejorar el scoring."
+    keywords: [off-target, offtarget, off target, siRNA, prediction, specificity]
+
+  - id: rna-fitopatogenos
+    text: "dsRNA plant pathogen control"
+    why: "RNAi contra fitopatógenos: uso alternativo de los mismos paneles y criterios."
+    keywords: [dsRNA, plant pathogen, fungus, fungal, oomycete, phytopathogen, crop protection]
+
+  # Vigilante "upstream": ¿salió versión nueva de siFi? Si cambia el algoritmo hay que
+  # re-correr la suite dorada antes de promover nada.
+  - id: upstream-sifi
+    text: "siFi upstream releases"
+    why: "Versión nueva del siFi original: revisar changelog y correr la suite dorada."
+    sources: [github]
+    repo: snowformatics/siFi21-
