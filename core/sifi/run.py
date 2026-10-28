@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import List, Optional, Sequence
 
 from . import __version__
+from . import scoring as _scoring
 from .params import SifiParams, ToolPaths
 from .pipeline import SifiPipeline, PipelineResult
 
@@ -49,6 +50,8 @@ def run_once(
     main_targets: Optional[Sequence[str]] = None,
     main_target_mode: str = "auto",
     extra_meta: Optional[dict] = None,
+    panel_roles: Optional[dict] = None,
+    score_params: Optional[dict] = None,
 ) -> dict:
     """Corre el pipeline sobre `query_path` y escribe el manifest + results.json."""
     os.makedirs(out_dir, exist_ok=True)
@@ -81,9 +84,17 @@ def run_once(
         "records": [],
         "extra": extra_meta or {},
     }
+    sp = score_params if score_params is not None else _scoring.load_params()
+    manifest["scoring"] = {
+        "schema": sp.get("schema"),
+        "version": sp.get("version"),
+        "yaml_sha256": _sha256_file(_scoring.DEFAULT_YAML),
+        "pesos": sp.get("pesos"),
+    }
     for res in results:
         rec = res.to_dict()
         rec.pop("artifacts", None)
+        rec["candidates"], rec["scoring"] = _score_record(rec, sp, panel_roles)
         manifest["records"].append(rec)
 
     payload = json.dumps(manifest, sort_keys=True).encode()
@@ -99,6 +110,30 @@ def run_once(
     manifest["tsv_path"] = tsv
 
     shutil.rmtree(work, ignore_errors=True)
+    return manifest
+
+
+def _score_record(rec: dict, sp: dict, roles: Optional[dict]) -> tuple:
+    """Puntúa las filas de un registro. Si no hay filas, devuelve vacío (nunca inventa)."""
+    if not rec.get("sirnas"):
+        return [], {"scoring": {"schema": sp.get("schema"), "version": sp.get("version")},
+                    "n": 0, "por_banda": {}, "mejor": None, "mejor_total": None}
+    scored = _scoring.score_candidates(rec, sp, roles or {})
+    return scored, _scoring.summarize(scored, sp)
+
+
+def rescore_manifest(manifest: dict, score_params: Optional[dict] = None,
+                     panel_roles: Optional[dict] = None) -> dict:
+    """Recalcula el scoring de un manifest existente, sin volver a correr el núcleo."""
+    sp = score_params if score_params is not None else _scoring.load_params()
+    manifest["scoring"] = {
+        "schema": sp.get("schema"),
+        "version": sp.get("version"),
+        "yaml_sha256": _sha256_file(_scoring.DEFAULT_YAML),
+        "pesos": sp.get("pesos"),
+    }
+    for rec in manifest.get("records", []):
+        rec["candidates"], rec["scoring"] = _score_record(rec, sp, panel_roles)
     return manifest
 
 

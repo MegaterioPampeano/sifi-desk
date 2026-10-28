@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from sifi import SifiParams, __version__
 from sifi import panels as panelmod
-from sifi.run import run_once
+from sifi.run import rescore_manifest, run_once
 from sifi.tools import discover
 
 PANELS_ROOT = os.environ.get("SIFI_PANELS_ROOT", os.path.expanduser("~/.sifidesk/panels"))
@@ -82,6 +82,7 @@ def _resumen(m: dict) -> dict:
            "mode": m["params"]["mode"], "mismatches": m["params"]["mismatches"], "records": []}
     for r in m["records"]:
         s = r.get("summary") or {}
+        sc = r.get("scoring") or {}
         out["records"].append({
             "query": r["query_name"],
             "length": r["query_length"],
@@ -91,6 +92,9 @@ def _resumen(m: dict) -> dict:
             "hits": s.get("n_hits"),
             "offtarget_rows": s.get("n_offtarget_rows"),
             "warnings": r.get("warnings", []),
+            "scoring": {"mejor": sc.get("mejor"), "total": sc.get("mejor_total"),
+                        "bandas": sc.get("por_banda")},
+            "top": _top(r.get("candidates") or [], 5),
         })
     return out
 
@@ -119,6 +123,30 @@ def cmd_panel(args) -> int:
         print(json.dumps(meta, indent=2, ensure_ascii=False))
         return 0
     return 1
+
+
+def cmd_score(args) -> int:
+    """Recalcula el scoring de un results.json existente, sin volver a correr siFi."""
+    import json as _json
+    from sifi.scoring import load_params
+    with open(args.results, encoding="utf-8") as fh:
+        manifest = _json.load(fh)
+    sp = load_params(args.weights) if args.weights else None
+    rescore_manifest(manifest, sp)
+    out = args.out or args.results
+    with open(out, "w", encoding="utf-8") as fh:
+        _json.dump(manifest, fh, indent=2, ensure_ascii=False)
+    for rec in manifest["records"]:
+        s = rec.get("scoring") or {}
+        print(f"{rec['query_name']}: n={s.get('n')} mejor={s.get('mejor')} "
+              f"total={s.get('mejor_total')} bandas={s.get('por_banda')}")
+    print(f"→ {out}")
+    return 0
+
+
+def _top(cands, n):
+    return [{"id": c["id"], "pos": c["pos"], "seq": c["seq"], "total": c["total"],
+             "banda": c["banda"]} for c in cands[:n]]
 
 
 def cmd_doctor(_args) -> int:
@@ -164,6 +192,12 @@ def main(argv=None) -> int:
     pan.add_argument("--bowtie", default=None)
     pan.add_argument("--rnaplfold", default=None)
     pan.set_defaults(func=cmd_panel)
+
+    sc = sub.add_parser("score", help="recalcula el scoring de un results.json")
+    sc.add_argument("results", help="ruta del results.json")
+    sc.add_argument("-o", "--out", default=None, help="salida (default: sobreescribe)")
+    sc.add_argument("--weights", default=None, help="score.yaml alternativo")
+    sc.set_defaults(func=cmd_score)
 
     doc = sub.add_parser("doctor", help="verifica binarios y entorno")
     doc.add_argument("--bowtie", default=None)
