@@ -231,6 +231,15 @@ def create_app(data_dir: Optional[str] = None,
         expose_headers=["Content-Disposition"],
     )
 
+    # Biblioteca de papers (edición developer): el router ya se autoprotege y
+    # responde 403 legible en la edición stable, así que se monta siempre.
+    try:
+        from library import api as library_api
+    except ImportError:  # bundle sin el módulo: la app sigue andando
+        library_api = None
+    if library_api is not None:
+        app.include_router(library_api.router)
+
     def _ui_public(path: str) -> bool:
         if not (ui_dir and os.path.isdir(ui_dir)):
             return False
