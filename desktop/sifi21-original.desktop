@@ -2,10 +2,10 @@
 Type=Application
 Version=1.0
 Name=siFi 21 (original)
-Comment=El motor de 2019 con sus dos gráficos (la ventana PyQt4 no corre en Python 3)
-Exec=/mnt/datos/proyectos/sifi-desk/desktop/sifi-original.sh
+Comment=GUI original de 2019 (Python 2.7 + PyQt4 en un entorno propio)
+Exec=/home/mariano/sifi21/sifi21-gui.sh
 Icon=/mnt/datos/proyectos/sifi-desk/desktop/sifi21.svg
 Terminal=false
 Categories=Science;Biology;
-Keywords=siFi;original;referencia;
+Keywords=siFi;original;referencia;pyqt4;
 StartupNotify=true
