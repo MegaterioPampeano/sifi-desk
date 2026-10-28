@@ -287,11 +287,22 @@ def render(results_json_list: Any, out_dir: str, fmt: str = "pdf",
 
     name = filename or f"reporte.{fmt}"
     path = _ensure_suffix(os.path.join(out_dir, name), fmt)
-    if fmt == "html":
-        with open(path, "w", encoding="utf-8") as fh:
-            fh.write(html)
-        return path
-
-    doc = weasyprint.HTML(string=html, base_url=out_dir)
-    doc.write_pdf(path)
+    # Escritura atómica: se genera en un temporal y se renombra al final. Si no,
+    # un segundo pedido puede leer el archivo a medio escribir (y servirlo con un
+    # Content-Length que ya no coincide: PDF corrupto).
+    tmp = f"{path}.{os.getpid()}.tmp"
+    try:
+        if fmt == "html":
+            with open(tmp, "w", encoding="utf-8") as fh:
+                fh.write(html)
+        else:
+            doc = weasyprint.HTML(string=html, base_url=out_dir)
+            doc.write_pdf(tmp)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            try:
+                os.unlink(tmp)
+            except OSError:  # pragma: no cover
+                pass
     return path

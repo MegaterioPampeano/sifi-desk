@@ -234,3 +234,37 @@ def test_reporte_409_si_no_termino(make_client, toy_db, tmp_path):
         r = c.get(f"/runs/{run['run_id']}/report?fmt=pdf")
         assert r.status_code == 409, r.text
         c.post(f"/runs/{run['run_id']}/cancel")
+
+
+def test_informe_simultaneo_no_devuelve_pdf_corrupto(make_client, toy_db):
+    """Dos pedidos del informe a la vez: uno genera, el otro espera; ninguno sirve
+    un archivo a medio escribir (era un fallo real: Content-Length no coincidía)."""
+    import threading
+
+    app = make_client()
+    with TestClient(app) as c:
+        r = c.post("/runs", json={"mode": "design", "query_path": H.QUERY_FA,
+                                 "db_dir": toy_db[0], "db_name": toy_db[1],
+                                 "mismatches": 1})
+        assert r.status_code == 201, r.text
+        rid = r.json()["run_id"]
+        assert H.wait_for(c, rid, {"done", "error"}, timeout=180)["status"] == "done"
+
+        salidas = []
+
+        def pedir():
+            salidas.append(c.get(f"/runs/{rid}/report?fmt=pdf"))
+
+        hilos = [threading.Thread(target=pedir) for _ in range(3)]
+        for h in hilos:
+            h.start()
+        for h in hilos:
+            h.join(120)
+
+        assert len(salidas) == 3
+        for resp in salidas:
+            assert resp.status_code == 200, resp.text
+            assert resp.content[:5] == b"%PDF-", "el informe no empieza con %PDF"
+            assert int(resp.headers["content-length"]) == len(resp.content)
+            # el archivo servido cierra: tiene su marcador EOF
+            assert b"%%EOF" in resp.content[-2048:], "PDF truncado"

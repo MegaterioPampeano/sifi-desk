@@ -22,6 +22,7 @@ import os
 import secrets
 import socket
 import sys
+import threading
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
@@ -37,6 +38,16 @@ from .worker import CORE_DIR, Worker, recover_interrupted
 
 if CORE_DIR not in sys.path:  # el paquete `sifi` vive al lado de `service`
     sys.path.insert(0, CORE_DIR)
+
+_REPORT_LOCKS: dict = {}
+_REPORT_LOCKS_GUARD = threading.Lock()
+
+
+def _report_lock(path: str):
+    """Lock por archivo de informe (varios pedidos simultáneos, una sola generación)."""
+    with _REPORT_LOCKS_GUARD:
+        return _REPORT_LOCKS.setdefault(path, threading.Lock())
+
 
 DEFAULT_DATA_DIR = os.environ.get("SIFID_DATA_DIR", os.path.expanduser("~/.sifidesk/sifid"))
 DEFAULT_PANELS_ROOT = os.environ.get("SIFI_PANELS_ROOT",
@@ -449,12 +460,14 @@ def create_app(data_dir: Optional[str] = None,
         report_dir = os.path.join(os.path.dirname(manifest_path), "report")
         out_path = os.path.join(report_dir, f"informe-{run_id}.{fmt}")
         try:
-            fresh = (os.path.isfile(out_path)
-                     and os.path.getmtime(out_path) >= os.path.getmtime(manifest_path))
-            if not fresh:
-                from report.render import render
-                out_path = render([manifest_path], out_dir=report_dir, fmt=fmt,
-                                  filename=f"informe-{run_id}")
+            # Un solo pedido genera; los demás esperan y sirven el archivo completo.
+            with _report_lock(out_path):
+                fresh = (os.path.isfile(out_path)
+                         and os.path.getmtime(out_path) >= os.path.getmtime(manifest_path))
+                if not fresh:
+                    from report.render import render
+                    out_path = render([manifest_path], out_dir=report_dir, fmt=fmt,
+                                      filename=f"informe-{run_id}")
         except Exception as exc:
             raise HTTPException(status_code=500,
                                 detail=f"no se pudo generar el informe {fmt}: {exc}") from exc
