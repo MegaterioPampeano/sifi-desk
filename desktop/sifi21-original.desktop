@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=siFi 21 (original)
+Comment=El motor de 2019 con sus dos gráficos (la ventana PyQt4 no corre en Python 3)
+Exec=/mnt/datos/proyectos/sifi-desk/desktop/sifi-original.sh
+Icon=/mnt/datos/proyectos/sifi-desk/desktop/sifi21.svg
+Terminal=false
+Categories=Science;Biology;
+Keywords=siFi;original;referencia;
+StartupNotify=true

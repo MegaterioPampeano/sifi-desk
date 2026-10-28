@@ -135,7 +135,7 @@ def get_target_data(f_in, sirna_size):
     for data in query:
         #print data['sirna_name'], data['sirna_position'], data['sirna_position']+21, data['is_efficient'], data['sirna_sequence']
         plot_range = set(range(int(data['sirna_position']), int(data['sirna_position']) + sirna_size))
-        plot_range_l = range(int(data['sirna_position']), int(data['sirna_position']) + sirna_size)
+        plot_range_l = list(range(int(data['sirna_position']), int(data['sirna_position']) + sirna_size))
         if data['is_efficient']:
             if data['sirna_name'] not in ready_sirnas:
                 if data['hit_name'] in efficient_dict.keys():

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=siFi Desk
+Comment=Diseño de dsRNA/siRNA con off-targets multi-panel, informe y agente
+Exec=/mnt/datos/proyectos/sifi-desk/desktop/sifi-desk.sh
+Icon=/mnt/datos/proyectos/sifi-desk/desktop/sifi-desk.svg
+Terminal=false
+Categories=Science;Biology;
+Keywords=dsRNA;siRNA;RNAi;chicharrita;
+StartupNotify=true
