@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "siFi Desk",
+  "version": "0.1.0",
+  "identifier": "science.omnivac.sifidesk",
+  "build": {
+    "frontendDist": "../..",
+    "devUrl": "http://127.0.0.1:8765",
+    "beforeDevCommand": "python3 ../mock/server.py --port 8765"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "siFi Desk — diseño de dsRNA",
+        "width": 1440,
+        "height": 950,
+        "minWidth": 1100,
+        "minHeight": 700,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' http://127.0.0.1:8765 http://127.0.0.1:8791 http://ipc.localhost; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "msi",
+      "nsis"
+    ],
+    "externalBin": [
+      "binaries/sifid"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.ico"
+    ]
+  }
+}

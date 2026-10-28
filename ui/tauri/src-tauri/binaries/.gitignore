@@ -1,0 +1,3 @@
+# El binario se copia acá en el build (sifid / sifid.exe).
+*
+!.gitignore
