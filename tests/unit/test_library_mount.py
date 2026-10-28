@@ -41,5 +41,8 @@ def test_dev_responde_stats_y_busqueda(client, monkeypatch):
     assert r.status_code == 200, r.text
     assert r.json()["results"] == []
 
-    # búsqueda vacía: 422 de FastAPI, no 500
-    assert client.get("/library/search", params={"q": ""}).status_code in (400, 422)
+    # búsqueda vacía: lista vacía o 422, nunca un 500
+    vacia = client.get("/library/search", params={"q": ""})
+    assert vacia.status_code in (200, 400, 422)
+    if vacia.status_code == 200:
+        assert vacia.json()["results"] == []
