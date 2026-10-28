@@ -1,0 +1,191 @@
+{
+ "status": "ok",
+ "message": {
+  "DOI": "10.1242/jeb.251768",
+  "title": [
+   "Functional interplay between retinoid X receptor and juvenile hormone analog regulates parthenogenetic offspring production in\n                    <i>Artemia</i>"
+  ],
+  "author": [
+   {
+    "given": "Jialong",
+    "family": "Xie",
+    "sequence": "first",
+    "affiliation": [
+     {
+      "name": "1 College of Marine and Environmental Sciences, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   },
+   {
+    "given": "Wei",
+    "family": "Liu",
+    "sequence": "additional",
+    "affiliation": [
+     {
+      "name": "1 College of Marine and Environmental Sciences, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   },
+   {
+    "given": "Zhiteng",
+    "family": "Li",
+    "sequence": "additional",
+    "affiliation": [
+     {
+      "name": "1 College of Marine and Environmental Sciences, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   },
+   {
+    "given": "M. D.",
+    "family": "Rayhanali",
+    "sequence": "additional",
+    "affiliation": [
+     {
+      "name": "1 College of Marine and Environmental Sciences, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   },
+   {
+    "ORCID": "https://orcid.org/0009-0006-0456-3558",
+    "authenticated-orcid": false,
+    "given": "Yingchao",
+    "family": "Ma",
+    "sequence": "additional",
+    "affiliation": [
+     {
+      "name": "1 College of Marine and Environmental Sciences, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     },
+     {
+      "name": "2 Key Laboratory of Marine Resource Chemistry and Food Technology, Ministry of Education, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     },
+     {
+      "name": "3 Tianjin Key Laboratory of Marine Resources and Chemistry, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   },
+   {
+    "given": "Liying",
+    "family": "Sui",
+    "sequence": "additional",
+    "affiliation": [
+     {
+      "name": "1 College of Marine and Environmental Sciences, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     },
+     {
+      "name": "2 Key Laboratory of Marine Resource Chemistry and Food Technology, Ministry of Education, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     },
+     {
+      "name": "3 Tianjin Key Laboratory of Marine Resources and Chemistry, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   },
+   {
+    "ORCID": "https://orcid.org/0000-0002-9953-9481",
+    "authenticated-orcid": false,
+    "given": "Hu",
+    "family": "Duan",
+    "sequence": "additional",
+    "affiliation": [
+     {
+      "name": "1 College of Marine and Environmental Sciences, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     },
+     {
+      "name": "2 Key Laboratory of Marine Resource Chemistry and Food Technology, Ministry of Education, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     },
+     {
+      "name": "3 Tianjin Key Laboratory of Marine Resources and Chemistry, Tianjin University of Science and Technology, No. 29, 13th Avenue, Tianjin 300457, People's Republic of China"
+     }
+    ],
+    "role": [
+     {
+      "vocabulary": "crossref",
+      "role": "author"
+     }
+    ]
+   }
+  ],
+  "container-title": [
+   "Journal of Experimental Biology"
+  ],
+  "issued": {
+   "date-parts": [
+    [
+     2026,
+     10,
+     26
+    ]
+   ]
+  },
+  "abstract": "<jats:p>The juvenile hormone (JH) signaling pathway is crucial for reproductive development, molting, and metamorphosis in model insects. However, the molecular mechanisms of key components in the JH signaling pathway remain poorly understood in crustaceans. This study elucidates the function of RXR gene and JH analogs (JHAs) in the reproductive development of the brine shrimp Artemia parthenogenetica (A. parthenogenetica). Using an ELISA kit, we detected JH-like immunoreactivity in A. parthenogenetica that peaks during stage IV of ovarian development, coinciding with maximal expression of CYP15. The RXR homolog in A. parthenogenetica (Ar-RXR) features conserved DNA- and ligand-binding domains and shares close phylogenetic affinity with Daphnia magna (D. magna). Its expression profile aligns with JHA fluctuations, suggesting coordinated regulation of oogenesis. RNAi-mediated knockdown of Ar-RXR significantly suppressed RXR expression (P &amp;lt; 0.01) and downregulated JH pathway genes (Ar-Met, Ar-Kr-h1, Ar-Vg), accompanied by abnormal cytological characteristics: concentric membranes and lipid droplet accumulation in fat body cells, reduced yolk granules in embryos, and decreased offspring formation. Conversely, JH Ⅲ injection upregulated ovarian Ar-RXR and other JH pathway genes (except Ar-Kr-h1), yielding plump, well-arranged eggs. Co-injection of JH Ⅲ and dsRXR partially rescued JH pathway gene expression and reduced the number of egg abnormalities. Our findings demonstrate that a JH-like signal and Ar-RXR functionally interact to regulate reproductive development in A. parthenogenetica, providing mechanistic insights into JH signaling and advancing understanding of arthropod reproductive evolution.</jats:p>",
+  "license": [
+   {
+    "start": {
+     "date-parts": [
+      [
+       2026,
+       10,
+       26
+      ]
+     ],
+     "date-time": "2026-10-26T00:00:00Z",
+     "timestamp": 1792972800000
+    },
+    "content-version": "am",
+    "delay-in-days": 0,
+    "URL": "http://www.biologists.com/user-licence-1-1/"
+   }
+  ],
+  "link": [
+   {
+    "URL": "https://journals.biologists.com/jeb/article-pdf/doi/10.1242/jeb.251768/3722760/jeb251768.pdf",
+    "content-type": "application/pdf",
+    "content-version": "am",
+    "intended-application": "syndication"
+   },
+   {
+    "URL": "https://journals.biologists.com/jeb/article-pdf/doi/10.1242/jeb.251768/3722760/jeb251768.pdf",
+    "content-type": "unspecified",
+    "content-version": "vor",
+    "intended-application": "similarity-checking"
+   }
+  ],
+  "publisher": "The Company of Biologists"
+ }
+}
