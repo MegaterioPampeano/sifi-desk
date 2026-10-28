@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="es" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>siFi Desk — diseño de dsRNA</title>
+  <meta name="description" content="Diseño de dsRNA contra Dalbulus maidis: paneles, candidatos y off-target.">
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">si</span>
+      <span class="brand-text">
+        <strong>siFi Desk</strong>
+        <small>diseño de dsRNA · Omnivac Science</small>
+      </span>
+    </div>
+
+    <nav class="topnav" aria-label="Secciones">
+      <button type="button" class="navlink is-active" data-nav="wizard">Asistente</button>
+      <button type="button" class="navlink" data-nav="runs">Corridas</button>
+      <button type="button" class="navlink" data-nav="results" id="nav-results" disabled>Resultados</button>
+    </nav>
+
+    <div class="topright">
+      <span class="svc" id="svc" title="Estado del servicio local">
+        <i class="dot" id="svc-dot"></i>
+        <span id="svc-text">conectando…</span>
+      </span>
+      <div class="theme" role="group" aria-label="Tema">
+        <button type="button" data-theme-set="auto" class="is-active" title="Tema automático">Auto</button>
+        <button type="button" data-theme-set="light" title="Tema claro">Claro</button>
+        <button type="button" data-theme-set="dark" title="Tema oscuro">Oscuro</button>
+      </div>
+      <button type="button" class="iconbtn" id="chat-toggle" aria-label="Mostrar u ocultar el agente" title="Agente">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="main" id="main">
+
+    <!-- ===================== ASISTENTE ===================== -->
+    <section class="view" id="view-wizard">
+      <div class="view-head">
+        <div>
+          <h1>Nueva corrida</h1>
+          <p class="lede">Cuatro pasos: paneles, secuencia, parámetros y ejecución. La interfaz no calcula nada: muestra lo que devuelve el servicio.</p>
+        </div>
+      </div>
+
+      <ol class="steps" id="steps">
+        <li class="step is-active" data-step="1"><span class="step-n">1</span><span class="step-t">Paneles</span></li>
+        <li class="step" data-step="2"><span class="step-n">2</span><span class="step-t">Secuencia</span></li>
+        <li class="step" data-step="3"><span class="step-n">3</span><span class="step-t">Parámetros</span></li>
+        <li class="step" data-step="4"><span class="step-n">4</span><span class="step-t">Correr</span></li>
+      </ol>
+
+      <div class="wizard-body">
+
+        <!-- Paso 1 -->
+        <section class="panel-step" data-pane="1">
+          <div class="section-head">
+            <h2>Paneles de referencia</h2>
+            <div class="section-actions">
+              <button type="button" class="linkbtn" id="panels-min">Mínimo recomendado</button>
+              <button type="button" class="linkbtn" id="panels-all">Todos</button>
+              <button type="button" class="linkbtn" id="panels-none">Ninguno</button>
+            </div>
+          </div>
+          <p class="hint">Cada panel declara su rol. El rol cambia el peso del riesgo: pegarle a un no-blanco o a un control penaliza; hacerlo contra el organismo blanco es el objetivo.</p>
+          <div class="panel-grid" id="panel-grid" aria-live="polite"></div>
+          <div class="step-foot">
+            <span class="foot-note" id="panels-note">—</span>
+            <button type="button" class="btn primary" data-go="2" disabled id="btn-step1">Continuar</button>
+          </div>
+        </section>
+
+        <!-- Paso 2 -->
+        <section class="panel-step hidden" data-pane="2">
+          <div class="section-head">
+            <h2>Secuencia de entrada</h2>
+            <div class="section-actions">
+              <button type="button" class="linkbtn" id="load-demo">Cargar ejemplo</button>
+              <button type="button" class="linkbtn" id="clear-seq">Limpiar</button>
+            </div>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Origen de la secuencia">
+            <button type="button" class="tab is-active" role="tab" data-origin="paste" aria-selected="true">Pegar FASTA o secuencia</button>
+            <button type="button" class="tab" role="tab" data-origin="file" aria-selected="false">Archivo FASTA</button>
+          </div>
+
+          <div class="origin" data-origin-pane="paste">
+            <label class="sr-only" for="seq-input">Secuencia o FASTA</label>
+            <textarea id="seq-input" class="mono-input" spellcheck="false" autocomplete="off"
+              placeholder=">Dm_COPI&#10;ATGCGTACGTTAGCCGATCGATCGGCTAACGTTAGCTAGCTAGCATCGATCGATTACG…"></textarea>
+          </div>
+          <div class="origin hidden" data-origin-pane="file">
+            <label class="dropzone" id="dropzone" for="seq-file">
+              <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+              <strong>Elegí un archivo .fa / .fasta</strong>
+              <span>Se lee en el navegador: el contenido se envía como texto al servicio.</span>
+              <input type="file" id="seq-file" accept=".fa,.fasta,.fna,.txt" hidden>
+            </label>
+            <p class="file-name" id="file-name"></p>
+          </div>
+
+          <div class="seq-readout" id="seq-readout" aria-live="polite">
+            <div class="readout-empty">Todavía no hay secuencia.</div>
+          </div>
+
+          <div class="step-foot">
+            <button type="button" class="btn ghost" data-go="1">Atrás</button>
+            <span class="foot-note">Se procesa cada registro por separado; el ranking se muestra por gen.</span>
+            <button type="button" class="btn primary" data-go="3" id="btn-step2" disabled>Continuar</button>
+          </div>
+        </section>
+
+        <!-- Paso 3 -->
+        <section class="panel-step hidden" data-pane="3">
+          <div class="section-head">
+            <h2>Parámetros del diseño</h2>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label for="p-size">Largo del siRNA</label>
+              <select id="p-size">
+                <option value="19">19 nt</option>
+                <option value="21" selected>21 nt (recomendado)</option>
+                <option value="22">22 nt</option>
+                <option value="23">23 nt</option>
+              </select>
+              <p class="field-note">21 nt es el estándar de Dicer en hemípteros; cambiarlo mueve todo el ranking.</p>
+            </div>
+            <div class="field">
+              <label for="p-mismatches">Mismatches permitidos (bowtie -v)</label>
+              <select id="p-mismatches">
+                <option value="0">0 — sólo hits perfectos</option>
+                <option value="1">1</option>
+                <option value="2" selected>2 (recomendado)</option>
+                <option value="3">3</option>
+              </select>
+              <p class="field-note">Con 2 se detectan off-target plausibles sin llenar la tabla de ruido.</p>
+            </div>
+            <div class="field">
+              <label for="p-mode">Modo</label>
+              <select id="p-mode">
+                <option value="design" selected>design — diseñar siRNAs nuevos</option>
+                <option value="offtarget">offtarget — barrido de una secuencia existente</option>
+              </select>
+              <p class="field-note">En <span class="mono">offtarget</span> no se buscan siRNAs nuevos: se evalúan los hits de la secuencia dada.</p>
+            </div>
+            <div class="field">
+              <label for="p-main">Main target (opcional)</label>
+              <input type="text" id="p-main" placeholder="Dm_COPI" autocomplete="off" spellcheck="false">
+              <p class="field-note">ID del registro que debe considerarse el blanco principal al leer los hits.</p>
+            </div>
+            <div class="field">
+              <label for="p-window">Ventana RNAplfold</label>
+              <input type="text" id="p-window" value="W 80 · span 40 · T 37,0 °C" readonly class="ro">
+              <p class="field-note">Fija en el producto: cambiarla invalida la comparación con corridas anteriores.</p>
+            </div>
+            <div class="field">
+              <label>Paneles de esta corrida</label>
+              <div class="chips" id="params-panels"></div>
+            </div>
+          </div>
+          <div class="step-foot">
+            <button type="button" class="btn ghost" data-go="2">Atrás</button>
+            <span class="foot-note" id="params-note">—</span>
+            <button type="button" class="btn primary" data-go="4">Revisar</button>
+          </div>
+        </section>
+
+        <!-- Paso 4 -->
+        <section class="panel-step hidden" data-pane="4">
+          <div class="section-head">
+            <h2>Revisión y ejecución</h2>
+          </div>
+          <div class="review" id="review"></div>
+          <div class="notice">
+            <strong>Antes de correr.</strong>
+            <span>La corrida usa los binarios locales (bowtie 1.3.1, ViennaRNA 2.7.2) y no sale a internet. Los resultados son predicción in silico y requieren validación en bioensayo.</span>
+          </div>
+          <div class="step-foot">
+            <button type="button" class="btn ghost" data-go="3">Atrás</button>
+            <span class="foot-note">Podés cancelar la corrida en cualquier momento; no quedan artefactos parciales.</span>
+            <button type="button" class="btn primary" id="btn-run">Iniciar corrida</button>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ===================== PROGRESO ===================== -->
+    <section class="view hidden" id="view-progress">
+      <div class="view-head">
+        <div>
+          <p class="eyebrow">Corrida en curso</p>
+          <h1 id="prog-title">Preparando…</h1>
+          <p class="lede" id="prog-sub">Consultando el estado del servicio.</p>
+        </div>
+        <div class="view-actions">
+          <span class="runid">run <span class="mono" id="prog-id">—</span></span>
+          <button type="button" class="btn danger ghost" id="btn-cancel">Cancelar corrida</button>
+        </div>
+      </div>
+
+      <div class="card progress-card">
+        <div class="progress-top">
+          <span class="status-pill" id="prog-status">en cola</span>
+          <span class="mono" id="prog-pct">0 %</span>
+        </div>
+        <div class="bar big" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="prog-bar">
+          <span style="width:0%"></span>
+        </div>
+        <div class="progress-meta">
+          <div><span class="k">Etapa</span><span class="v" id="prog-stage">—</span></div>
+          <div><span class="k">Avance</span><span class="v mono" id="prog-count">0 / 0</span></div>
+          <div><span class="k">Transcurrido</span><span class="v mono" id="prog-elapsed">00:00</span></div>
+          <div><span class="k">Paneles</span><span class="v" id="prog-panels">—</span></div>
+        </div>
+      </div>
+
+      <div class="card log-card">
+        <div class="card-head">
+          <h2>Registro</h2>
+          <span class="muted small">se actualiza con cada consulta a GET /runs/{id}</span>
+        </div>
+        <pre class="log" id="prog-log" aria-live="polite"></pre>
+      </div>
+
+      <div class="progress-hint muted small">Mientras corre podés usar el agente de la derecha; los resultados aparecen solos al terminar.</div>
+    </section>
+
+    <!-- ===================== RESULTADOS ===================== -->
+    <section class="view hidden" id="view-results">
+      <div class="view-head">
+        <div>
+          <p class="eyebrow">Resultados</p>
+          <h1 id="res-title">Candidatos</h1>
+          <p class="lede" id="res-sub">—</p>
+        </div>
+        <div class="view-actions">
+          <span class="runid">run <span class="mono" id="res-id">—</span></span>
+          <button type="button" class="btn ghost" id="btn-export" disabled title="El frente de reportes todavía no expone POST /reports">Exportar PDF</button>
+          <button type="button" class="btn primary" id="btn-new">Nueva corrida</button>
+        </div>
+      </div>
+
+      <div class="tiles" id="res-tiles"></div>
+
+      <div class="card gene-card">
+        <div class="card-head">
+          <h2>Mapa del gen</h2>
+          <span class="muted small" id="map-caption">posición de cada candidato sobre el transcrito</span>
+        </div>
+        <div class="gene-tabs" id="gene-tabs"></div>
+        <div class="gene-map" id="gene-map"></div>
+        <div class="gene-legend muted small">
+          <span><i class="tick ok"></i> recomendado</span>
+          <span><i class="tick mid"></i> revisar</span>
+          <span><i class="tick low"></i> bajo / descartar</span>
+          <span class="map-note" id="map-note"></span>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <div class="table-tools">
+          <div class="search">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.6"/></svg>
+            <input type="search" id="q" placeholder="Buscar candidato, secuencia o hit…" autocomplete="off">
+          </div>
+          <div class="filters" id="band-filters" role="group" aria-label="Filtrar por banda">
+            <button type="button" class="chip is-active" data-band="all">Todas</button>
+            <button type="button" class="chip" data-band="recomendado">Recomendado</button>
+            <button type="button" class="chip" data-band="revisar">Revisar</button>
+            <button type="button" class="chip" data-band="bajo">Bajo</button>
+            <button type="button" class="chip" data-band="descartar">Descartar</button>
+          </div>
+          <span class="muted small" id="table-count">—</span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="grid" id="cand-table">
+            <thead>
+              <tr>
+                <th class="num" data-sort="rank" scope="col">#</th>
+                <th data-sort="id" scope="col">Candidato</th>
+                <th data-sort="query" scope="col">Gen</th>
+                <th class="num" data-sort="pos" scope="col">Pos.</th>
+                <th class="num" data-sort="total" scope="col" aria-sort="descending">Score</th>
+                <th data-sort="banda" scope="col">Banda</th>
+                <th class="axis" data-sort="E" scope="col" title="Eficiencia (40)">E</th>
+                <th class="axis" data-sort="R" scope="col" title="Riesgo (15)">R</th>
+                <th class="axis" data-sort="S" scope="col" title="Especificidad (15)">S</th>
+                <th class="axis" data-sort="T" scope="col" title="Consenso siFi (15)">T</th>
+                <th class="axis" data-sort="D" scope="col" title="Diseño (15)">D</th>
+                <th class="num" data-sort="n_hits" scope="col">Hits</th>
+                <th class="num" data-sort="dg" scope="col">ΔG</th>
+              </tr>
+            </thead>
+            <tbody id="cand-body"></tbody>
+          </table>
+        </div>
+        <div class="table-foot muted small" id="table-foot">—</div>
+      </div>
+    </section>
+
+    <!-- ===================== CORRIDAS ===================== -->
+    <section class="view hidden" id="view-runs">
+      <div class="view-head">
+        <div>
+          <p class="eyebrow">Historial</p>
+          <h1>Corridas</h1>
+          <p class="lede">Estado de los trabajos del servicio local. La cola es persistente: una corrida que se corta queda marcada y se puede relanzar.</p>
+        </div>
+        <div class="view-actions">
+          <button type="button" class="btn ghost" id="btn-refresh-runs">Actualizar</button>
+          <button type="button" class="btn primary" id="btn-new2">Nueva corrida</button>
+        </div>
+      </div>
+      <div class="runs-list" id="runs-list"></div>
+    </section>
+
+  </main>
+
+  <!-- ===================== AGENTE ===================== -->
+  <aside class="chat" id="chat" aria-label="Agente siFi">
+    <div class="chat-head">
+      <div class="agent-id">
+        <span class="agent-mark" aria-hidden="true">si</span>
+        <span>
+          <strong>Agente siFi</strong>
+          <small id="chat-context">sin corrida activa</small>
+        </span>
+      </div>
+      <span class="status-pill ghosted" id="chat-status">local</span>
+    </div>
+    <div class="chat-log" id="chat-log" aria-live="polite"></div>
+    <div class="chat-suggest" id="chat-suggest"></div>
+    <form class="chat-form" id="chat-form">
+      <label class="sr-only" for="chat-input">Mensaje para el agente</label>
+      <textarea id="chat-input" rows="2" placeholder="Preguntá por el ranking, los off-target o el informe…"></textarea>
+      <button type="submit" class="btn primary" id="chat-send" aria-label="Enviar">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 12 20 4l-4 16-4-6-8-2Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
+    <p class="chat-foot">Las respuestas salen del manifest de la corrida. No reemplazan el criterio experimental.</p>
+  </aside>
+
+  <!-- ===================== DETALLE ===================== -->
+  <div class="drawer-scrim hidden" id="drawer-scrim"></div>
+  <aside class="drawer hidden" id="detail" aria-label="Detalle del candidato" role="dialog" aria-modal="true">
+    <div class="drawer-head">
+      <div>
+        <p class="eyebrow">Detalle</p>
+        <h2 id="d-title">—</h2>
+      </div>
+      <button type="button" class="iconbtn" id="d-close" aria-label="Cerrar detalle">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.7"/></svg>
+      </button>
+    </div>
+    <div class="drawer-body" id="d-body"></div>
+    <div class="drawer-foot">
+      <button type="button" class="btn ghost" id="d-copy">Copiar secuencia</button>
+      <button type="button" class="btn ghost" id="d-focus">Ver en el mapa</button>
+    </div>
+  </aside>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+</div>
+
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
