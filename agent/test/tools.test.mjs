@@ -6,11 +6,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import http from 'node:http'
-import { Context } from 'cordis'
 
 import { SifidClient } from '../src/client.mjs'
 import { TOOLS, callTool } from '../src/tools.mjs'
-import * as sifiTools from '../plugins/sifi-tools/index.mjs'
+import { registerDshTools, toDshParameters, toDshTool } from '../src/dsh-tools.mjs'
 
 // ------------------------------------------------------------- sifid falso
 
@@ -277,16 +276,57 @@ test('error accionable cuando sifid no está corriendo', async () => {
   )
 })
 
-test('el plugin de cordis registra las 7 tools y publica ctx.sifiTools', async () => {
-  const app = new Context()
-  await app.plugin(sifiTools, { baseUrl })
-  const registry = app.sifiTools
-  assert.ok(registry, 'no publicó ctx.sifiTools')
-  const names = registry.list().map((t) => t.name).sort()
-  assert.equal(names.length, 7)
-  const panels = await registry.call('sifi_panels', {})
-  assert.equal(panels.panels.length, 2)
-  assert.equal(typeof registry.get('sifi_design').render, 'function')
-  assert.equal(app.sifiClient.baseUrl, baseUrl)
-  await app.registry.delete(sifiTools)
+test('el puente a dsh registra las 7 tools con la API real de @deepseek-ai/dsh-tools', async () => {
+  // `defineTool` de dsh valida el author-schema y compila; acá usamos un doble
+  // que devuelve las opciones para inspeccionarlas sin instalar el harness.
+  const defineTool = (options) => ({ ...options })
+  const registered = new Map()
+  const fakeCtx = {
+    tools: {
+      register(def) {
+        if (registered.has(def.name)) throw new Error(`duplicada ${def.name}`)
+        registered.set(def.name, def)
+        return () => registered.delete(def.name)
+      },
+    },
+  }
+
+  const disposers = registerDshTools(fakeCtx, TOOLS, { defineTool, client })
+  assert.equal(disposers.length, 7)
+  assert.deepEqual([...registered.keys()].sort(), TOOLS.map((t) => t.name).sort())
+
+  const design = registered.get('sifi_design')
+  assert.equal(design.parameters.sirna_size.type, 'integer', 'integer se declara como type integer')
+  assert.equal(design.parameters.sirna_size.min, undefined, 'min/max no son author-schema: los valida callTool')
+  assert.equal(design.parameters.query_path.required, true)
+  assert.deepEqual(design.output.schema, { type: 'json' })
+
+  // execute delega en la tool neutral (pega contra el sifid falso)
+  const result = await design.execute({ query_path: 'q.fa', wait: false })
+  assert.ok(result.run_id)
+  assert.equal(result.status, 'queued')
+
+  // render proyecta a ContentBlock de texto
+  const blocks = design.output.render({}, { run_id: 'r1', status: 'done' })
+  assert.equal(blocks[0].type, 'text')
+  assert.match(blocks[0].text, /r1/)
+
+  // el disposer desregistra
+  for (const d of disposers) d()
+  assert.equal(registered.size, 0)
+})
+
+test('toDshParameters descarta anotaciones que el author-schema de dsh rechaza', () => {
+  const out = toDshParameters({
+    n: { type: 'number', description: 'x', integer: true, min: 1, max: 5, default: 3 },
+    ids: { type: 'array', required: true, minItems: 1, items: { type: 'string' } },
+    mode: { type: 'string', enum: ['a', 'b'] },
+  })
+  assert.deepEqual(out.n, { type: 'integer', description: 'x', default: 3 })
+  assert.deepEqual(out.ids, { type: 'array', required: true, items: { type: 'string' } })
+  assert.deepEqual(out.mode, { type: 'string', enum: ['a', 'b'] })
+})
+
+test('toDshTool exige defineTool (no inventa la API si falta el harness)', () => {
+  assert.throws(() => toDshTool(TOOLS[0], { client }), /falta defineTool/)
 })

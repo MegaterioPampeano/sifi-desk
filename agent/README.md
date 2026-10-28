@@ -1,19 +1,21 @@
 # `agent/` — el agente del producto Si-Fi
 
 Implementa el **M4** del roadmap: las siete herramientas con las que el agente opera el
-producto, más su persona y su capa de adaptación al harness.
+producto, su persona y su integración con **dsh** (`@deepseek-ai/dsh`, el harness real).
 
 ```
 agent/
-├── package.json              # cordis + deepseek-harness, versión exacta
-├── cordis.yml                # config del producto (plugin + permisos)
-├── prompts/system.md         # persona y reglas duras del agente
+├── package.json              # sin deps de harness; tests + bin de desarrollo
+├── prompts/system.md         # persona y reglas duras del agente (única fuente)
 ├── src/client.mjs            # cliente HTTP de sifid (errores accionables)
 ├── src/tools.mjs             # las 7 tools: esquema + validación + execute + render
-├── adapter/index.mjs         # capa de adaptación dsh ↔ standalone
-├── plugins/sifi-tools/       # plugin de Cordis (publica las tools)
-├── bin/sifi-agent.mjs        # entry de desarrollo (sin harness)
-└── test/tools.test.mjs       # 12 tests contra un sifid falso (node:http)
+├── src/dsh-tools.mjs         # puente a la API real de @deepseek-ai/dsh-tools
+├── bin/sifi-agent.mjs        # banco de pruebas sin LLM
+├── test/tools.test.mjs       # 14 tests contra un sifid falso (node:http)
+├── test/fake-sifid.mjs       # sifid falso mínimo para smoke manual
+└── dsh/                      # DSH_HOME del producto + perfil `sifi`
+    ├── profiles/sifi/        # package.json (bundles) + cordis.patch.yml
+    └── bundles/sifi-tools/   # bundle: registra las 7 tools + la persona
 ```
 
 **Regla de oro:** este paquete **no importa el core de Python**. Todo va por HTTP a `sifid`.
@@ -23,55 +25,60 @@ Si el servicio no está, la tool devuelve el comando exacto para arrancarlo.
 
 - Node **22+** (usa `fetch`, `AbortSignal.any`, `node:test`).
 - `sifid` corriendo (frente M3): `python3 -m service.app --port 8765`.
+- Para el agente con LLM: una `DEEPSEEK_API_KEY` (o `agent/dsh/.env`, gitignored).
 
 ## Instalación
 
 ```bash
-cd agent
-npm ci            # reproducible, usa package-lock.json
+cd agent && npm ci          # tests + bin (sin dependencias)
+cd dsh && npm ci            # harness: dsh 0.2.1-rc.2 y sus ~600 paquetes
 ```
 
-## Levantarlo (dev)
+## El agente real (dsh)
+
+`dsh/` es un **DSH_HOME** propio: el perfil `sifi` se compone con
+`@deepseek-ai/dsh-base` + `@deepseek-ai/dsh-headless` + nuestro bundle `sifi-tools`.
 
 ```bash
-# 1) el servicio (en otra terminal, desde la raíz del repo)
-python3 -m service.app --port 8765
+cd agent/dsh
+export DEEPSEEK_API_KEY=...          # o ponelo en agent/dsh/.env
+export SIFID_URL=http://127.0.0.1:8765
+export SIFID_TOKEN=...               # opcional
 
-# 2) el agente
-cd agent
-export SIFID_URL=http://127.0.0.1:8765      # default si no se exporta
-node bin/sifi-agent.mjs                     # imprime el estado y las tools
+npm run config                       # dsh --profile sifi --dump-config
+npm run headless -- "Llamá a sifi_panels y resumí los paneles disponibles"
+npm run smoke                        # tarea trivial: valida credenciales
 ```
 
-Comandos útiles:
+`npm run headless` es `DSH_HOME=$PWD dsh --profile sifi headless ...`. Otros modos de dsh
+(`web`, `tui`) no están configurados para este perfil.
+
+## Banco de pruebas (sin LLM)
 
 ```bash
+cd agent
 node bin/sifi-agent.mjs --health                       # ¿está sifid?
 node bin/sifi-agent.mjs --list-tools                   # esquemas de las 7 tools
-node bin/sifi-agent.mjs --prompt                       # system prompt (para el harness)
+node bin/sifi-agent.mjs --prompt                       # system prompt
 node bin/sifi-agent.mjs --tool sifi_panels             # llamar una tool
 node bin/sifi-agent.mjs --tool sifi_design \
   --args '{"query_path":"tests/data/query.fa","panel_ids":["maiz"]}'
 node bin/sifi-agent.mjs --tool sifi_score --args '{"run_id":"run_1"}' --json
 ```
 
-Variables:
-
-| Variable | Default | Para qué |
-|---|---|---|
-| `SIFID_URL` | `http://127.0.0.1:8765` | base URL del servicio |
-| `SIFID_TOKEN` | — | token de sesión (se manda como `x-sifi-token`) |
+Variables: `SIFID_URL` (default `http://127.0.0.1:8765`) y `SIFID_TOKEN` (header
+`x-sifi-token`).
 
 ## Tests
 
 ```bash
-npm test
+npm test        # 14 tests, sifid falso con node:http
 ```
 
-Levanta un `sifid` falso con `node:http` (endpoints del contrato) y verifica las 7 tools sin
-depender del servicio real ni de Python. 12 tests: contrato, ordenamiento por score, filtros,
-off-target sobre un run existente, validación de argumentos, error accionable con el servicio
-caído, y registro real del plugin en un `Context` de Cordis.
+Cubren contrato, ordenamiento por score, filtros, off-target sobre un run existente,
+validación de argumentos, error accionable con el servicio caído, y el **puente a dsh**:
+mapeo al author-schema (`integer`, sin `min`/`max`), `output.schema = {type:'json'}`,
+`execute` delegando en la tool y `register`/disposer.
 
 ## Las 7 tools
 
@@ -89,22 +96,21 @@ Contrato con `sifid`: `POST /runs`, `GET /runs`, `GET /runs/{id}`, `POST /runs/{
 `GET /runs/{id}/results`, `GET /panels`, `GET /health` — más `POST /reports` (ROADMAP §5.3)
 y `GET /news` (M7). Si estos dos no existen, la tool lo dice y no inventa nada.
 
-## Cómo se engancha al harness (dsh)
+## Cómo se engancha al harness
 
-`deepseek-harness@0.0.1`, el paquete npm actual, es un **placeholder sin código**: no hay API
-que llamar todavía (detalle en [`NOTAS.md`](NOTAS.md)). Por eso:
+El bundle `dsh/bundles/sifi-tools` es un plugin de dsh normal:
 
-- `adapter/index.mjs` define el contrato neutral (`{name, description, parameters, execute, render}`).
-- Si el contexto de Cordis tiene un servicio `tools` con `register()` (lo que el roadmap espera
-  de dsh) y el paquete exporta `defineTool`, las tools se registran ahí, mapeando
-  `output.schema` + `render()` y propagando `exec.signal`.
-- Si no, se publica el servicio cordis **`ctx.sifiTools`** con `list()/get()/call()`, que es lo
-  que usa `bin/sifi-agent.mjs` y lo que podrá usar la ventana (M5).
+- `defineTool(...)` de `@deepseek-ai/dsh-tools` para cada una de las 7 tools, registradas con
+  `ctx.tools.register()` (el registro que usa el loop del agente).
+- `ctx.systemPrompt.section()` publica `prompts/system.md` como persona del producto.
+- `dsh.bundle.patch` inserta la fila del plugin en el árbol; el perfil la re-configura por id.
 
-Cuando dsh publique su API real, el único archivo a tocar es `adapter/index.mjs`.
+El detalle de la API, las trampas y las verificaciones (con salidas crudas) está en
+[`NOTAS.md`](NOTAS.md). Si se sube la versión de dsh, `engines.dsh` hace que el bundle se
+**saltee con warning** en vez de fallar en silencio: hay que revalidar y actualizar el pin.
 
 ## Producción
 
-El binario final lo arma el frente de empaquetado (M8): `sifid` como sidecar + este agente en
-modo standalone, con `cordis.yml` y `prompts/system.md` empaquetados. El puerto del servicio se
-inyecta por `SIFID_URL` (el servicio usa puerto efímero y token de sesión).
+El binario final lo arma el frente de empaquetado (M8): `sifid` como sidecar + `agent/dsh`
+(perfil incluido) y `prompts/system.md` empaquetados. El puerto del servicio se inyecta por
+`SIFID_URL` (el servicio usa puerto efímero y token de sesión).
