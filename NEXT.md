@@ -4,6 +4,19 @@
 > cada paso: se marca lo hecho y se anota el próximo. Si algo requiere una decisión de
 > Mariano, va a `docs/PREGUNTAS.md` y **no se implementa**.
 
+## Modo paralelo (desde 2026-10-28 19:20 UTC)
+
+A partir de acá el trabajo se reparte en **tres frentes independientes** que corren en
+worktrees separados: ver `docs/STREAMS.md`. El supervisor (cron `sifi-reporte`) lanza un
+subagente por frente, verifica tests y mergea a `master` en orden.
+
+* `w/servicio`  → M3 (`core/service/**`)
+* `w/reportes`  → M6 (`core/report/**`)
+* `w/novedades` → M7 (`core/watch/**`)
+
+Lo que sigue en `master` (secuencial, lo hago yo): M2.3 comparación con el shortlist histórico,
+M4 agente (dsh + plugins), M5 ventana, M8 empaquetado.
+
 ## Reglas permanentes
 
 1. `vendor/` es upstream verbatim: **no se edita nunca**.
