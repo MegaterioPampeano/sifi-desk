@@ -1,0 +1,67 @@
+# Scoring v2 — pesos y umbrales (versionados con el producto)
+#
+# El total va de 0 a 100 y es la suma de los aportes de cada eje:
+#     total = Σ (peso[eje] * valor[eje])   con valor[eje] ∈ [0, 1]
+# Los pesos deben sumar 100. Cambiar cualquier número de acá cambia el ranking:
+# por eso `version` viaja en cada resultado y se guarda en el reporte.
+schema: sifi.score/2
+version: 2
+
+pesos:
+  E: 40   # eficiencia termodinámica (accesibilidad, hebra, extremo)
+  R: 15   # riesgo de off-target (alto = seguro)
+  S: 15   # especificidad (pocos off-targets distintos)
+  T: 15   # consenso con el motor siFi (is_efficient / score)
+  D: 15   # calidad de diseño de la secuencia (GC, homopolímeros, extremos)
+
+umbrales:
+  recomendado: 70
+  revisar: 50
+  descartar: 25
+  # Un candidato con R por debajo de esto se marca 'riesgo_alto' aunque el total sea bueno:
+  # un hit perfecto en humano/no-blanco no se compensa con eficiencia.
+  riesgo_alto: 0.35
+
+E:
+  acceso: 0.50
+  hebra: 0.25
+  extremo: 0.25
+  # valor asignado a un chequeo que el motor no pudo calcular (ej. bordes de la secuencia)
+  desconocido: 0.5
+
+T:
+  eficiente: 1.0
+  no_eficiente: 0.15
+  # si el registro trae el score propio de siFi (0..1) se promedia con el booleano
+  usar_score: true
+
+S:
+  # S = 1 / (1 + decaimiento * Σ 1/(1+mismatches))  → sin hits: 1.0
+  decaimiento: 1.0
+
+R:
+  # severidad de un hit según mismatches (el resto de los valores usa el último escalón)
+  severidad:
+    0: 1.0
+    1: 0.7
+    2: 0.4
+    3: 0.15
+  peso_rol:
+    control: 1.0        # humano u otro control de especificidad
+    no_blanco: 1.0      # organismo que no se quiere dañar
+    simbionte: 0.8
+    universal: 0.3      # panel de transcritos no relacionados (control negativo)
+    patogeno: 0.0       # pegarle al patógeno es deseable, no es riesgo
+    desconocido: 0.8
+  penalidad_multi_panel: 0.15
+
+D:
+  gc:
+    optimo: [35.0, 55.0]
+    tolerable: [25.0, 65.0]
+  homopolimero_max: 4
+  peso_gc: 0.5
+  peso_homopolimero: 0.25
+  peso_extremo: 0.25
+  # regla siFi de terminales: A/T en la posición 2 (5' del antisentido) es lo preferido
+  extremo_preferido: ["A", "T"]

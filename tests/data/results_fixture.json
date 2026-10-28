@@ -1,0 +1,91 @@
+{
+  "schema": "sifi.results/1",
+  "run_id": "fixture0000000000",
+  "generated_at": "2026-10-28T18:00:00+00:00",
+  "params": {
+    "sirna_size": 21,
+    "mismatches": 2,
+    "mode": "design",
+    "rnaplfold": {"W": 80, "span": 40, "T": 37.0}
+  },
+  "records": [
+    {
+      "query_name": "Gene_1",
+      "sirnas": [
+        {
+          "query_name": "Gene_1", "sirna_name": "sirna10", "sirna_position": 10,
+          "sirna_sequence": "ATGCGATCGATCGTAGCTAGC", "is_efficient": true,
+          "strand_selection": true, "end_stability": true,
+          "target_site_accessibility": true, "accessibility_value": 0.9,
+          "is_off_target": false, "hit_name": "Gene_1",
+          "reference_strand_pos": 10, "strand": "+", "mismatches": 0
+        },
+        {
+          "query_name": "Gene_1", "sirna_name": "sirna20", "sirna_position": 20,
+          "sirna_sequence": "ATGCGATCGATCGTAGCTAGC", "is_efficient": true,
+          "strand_selection": true, "end_stability": true,
+          "target_site_accessibility": true, "accessibility_value": 0.6,
+          "is_off_target": false, "hit_name": "Gene_1",
+          "reference_strand_pos": 20, "strand": "+", "mismatches": 0
+        },
+        {
+          "query_name": "Gene_1", "sirna_name": "sirna20", "sirna_position": 20,
+          "sirna_sequence": "ATGCGATCGATCGTAGCTAGC", "is_efficient": true,
+          "strand_selection": true, "end_stability": true,
+          "target_site_accessibility": true, "accessibility_value": 0.6,
+          "is_off_target": true, "hit_name": "Zm00001eb001234",
+          "reference_strand_pos": 812, "strand": "-", "mismatches": 2
+        },
+        {
+          "query_name": "Gene_1", "sirna_name": "sirna30", "sirna_position": 30,
+          "sirna_sequence": "ATGCGATCGATCGTAGCTAGC", "is_efficient": false,
+          "strand_selection": false, "end_stability": false,
+          "target_site_accessibility": false, "accessibility_value": 0.2,
+          "is_off_target": false, "hit_name": "Gene_1",
+          "reference_strand_pos": 30, "strand": "+", "mismatches": 0
+        },
+        {
+          "query_name": "Gene_1", "sirna_name": "sirna30", "sirna_position": 30,
+          "sirna_sequence": "ATGCGATCGATCGTAGCTAGC", "is_efficient": false,
+          "strand_selection": false, "end_stability": false,
+          "target_site_accessibility": false, "accessibility_value": 0.2,
+          "is_off_target": true, "hit_name": "NM_000001",
+          "reference_strand_pos": 100, "strand": "-", "mismatches": 0
+        },
+        {
+          "query_name": "Gene_1", "sirna_name": "sirna30", "sirna_position": 30,
+          "sirna_sequence": "ATGCGATCGATCGTAGCTAGC", "is_efficient": false,
+          "strand_selection": false, "end_stability": false,
+          "target_site_accessibility": false, "accessibility_value": 0.2,
+          "is_off_target": true, "hit_name": "NM_000002",
+          "reference_strand_pos": 200, "strand": "-", "mismatches": 0
+        },
+        {
+          "query_name": "Gene_1", "sirna_name": "sirna40", "sirna_position": 40,
+          "sirna_sequence": "GGGGCCGGGCCGGGCCGGGCC", "is_efficient": true,
+          "strand_selection": true, "end_stability": true,
+          "target_site_accessibility": true, "accessibility_value": 0.95,
+          "is_off_target": false, "hit_name": "Gene_1",
+          "reference_strand_pos": 40, "strand": "+", "mismatches": 0
+        },
+        {
+          "query_name": "Gene_1", "sirna_name": "sirna50", "sirna_position": 50,
+          "sirna_sequence": "ATGCGATCGATCGTAGCTAGC", "is_efficient": true,
+          "strand_selection": true, "end_stability": true,
+          "target_site_accessibility": true, "accessibility_value": 0.8,
+          "score": 0.85,
+          "is_off_target": false, "hit_name": "Gene_1",
+          "reference_strand_pos": 50, "strand": "+", "mismatches": 0
+        },
+        {
+          "query_name": "Gene_1", "sirna_name": "sirna90", "sirna_position": 90,
+          "sirna_sequence": "ATGCGATCGATCGTAGCTAGC", "is_efficient": true,
+          "strand_selection": null, "end_stability": null,
+          "target_site_accessibility": null, "accessibility_value": "NA",
+          "is_off_target": false, "hit_name": "Gene_1",
+          "reference_strand_pos": 90, "strand": "+", "mismatches": 0
+        }
+      ]
+    }
+  ]
+}
