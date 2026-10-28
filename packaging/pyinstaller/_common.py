@@ -25,6 +25,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))          # .../packaging/pyinstaller
 REPO = os.path.dirname(os.path.dirname(HERE))              # raíz del repo
 CORE = os.path.join(REPO, "core")
+AGENT_PKG = os.path.join(REPO, "packaging", "agent")   # agent_doctor.py (chequeo de `sifi doctor`)
 PLAT = f"{sys.platform}-{platform.machine()}"
 VENDOR_REL = os.path.join("packaging", "vendor", PLAT)
 BUNDLE_NAME = "sifi-desk-" + ("windows" if os.name == "nt" else "linux")
@@ -119,11 +120,11 @@ EXCLUDES = [
 
 def analysis_kwargs(extra_hidden: list[str] | None = None) -> dict:
     """kwargs comunes de `Analysis(...)` para los dos sidecars."""
-    hidden = list(HIDDEN_UVICORN)
+    hidden = list(HIDDEN_UVICORN) + ["agent_doctor"]
     if extra_hidden:
         hidden += list(extra_hidden)
     return {
-        "pathex": [CORE],
+        "pathex": [CORE, AGENT_PKG],
         "datas": core_datas() + vendor_datas() + license_datas(),
         "hiddenimports": hidden,
         "excludes": EXCLUDES,

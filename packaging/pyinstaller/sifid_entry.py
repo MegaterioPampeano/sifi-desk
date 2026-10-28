@@ -27,10 +27,12 @@ import sys
 def _bootstrap_path() -> None:
     if getattr(sys, "frozen", False):
         return
-    core = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-        os.path.abspath(__file__)))), "core")
-    if core not in sys.path:
-        sys.path.insert(0, core)
+    repo = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))))
+    for extra in (os.path.join(repo, "core"),
+                  os.path.join(repo, "packaging", "agent")):   # agent_doctor
+        if extra not in sys.path:
+            sys.path.insert(0, extra)
 
 
 def _bundle_root() -> str | None:
@@ -70,6 +72,25 @@ def _patch_runner_argv() -> None:
     appmod.create_app = create_app
 
 
+def _doctor_con_agente(argv: list[str]) -> int:
+    """`sifi doctor` + el bloque del agente incluido en el bundle (M10).
+
+    El chequeo del agente vive en `packaging/agent/agent_doctor.py` porque el
+    agente (dsh sobre Node) lo aporta el instalable, no el core científico: así
+    `core/` no se entera de que existe un harness. Si el desinstalador borró
+    `agent/`, se informa `·` y doctor sigue siendo el de siempre.
+    """
+    from cli import main as cli_main
+    rc = cli_main(argv)
+    try:
+        from agent_doctor import default_root, report as agent_report
+        arc = agent_report(_bundle_root() or default_root())
+    except Exception as exc:  # nunca romper doctor por el agente
+        print(f"· agente: no se pudo verificar ({exc.__class__.__name__}: {exc})")
+        arc = 0
+    return rc or arc
+
+
 def main(argv=None) -> int:
     _bootstrap_path()
     argv = list(sys.argv[1:] if argv is None else argv)
@@ -77,6 +98,8 @@ def main(argv=None) -> int:
     # `sifi` es una copia del mismo ejecutable: el nombre decide el modo.
     prog = os.path.basename(sys.argv[0] or "")
     if prog.lower() in ("sifi", "sifi.exe"):
+        if argv[:1] == ["doctor"]:
+            return _doctor_con_agente(argv)
         from cli import main as cli_main
         return cli_main(argv)
 

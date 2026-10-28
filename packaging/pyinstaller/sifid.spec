@@ -69,9 +69,16 @@ coll = COLLECT(
     name=BUNDLE_NAME,
 )
 
-# `sifi` = copia del mismo ejecutable; el dispatch es por argv[0].
+# `sifi` = mismo ejecutable con otro nombre (el dispatch es por argv[0]).
+# Hardlink cuando el filesystem lo permite: son 13 MB idénticos y en el .deb /
+# AppImage (tar + squashfs) se deduplican; si no se puede, copia.
 _src = os.path.join(DISTPATH, BUNDLE_NAME, "sifid" + (".exe" if os.name == "nt" else ""))
 _dst = os.path.join(DISTPATH, BUNDLE_NAME, "sifi" + (".exe" if os.name == "nt" else ""))
-shutil.copy2(_src, _dst)
+try:
+    if os.path.exists(_dst):
+        os.unlink(_dst)
+    os.link(_src, _dst)
+except OSError:
+    shutil.copy2(_src, _dst)
 
 print(f"[sifid.spec] bundle: dist/{BUNDLE_NAME}  (binarios: {PLAT})")

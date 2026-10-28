@@ -1,58 +1,100 @@
-# TODO · M8 empaquetado
+# TODO · empaquetado
 
-Estado: sidecars one-dir + ensamblado Linux probados de verdad; CI y PowerShell
-escritos pero **sin correr** en esta ventana (no hay Windows ni runners locales).
+Estado **M10 (empaquetado v2)**: el instalable de Linux lleva núcleo + UI (si está
+compilada) + **agente**, y se construye desde cero en una máquina limpia (los
+binarios externos se compilan/bajan con sha256 fijado y el build falla si el smoke
+no puede correr). Verificado acá: bundle 179 MB, `.deb` 49 MB, `.AppImage` 53 MB,
+`128 passed`, smoke CLI+API OK, `sifi doctor` con el agente en verde y perfil `sifi`
+montando desde el bundle.
 
-## Hecho
+Windows: scripts reescritos (D3, D6, agente, vendor obligatorio) pero **sin correr
+en un Windows real** en esta ventana.
 
-- `packaging/pyinstaller/{sifid,sifi}.spec` (one-dir) + `sifid_entry.py`,
-  `sifi_entry.py`, `_common.py`.
-- `packaging/vendor/fetch_binaries.sh` (idempotente, `--check` verifica sha256
-  contra `MANIFEST.json`, funciona offline) + `README.md` + carpetas `<plat>`.
-- `scripts/build_linux.sh` → `dist/sifi-desk-linux/` con `sifid`/`sifi`,
-  `packaging/vendor/linux-x86_64/` y verificación `sifid --help` + `sifi version`.
-  Corrido en esta máquina: OK (191 MB, Python 3.12, PyInstaller 6.22.3).
-- `scripts/package_deb.sh`, `scripts/package_appimage.sh` (tolera falta de
-  appimagetool).
-- `.github/workflows/build.yml`: matrix ubuntu/windows, pytest, sidecars, `.deb`,
-  `.AppImage`, `.msi` Tauri tolerante a fallo, artefactos (`.zip` de Windows) y
-  release por tag.
-- `scripts/build_windows.ps1` equivalente PowerShell (paso 4b arma
-  `dist/sifi-desk-windows.zip` con `LEEME.txt`).
-- `packaging/README.md`: qué se construye dónde, cómo probarlo y qué falta para
-  firmar.
-- **Smoke real** en `scripts/build_linux.sh` (paso 5/5): índice de juguete con el
-  `bowtie-build` del bundle + `sifi design` por CLI + la misma corrida por la API
-  (ejercita el runner congelado `sifid --runner`). `--no-smoke` lo saltea.
-  Corrido OK: `GeneA · 280 siRNAs · 1 hits` por CLI y por API.
+## Hecho en M10
 
-### Bug encontrado y arreglado por el smoke
-
-`_common.py` no copiaba `core/sifi/score.yaml`: el bundle arrancaba, `--help` y
-`sifi version` andaban, pero `sifi design` moría con
-`FileNotFoundError: <bundle>/_internal/sifi/score.yaml`. El `.spec` ahora falla en
-el build si el archivo no está (`core_datas()`), y `_internal/sifi/score.yaml`
-queda empaquetado. Sin el smoke, esto se entregaba roto.
+1. **El agente viaja en el instalable** — `packaging/agent/` es un mini-frente
+   propio:
+   - `bundle_agent.sh` copia `agent/` (perfil `dsh/profiles/sifi`, bundle
+     `dsh/bundles/sifi-tools`, `src/`, `prompts/system.md`, `bin/`, `test/`) al
+     artifacto, sin `node_modules`/`.env`/estado, y escribe `INFO.json` con el pin
+     de dsh y el inventario. Medido: **23 archivos, 505 kB** (+`install.sh`,
+     `INFO.json`; la carpeta en el bundle ocupa 592 kB).
+   - `install.sh` (sin sudo) copia a `~/.sifi/agent` (`$SIFI_AGENT_HOME`) y corre
+     `npm ci`; idempotente por hash del lock; `--light` no instala el CLI de dsh.
+     Probado desde el bundle real: **621 paquetes en 11 s, 884 MB**.
+   - `agent_doctor.py` + hook en `packaging/pyinstaller/sifid_entry.py`: `sifi
+     doctor` informa node/dsh/harness y **monta el perfil de verdad**
+     (`dsh --profile sifi --dump-config`). No toca `core/`.
+   - **Decisión (b)**: Node 22+ y dsh son prerrequisito, no van embebidos.
+     Medición: Node portátil 30,8 MB comprimido / 205 MB expandido (`bin/node`
+     123 MB) + árbol de dsh 884 MB = ~1,1 GB → `.deb` ≥300 MB contra 62 MB de
+     D2. Detalle en `packaging/agent/README.md`.
+2. **Brecha #1 cerrada (binarios de `packaging/vendor/`)**
+   - `packaging/vendor/pins.sh`: única fuente de verdad (URL + sha256) de bowtie
+     1.3.1 (zip linux / fuente win) y ViennaRNA 2.7.2 (fuente).
+   - `scripts/build_vendor_linux.sh`: baja bowtie del release (**sha256 verificado**)
+     y **compila** RNAplfold (`--without-perl --without-python --without-doc
+     --disable-openmp`), publica en `packaging/vendor/<plat>` con `MANIFEST.json`.
+     Probado desde cero (borré `build/vendor` y `packaging/vendor/linux-x86_64`):
+     bowtie sha256 ok, ViennaRNA sha256 ok, compilación OK, **6 binarios, 30,2 MB**.
+   - `fetch_binaries.sh` ahora **falla** si falta un binario (antes avisaba) y
+     verifica sha256 de cada descarga; URL custom sin `SIFI_*_SHA256` se rechaza.
+   - `scripts/build_linux.sh`: si `--check` falla corre el build de vendor; si aun
+     así falta, `exit 1`. `SIFI_VENDOR_OPTIONAL=1` sigue existiendo **sólo** si el
+     que compila lo pide (nunca automático) y en ese caso fuerza `--no-smoke`.
+   - El smoke ahora es **obligatorio**: sin `bowtie-build`/`RNAplfold` en el
+     bundle, el paso 6/6 muere en vez de saltearse.
+3. **D3/D6** — raíz de Tauri = `ui/tauri/` en `.github/workflows/build.yml` y
+   `scripts/build_windows.ps1`; el sidecar se emite como
+   `sifid-<target-triple>[.exe]` (`x86_64-unknown-linux-gnu`,
+   `x86_64-pc-windows-msvc`) y en Linux se deja además en
+   `ui/tauri/src-tauri/binaries/`. Hardlinks: `sifi`/sidecar no duplican 13 MB
+   (bajó el bundle de 205 → 179 MB y el `.deb` de 62 → 49 MB).
+4. **`.AppImage` sin sudo**: `scripts/package_appimage.sh` baja `appimagetool`
+   1.9.1 a `packaging/.tools/` (gitignoreado, sha256 fijado) y lo corre con
+   `--appimage-extract-and-run` (no necesita FUSE ni root). Si falla, imprime el
+   log y sale **1** (antes salía 0 sin artefacto). Generado y probado acá:
+   `dist/sifi-desk-x86_64.AppImage` (53 MB), `--help` responde con el `sifid` real.
 
 ## Falta / pendiente
 
-1. **Probar `build_windows.ps1` en un Windows real** (acá no hay pwsh). Riesgos:
-   `bash` de Git for Windows para `fetch_binaries.sh`, y que el `.msi` de Tauri
-   todavía no tiene `ui/tauri.conf.json` (hoy se saltea con warning).
-2. **RNAplfold para Windows**: no hay binario estático oficial; hay que compilar
-   ViennaRNA con MSYS2/MinGW o usar el instalador y copiar `RNAplfold.exe` a
-   `packaging/vendor/win32-AMD64/`. El bundle Windows hoy sale sin él.
-3. **Pin de hashes**: `MANIFEST.json` se genera al bajar; falta revisarlo y
-   commitearlo por plataforma (hoy está gitignoreado junto con los binarios).
-4. **AppImage sin probar** (no hay appimagetool en esta máquina): el script
-   scrapea el binario a `build/appimagetool` y, si falla, sale 0 sin artefacto.
-5. **No hay `pyproject.toml`** en el repo: el CI instala
-   `packaging/requirements-build.txt`. Si aparece el paquete, cambiar a
-   `pip install -e .[dev]`.
-6. **UI**: `build_linux.sh` copia `dist/ui`, `ui/dist` o `agent/dist` si existen;
-   no hay UI compilada en este worktree, así que el bundle sale API/CLI-only.
-7. **Firma de código** (Windows Authenticode / Linux) sin hacer: fuera del
-   alcance de M8.
+1. **Windows real**: `build_windows.ps1` + `packaging/vendor/build_vendor_windows.sh`
+   (MSYS2/MinGW64) están escritos y revisados, no corridos. Riesgo principal: que
+   bowtie 1.3.1 compile con el MinGW posix-threads del runner y que el `.exe` de
+   RNAplfold encuentre sus DLLs (`collect_dlls` copia `libgcc_s_seh-1.dll`,
+   `libstdc++-6.dll`, `libwinpthread-1.dll`). Si falla, el CI queda rojo a
+   propósito: no se publica un zip sin bowtie/RNAplfold.
+2. **`ui/tauri/src-tauri/src/main.rs` busca `sifid` plano** junto al `.exe`, pero
+   Tauri deja el `externalBin` como `sifid-<triple>`. El `.msi` va a arrancar sin
+   sidecar hasta que el frente UI lo resuelva (o pase a
+   `tauri_plugin_shell::ShellExt::sidecar`). No se tocó `ui/**` (M10 no lo tiene).
+3. **Instalación del harness requiere red** la primera vez (`npm ci`: 621
+   paquetes, 884 MB en `~/.sifi/agent`). Alternativa para redes cerradas:
+   publicar un tarball del `node_modules` como release propia y dar
+   `SIFI_AGENT_TARBALL`+sha256 (mismo mecanismo que `SIFI_VIENNA_URL`).
+4. **dsh del sistema ≠ pin**: acá hay 0.2.0-rc.2 global; `doctor` lo marca con `!`
+   (no rompe) y `install.sh` completo instala 0.2.1-rc.2 en `~/.sifi/agent`. Si el
+   producto fija 0.2.1-rc.2, conviene que `sifi-tools` suba el warning a error.
+5. **AppImage y FUSE**: el `.AppImage` generado se probó con
+   `--appimage-extract-and-run`; en máquinas sin `libfuse2` el usuario necesita
+   ese flag (documentado en el `LEEME`? no: falta en el README de usuario).
+6. **Firma de código** (Authenticode / Linux) sigue sin hacer: fuera de alcance.
+7. **UI compilada**: `build_linux.sh` copia `dist/ui`, `ui/dist` o `agent/dist` si
+   existen; en este worktree no hay build de UI, así que el bundle sale API/CLI +
+   agente (el `.msi`/`.deb` con UI depende de compilar Tauri).
 8. `core/service/worker.py` lanza el runner con `cwd=CORE_DIR`; congelado cae en
    `<bundle>/_internal`, que existe, pero conviene que el core acepte `cwd`
    opcional (anotado en `docs/PREGUNTAS.md`).
+
+## Comandos
+
+```bash
+# Linux, de cero (compila binarios si faltan) — el que usa el CI
+bash scripts/build_linux.sh --deb --appimage
+
+# sólo binarios externos (cacheable en CI)
+bash scripts/build_vendor_linux.sh
+
+# bundle de desarrollo sin binarios (NO publicable)
+SIFI_VENDOR_OPTIONAL=1 bash scripts/build_linux.sh --no-smoke
+```

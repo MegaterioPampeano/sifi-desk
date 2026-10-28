@@ -28,8 +28,12 @@ Architecture: amd64
 Maintainer: siFi-Desk <sifi-desk@localhost>
 Installed-Size: $(du -sk "$WORK/opt/sifi-desk" | awk '{print $1}')
 Depends: libc6
+Recommends: nodejs (>= 22.0.0), npm
 Description: siFi-Desk - diseno de siRNAs con verificacion de off-targets
- Nucleo headless (bowtie + RNAplfold) con API local y CLI.
+ Nucleo headless (bowtie + RNAplfold) con API local y CLI, mas el agente
+ (perfil de dsh + tools del producto) en /opt/sifi-desk/agent. El agente
+ necesita Node 22+ y dsh: se instalan aparte (ver /opt/sifi-desk/agent/install.sh)
+ y \`sifi doctor\` lo verifica.
 EOF
 
 cat > "$WORK/usr/share/applications/sifi-desk.desktop" <<'EOF'
@@ -42,5 +46,24 @@ Terminal=true
 Categories=Science;Biology;
 EOF
 
+# Mensaje de instalación: el núcleo queda andando solo; el agente necesita su
+# runtime (Node 22+ y dsh, ~1 GB) que a propósito no viaja en el .deb.
+cat > "$WORK/DEBIAN/postinst" <<'POST'
+#!/bin/sh
+set -e
+if ! command -v node >/dev/null 2>&1; then
+  cat <<'MSG'
+siFi-Desk quedó instalado: `sifid` y `sifi` funcionan ya (probá `sifi doctor`).
+El agente incluido en /opt/sifi-desk/agent necesita su runtime, que no viaja en
+el paquete (Node 22+ y el harness dsh, ~1 GB):
+  1) instalá Node 22+ (nodesource o el tarball oficial de nodejs.org)
+  2) bash /opt/sifi-desk/agent/install.sh      # deja el harness en ~/.sifi/agent
+  3) sifi doctor                               # verifica node, dsh y el perfil
+MSG
+fi
+exit 0
+POST
+chmod 755 "$WORK/DEBIAN/postinst"
+
 dpkg-deb --root-owner-group -Zxz --build "$WORK" "$OUT" >/dev/null
-echo "deb: ${OUT#$REPO/}"
+echo "deb: ${OUT#$REPO/}  ($(du -h "$OUT" | awk '{print $1}'))"

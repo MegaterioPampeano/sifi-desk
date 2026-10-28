@@ -9,8 +9,17 @@
 #   2. build/ del checkout     → bowtie-*/bowtie, vienna/bin/RNAplfold (Linux; en un
 #                                worktree busca también el checkout principal).
 #   3. PATH                    → which bowtie / RNAplfold / bowtie-build.
-#   4. Descarga                → bowtie 1.3.1 desde GitHub Releases; ViennaRNA desde
-#                                SIFI_VIENNA_URL (zip/tar con RNAplfold dentro).
+#   4. Descarga                → bowtie 1.3.1 del release de GitHub, **con sha256
+#                                fijado acá abajo** (un hash distinto aborta).
+#                                RNAplfold NO se baja de internet: se compila del
+#                                fuente con scripts/build_vendor_linux.sh (Linux) o
+#                                packaging/vendor/build_vendor_windows.sh (MSYS2), o
+#                                se toma de una release propia con SIFI_VIENNA_URL +
+#                                SIFI_VIENNA_SHA256.
+#
+# Este script **falla** si al final falta algún binario (exit 1). Para compilar un
+# bundle de desarrollo sin binarios, el que lo pide lo dice explícitamente:
+# SIFI_VENDOR_OPTIONAL=1 al compilar (ver scripts/build_linux.sh).
 #
 # Uso:
 #   bash packaging/vendor/fetch_binaries.sh              # auto
@@ -47,6 +56,11 @@ case "$PLAT" in win32-*) EXE=".exe" ;; esac
 
 echo "== plataforma: $PLAT"
 echo "== destino:    ${DEST#$REPO_ROOT/}"
+
+# Fuentes versionadas (M10): URL + sha256 fijados en packaging/vendor/pins.sh.
+# Si cambia el contenido del release, el build falla en vez de empaquetar otra cosa.
+# shellcheck source=pins.sh
+. "$REPO_ROOT/packaging/vendor/pins.sh"
 
 want=("bowtie" "RNAplfold")
 [ -n "${SIFI_WANT_BOWTIE_BUILD:-1}" ] && want+=("bowtie-build")
@@ -202,36 +216,86 @@ if ! have_all >/dev/null 2>&1; then
   done
 fi
 
-# --- 4. descarga ------------------------------------------------------------ #
+# --- 4. descarga (sólo fuentes versionadas, con sha256 fijado) -------------- #
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
+  else "$PYTHON" -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"
+  fi
+}
+
+fetch_verified() {  # fetch_verified <url> <archivo> <sha256 esperado | "">
+  local url="$1" out="$2" want="$3" got
+  echo "   ↓ $url"
+  fetch "$url" "$out" || { echo "   ✗ no se pudo bajar" >&2; return 1; }
+  got="$(sha256_of "$out")"
+  if [ -z "$want" ]; then
+    echo "   ! sin sha256 fijado para esta URL (origen no verificado): $got" >&2
+    return 0
+  fi
+  if [ "$got" != "$want" ]; then
+    echo "   ✗ sha256 NO coincide" >&2
+    echo "     esperado: $want" >&2
+    echo "     obtenido: $got" >&2
+    rm -f "$out"
+    return 1
+  fi
+  echo "   sha256 ok (${want:0:16}…)"
+  return 0
+}
+
 if ! have_all >/dev/null 2>&1 && [ "$MODE" != "from-build" ]; then
-  echo "== fuente: descarga"
+  echo "== fuente: descarga (verificada)"
   if [ ! -f "$DEST/bowtie$EXE" ]; then
     case "$PLAT" in
-      linux-*)   BT_URL="${SIFI_BOWTIE_URL:-https://github.com/BenLangmead/bowtie/releases/download/v1.3.1/bowtie-1.3.1-linux-x86_64.zip}" ;;
-      win32-*)   BT_URL="${SIFI_BOWTIE_URL:-https://github.com/BenLangmead/bowtie/releases/download/v1.3.1/bowtie-1.3.1-win-x86_64.zip}" ;;
-      *)         BT_URL="${SIFI_BOWTIE_URL:-}" ;;
+      linux-*) BT_URL="$BOWTIE_URL_LINUX"; BT_SHA="$BOWTIE_SHA_LINUX" ;;
+      win32-*) BT_URL=""; BT_SHA="" ;;   # no hay zip win en el release 1.3.1: se compila
+      *)       BT_URL=""; BT_SHA="" ;;
     esac
-    if [ -n "$BT_URL" ]; then
-      echo "   ↓ $BT_URL"
-      if fetch "$BT_URL" "$REPO_ROOT/build/bowtie-download.zip" && unpack "$REPO_ROOT/build/bowtie-download.zip"; then
-        for f in "$TMP"/unpacked/*/bowtie*; do
-          [ -f "$f" ] || continue
-          cp -f "$f" "$DEST/$(basename "$f")"
-        done
-        chmod +x "$DEST"/bowtie* 2>/dev/null || true
-        for f in "$TMP"/unpacked/*/LICENSE*; do [ -f "$f" ] && cp -f "$f" "$DEST/LICENSE-bowtie.txt"; done
-      fi
+    # Mirror propio (release corporativa): exige el hash explícito.
+    if [ -n "${SIFI_BOWTIE_URL:-}" ]; then
+      BT_URL="$SIFI_BOWTIE_URL"
+      BT_SHA="${SIFI_BOWTIE_SHA256:-}"
+    fi
+    if [ -n "$BT_URL" ] && fetch_verified "$BT_URL" "$REPO_ROOT/build/bowtie-download.zip" "$BT_SHA"; then
+      unpack "$REPO_ROOT/build/bowtie-download.zip" || true
+      # Sólo las variantes "small index" (las únicas que usa el producto):
+      # -l/-inspect son ~40 MB de binarios que ningún panel toca.
+      keep="bowtie bowtie-align-s bowtie-build bowtie-build-s"
+      [ -n "${SIFI_VENDOR_FULL:-}" ] && keep="$keep bowtie-align-l bowtie-build-l bowtie-inspect bowtie-inspect-s"
+      for f in "$TMP"/unpacked/*/bowtie*; do
+        [ -f "$f" ] || continue
+        case " $keep " in
+          *" $(basename "$f" | sed 's/\.exe$//') "*) cp -f "$f" "$DEST/$(basename "$f")" ;;
+        esac
+      done
+      chmod +x "$DEST"/bowtie* 2>/dev/null || true
+      for f in "$TMP"/unpacked/*/LICENSE*; do [ -f "$f" ] && cp -f "$f" "$DEST/LICENSE-bowtie.txt"; done
+      TMP=""
     fi
   fi
+
+  # RNAplfold: no hay binario estático oficial de ViennaRNA. Se compila del
+  # fuente pinneado (`scripts/build_vendor_linux.sh`) o se toma de una release
+  # propia, y en ese caso hay que dar URL **y** sha256.
   if [ ! -f "$DEST/RNAplfold$EXE" ] && [ -n "${SIFI_VIENNA_URL:-}" ]; then
-    echo "   ↓ $SIFI_VIENNA_URL"
-    ext="${SIFI_VIENNA_URL##*.}"
-    if fetch "$SIFI_VIENNA_URL" "$REPO_ROOT/build/vienna-download.$ext" \
-       && unpack "$REPO_ROOT/build/vienna-download.$ext"; then
-      found="$(find "$TMP/unpacked" -name "RNAplfold$EXE" -type f | head -1)"
-      [ -n "$found" ] && copy_exec "$found" "RNAplfold$EXE" || true
-      lic="$(find "$TMP/unpacked" -iname "COPYING*" -o -iname "LICENSE*" | head -1)"
-      [ -n "$lic" ] && cp -f "$lic" "$DEST/LICENSE-ViennaRNA.txt" || true
+    if [ -z "${SIFI_VIENNA_SHA256:-}" ]; then
+      echo "   ! SIFI_VIENNA_URL sin SIFI_VIENNA_SHA256: no la uso (origen no verificable)" >&2
+    else
+      ext="tar.gz"
+      case "$SIFI_VIENNA_URL" in
+        *.zip) ext="zip" ;;
+        *.tgz) ext="tar.gz" ;;
+        *.tar.xz) ext="tar.xz" ;;
+      esac
+      out="$REPO_ROOT/build/vienna-vendor.$ext"
+      if fetch_verified "$SIFI_VIENNA_URL" "$out" "$SIFI_VIENNA_SHA256" && unpack "$out"; then
+        found="$(find "$TMP/unpacked" -name "RNAplfold$EXE" -type f | head -1)"
+        [ -n "$found" ] && copy_exec "$found" "RNAplfold$EXE" || true
+        lic="$(find "$TMP/unpacked" \( -iname "COPYING*" -o -iname "LICENSE*" \) | head -1)"
+        [ -n "$lic" ] && cp -f "$lic" "$DEST/LICENSE-ViennaRNA.txt" || true
+        TMP=""
+      fi
     fi
   fi
 fi
@@ -301,13 +365,14 @@ else
   echo "== INCOMPLETO: faltan binarios en $DEST" >&2
   case "$PLAT" in
     win32-*)
-      echo "   Windows: usá el zip oficial de bowtie (bowtie-1.3.1-win-x86_64.zip) y" >&2
-      echo "   RNAplfold del instalador de ViennaRNA 2.7.2 (o compilá con MSYS2/MinGW):" >&2
-      echo "     powershell -File scripts/build_windows.ps1 -FetchOnly" >&2 ;;
+      echo "   Compilá los dos desde el fuente pineado (MSYS2/MinGW64):" >&2
+      echo "     bash packaging/vendor/build_vendor_windows.sh" >&2 ;;
     *)
-      echo "   Compilá y volvé a correr con SIFI_VENDOR_SRC=<dir>:" >&2
-      echo "     bowtie:     make -C bowtie-1.3.1" >&2
-      echo "     ViennaRNA:  ./configure --without-perl && make -j && make install" >&2 ;;
+      echo "   Compilá los dos desde el fuente pineado (no hay binario estático de" >&2
+      echo "   RNAplfold, y el que hay que usar lo fija packaging/vendor/pins.sh):" >&2
+      echo "     bash scripts/build_vendor_linux.sh" >&2
+      echo "   o reutilizá un build existente:" >&2
+      echo "     SIFI_VENDOR_SRC=<dir con bowtie y RNAplfold> bash packaging/vendor/fetch_binaries.sh" >&2 ;;
   esac
   exit 1
 fi
