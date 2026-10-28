@@ -128,3 +128,34 @@ def test_manifest_invalido(tmp_path):
     malo.write_text('{"foo": 1}', encoding="utf-8")
     with pytest.raises(ReportError):
         render([str(malo)], str(tmp_path / "out"))
+
+
+def test_informe_incluye_perfil_por_posicion(tmp_path):
+    """La Figura 3 (perfil por posición) tiene que existir, tener datos y estar en el PDF.
+
+    Es el gráfico del siFi original que faltaba: curvas de todos vs eficientes y bandas de
+    off-target perfecto. Sin él el informe ordena candidatos pero no dice dónde cortar.
+    """
+    import json
+    from report.figures import perfil_posicion
+
+    largo = 200
+    filas = []
+    for pos in range(1, largo - 20):
+        for eficiente in (True, False):
+            filas.append({"query_name": "q", "sirna_name": f"s{pos}{int(eficiente)}",
+                          "sirna_position": pos, "is_efficient": eficiente,
+                          "is_off_target": pos > 150 and not eficiente,
+                          "mismatches": "" if pos > 150 and not eficiente else ""})
+    rec = {"query_name": "q", "query_length": largo, "sirnas": filas}
+    salida = perfil_posicion([rec], str(tmp_path / "perfil.png"))
+    assert os.path.isfile(salida) and os.path.getsize(salida) > 15_000
+
+    # el PDF de una corrida real tiene que traer la sección y la figura
+    pdf = render([FIXTURE], out_dir=str(tmp_path / "out"), fmt="pdf", filename="i")
+    html = render([FIXTURE], out_dir=str(tmp_path / "out2"), fmt="html", filename="i")
+    with open(html, encoding="utf-8") as fh:
+        cuerpo = fh.read()
+    assert "Perfil por posición" in cuerpo
+    assert "fig_perfil.png" in cuerpo
+    assert os.path.isfile(os.path.join(str(tmp_path / "out"), "assets", "fig_perfil.png"))

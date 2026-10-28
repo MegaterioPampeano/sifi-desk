@@ -457,8 +457,24 @@
 </div>
 {% endif %}
 
-<!-- ==================================================== 6. LIMITACIONES -->
-<h2><span class="num">6</span>Limitaciones</h2>
+
+<!-- ================================================ 6. PERFIL POR POSICIÓN -->
+<h2><span class="num">6</span>Perfil por posición</h2>
+
+<div class="figure">
+  <img src="{{ figs.perfil }}" alt="Perfil por posición del transcrito">
+  <div class="caption">
+    <b>Figura 3.</b> Cuántos siRNAs cubren cada posición del transcrito (curva azul) y
+    cuántos de ellos pasan los filtros de eficiencia (curva verde). Las bandas grises marcan
+    posiciones cubiertas por un hit <i>perfecto</i> (0 mismatches) en algún panel: ahí no
+    conviene cortar. La banda ámbar señala los {{ 40 }} nt con más siRNAs eficientes y sin
+    off-target perfecto, si existe. Es el gráfico que traduce el score a una decisión de
+    corte; el score ordena candidatos, esto muestra dónde están.
+  </div>
+</div>
+
+<!-- ==================================================== 7. LIMITACIONES -->
+<h2><span class="num">7</span>Limitaciones</h2>
 
 <p>
   Estas limitaciones son parte del resultado, no una advertencia legal al pie. Cualquier

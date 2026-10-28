@@ -139,21 +139,98 @@ def _short(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
+def perfil_posicion(records, path: str) -> str:
+    """Perfil por posición del transcrito: todos los siRNAs, los eficientes y las bandas
+    de off-target perfecto. Es el gráfico que responde «¿por dónde corto?»: donde la curva
+    verde sube y no hay banda roja, la ventana es buena."""
+    fig, ax = plt.subplots(figsize=(6.9, 2.9), constrained_layout=True)
+
+    total = [0] * 0
+    series = []
+    for rec in records:
+        largo = int(rec.get("query_length") or 0)
+        filas = rec.get("sirnas") or []
+        if not largo:
+            largo = max((int(r.get("sirna_position") or 0) for r in filas), default=0) + 21
+        if largo <= 0:
+            continue
+        todos = [0] * largo
+        eficientes = [0] * largo
+        banda = [False] * largo
+        for r in filas:
+            pos = int(r.get("sirna_position") or 0) - 1
+            if pos < 0:
+                continue
+            for i in range(pos, min(pos + 21, largo)):
+                todos[i] += 1
+                if r.get("is_efficient"):
+                    eficientes[i] += 1
+            if str(r.get("mismatches") or "").strip() in ("0", ""):
+                if r.get("is_off_target"):
+                    for i in range(pos, min(pos + 21, largo)):
+                        banda[i] = True
+        series.append((rec.get("query_name") or "query", todos, eficientes, banda, largo))
+
+    if not series:
+        _empty(ax, "Sin filas de siRNA para ubicar en el transcrito")
+        ax.set_title("Perfil por posición")
+        return _save(fig, path)
+
+    nombre, todos, eficientes, banda, largo = series[0]
+    for i, flag in enumerate(banda):
+        if flag:
+            ax.axvspan(i, i + 1, color="0.72", alpha=0.45, linewidth=0, zorder=1)
+
+    ax.plot(range(largo), todos, color="#2b6cb0", linewidth=1.0, zorder=3,
+            label="Todos los siRNAs")
+    ax.plot(range(largo), eficientes, color=VERDE, linewidth=1.6, zorder=4,
+            label="Eficientes (pasan los filtros)")
+
+    ax.set_xlim(0, largo)
+    ax.set_ylim(bottom=0)
+    ax.set_xlabel(f"Posición sobre el transcrito ({nombre}, {largo} nt)")
+    ax.set_ylabel("siRNAs por posición")
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.grid(axis="y", color="#e3e8eb", linewidth=0.6, zorder=0)
+    ax.set_axisbelow(True)
+    ax.legend(frameon=False, fontsize=6.8, loc="upper right")
+    ax.set_title("Perfil por posición — dónde conviene cortar")
+    # Marca la mejor zona: 40 nt con más eficientes y sin off-target perfecto
+    mejor, mejor_val = None, 0
+    ancho = 40
+    for ini in range(0, max(1, largo - ancho), 5):
+        if any(banda[ini:ini + ancho]):
+            continue
+        val = sum(eficientes[ini:ini + ancho])
+        if val > mejor_val:
+            mejor, mejor_val = ini, val
+    if mejor is not None and mejor_val:
+        ax.axvspan(mejor, mejor + ancho, color=AMBAR, alpha=0.18, linewidth=0, zorder=2)
+        ax.annotate(f"mejor zona: {mejor + 1}-{mejor + ancho}",
+                    xy=(mejor + ancho / 2, ax.get_ylim()[1] * 0.9),
+                    ha="center", fontsize=7, color=AMBAR)
+    return _save(fig, path)
+
+
 def figuras(runs, assets_dir: str) -> Dict[str, str]:
     """Genera las dos figuras y devuelve rutas relativas al out_dir."""
     os.makedirs(assets_dir, exist_ok=True)
     eff_path = os.path.join(assets_dir, "fig_eficiencia.png")
     panel_path = os.path.join(assets_dir, "fig_paneles.png")
+    perfil_path = os.path.join(assets_dir, "fig_perfil.png")
 
     series = [(run.run_id, run.e_values) for run in runs]
     eficiencia_hist(series, eff_path)
     hits_por_panel(_merge_panels(runs), panel_path)
+    perfil_posicion([rec for run in runs for rec in run.records], perfil_path)
 
     return {
         "eficiencia": "assets/fig_eficiencia.png",
         "paneles": "assets/fig_paneles.png",
+        "perfil": "assets/fig_perfil.png",
         "eficiencia_path": eff_path,
         "paneles_path": panel_path,
+        "perfil_path": perfil_path,
     }
 
 
