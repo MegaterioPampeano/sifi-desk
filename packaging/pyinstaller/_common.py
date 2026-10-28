@@ -59,6 +59,23 @@ def vendor_datas() -> list[tuple[str, str]]:
     return out
 
 
+def core_datas() -> list[tuple[str, str]]:
+    """Datos que `core/` lee del disco en runtime (no son módulos).
+
+    `sifi/scoring.py` resuelve `DEFAULT_YAML` como
+    `os.path.join(os.path.dirname(__file__), "score.yaml")`; congelado eso es
+    `<bundle>/_internal/sifi/score.yaml`, así que el destino es `sifi/`.
+    """
+    out = []
+    for rel in ("sifi/score.yaml",):
+        src = os.path.join(CORE, rel)
+        if os.path.isfile(src):
+            out.append((src, os.path.dirname(rel)))
+        else:  # sin score.yaml el pipeline no arranca: mejor fallar en el build
+            raise SystemExit(f"falta core/{rel}: el bundle quedaría inservible")
+    return out
+
+
 def license_datas() -> list[tuple[str, str]]:
     """Licencias que el instalador tiene que redistribuir."""
     out = []
@@ -107,7 +124,7 @@ def analysis_kwargs(extra_hidden: list[str] | None = None) -> dict:
         hidden += list(extra_hidden)
     return {
         "pathex": [CORE],
-        "datas": vendor_datas() + license_datas(),
+        "datas": core_datas() + vendor_datas() + license_datas(),
         "hiddenimports": hidden,
         "excludes": EXCLUDES,
         "noarchive": False,

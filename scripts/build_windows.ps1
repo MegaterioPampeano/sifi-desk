@@ -17,6 +17,7 @@
 param(
     [switch]$NoTests,
     [switch]$SkipMsi,
+    [switch]$NoZip,
     [switch]$FetchOnly,
     [string]$Python = "python"
 )
@@ -75,6 +76,35 @@ if ($LASTEXITCODE -ne 0) { throw "sifid.exe --help falló" }
 & (Join-Path $Bundle "sifi.exe") version
 if ($LASTEXITCODE -ne 0) { throw "sifi.exe version falló" }
 Get-ChildItem $Bundle | Select-Object -ExpandProperty Name | ForEach-Object { Write-Host "   $_" }
+
+Step "4b/5 zip del bundle"
+if ($NoZip) {
+    Write-Host "omitido (-NoZip)"
+} else {
+    $leeme = Join-Path $Bundle "LEEME.txt"
+    $texto = @"
+siFi-Desk (Windows) — bundle de escritorio
+==========================================
+
+Ejecutables:
+  sifid.exe    servicio local (API HTTP en 127.0.0.1:8765) + cola de corridas
+  sifi.exe     CLI headless (design, offtarget, panel, score, doctor, version)
+
+Primeros pasos:
+  sifi.exe doctor
+  sifid.exe --help
+
+Descomprimir la carpeta completa (no mover los .exe fuera de _internal\).
+Los binarios externos (bowtie, RNAplfold) están en packaging\vendor\win32-AMD64\.
+Licencias en licenses\. Uso no comercial.
+"@
+    Set-Content -Path $leeme -Value $texto -Encoding UTF8
+    $zip = Join-Path $Repo "dist\sifi-desk-windows.zip"
+    if (Test-Path $zip) { Remove-Item $zip -Force }
+    Compress-Archive -Path (Join-Path $Bundle "*") -DestinationPath $zip `
+        -CompressionLevel Optimal -Force
+    Write-Host "   dist\sifi-desk-windows.zip"
+}
 
 Step "5/5 .msi (Tauri, opcional)"
 $tauriConf = Join-Path $Repo "ui\tauri.conf.json"

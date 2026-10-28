@@ -15,8 +15,24 @@ escritos pero **sin correr** en esta ventana (no hay Windows ni runners locales)
 - `scripts/package_deb.sh`, `scripts/package_appimage.sh` (tolera falta de
   appimagetool).
 - `.github/workflows/build.yml`: matrix ubuntu/windows, pytest, sidecars, `.deb`,
-  `.AppImage`, `.msi` Tauri tolerante a fallo, artefactos y release por tag.
-- `scripts/build_windows.ps1` equivalente PowerShell.
+  `.AppImage`, `.msi` Tauri tolerante a fallo, artefactos (`.zip` de Windows) y
+  release por tag.
+- `scripts/build_windows.ps1` equivalente PowerShell (paso 4b arma
+  `dist/sifi-desk-windows.zip` con `LEEME.txt`).
+- `packaging/README.md`: qué se construye dónde, cómo probarlo y qué falta para
+  firmar.
+- **Smoke real** en `scripts/build_linux.sh` (paso 5/5): índice de juguete con el
+  `bowtie-build` del bundle + `sifi design` por CLI + la misma corrida por la API
+  (ejercita el runner congelado `sifid --runner`). `--no-smoke` lo saltea.
+  Corrido OK: `GeneA · 280 siRNAs · 1 hits` por CLI y por API.
+
+### Bug encontrado y arreglado por el smoke
+
+`_common.py` no copiaba `core/sifi/score.yaml`: el bundle arrancaba, `--help` y
+`sifi version` andaban, pero `sifi design` moría con
+`FileNotFoundError: <bundle>/_internal/sifi/score.yaml`. El `.spec` ahora falla en
+el build si el archivo no está (`core_datas()`), y `_internal/sifi/score.yaml`
+queda empaquetado. Sin el smoke, esto se entregaba roto.
 
 ## Falta / pendiente
 
