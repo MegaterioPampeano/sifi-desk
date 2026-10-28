@@ -1,0 +1,8 @@
+node_modules/
+.env
+*.log
+
+# estado de runtime del harness (sesiones, caches, ids locales)
+sessions/
+storages/
+.anonymous-user-id

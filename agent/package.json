@@ -2,19 +2,17 @@
   "name": "sifi-agent",
   "version": "0.1.0",
   "private": true,
-  "description": "Agente de IA del producto Si-Fi (Omnivac Science): dsh + Cordis + tools contra sifid",
-  "license": "CC-BY-NC-SA-2.0",
   "type": "module",
-  "engines": {
-    "node": ">=22"
+  "description": "Agente Si-Fi: tools del producto (neutrales) + perfil de dsh en ./dsh",
+  "bin": {
+    "sifi-agent": "./bin/sifi-agent.mjs"
   },
   "scripts": {
-    "start": "node bin/sifi-agent.mjs",
     "test": "node --test test/*.test.mjs",
-    "tools:list": "node bin/sifi-agent.mjs --list-tools"
+    "tools": "node bin/sifi-agent.mjs --list-tools",
+    "fake-sifid": "node test/fake-sifid.mjs --port 8765"
   },
-  "dependencies": {
-    "cordis": "4.0.0-rc.12",
-    "deepseek-harness": "0.0.1"
+  "engines": {
+    "node": ">=22"
   }
 }

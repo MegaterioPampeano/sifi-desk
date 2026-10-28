@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 /**
- * Entry de desarrollo del agente Si-Fi.
+ * Entry de desarrollo del agente Si-Fi, SIN harness.
+ *
+ * Es un banco de pruebas de las tools, no un agente: no hay LLM ni loop. Para
+ * el agente real se usa el perfil de dsh (`agent/dsh`, ver README).
  *
  * - `node bin/sifi-agent.mjs --list-tools`        lista las tools disponibles
  * - `node bin/sifi-agent.mjs --health`            chequea sifid
  * - `node bin/sifi-agent.mjs --tool sifi_panels`  llama una tool (args: --args '<json>')
- * - `node bin/sifi-agent.mjs --prompt`            imprime el system prompt (para pegar en el harness)
- *
- * Sin harness (dsh) instalado, corre en modo standalone: el plugin publica
- * `ctx.sifiTools` y este bin lo usa. No inventa una API de dsh que no existe.
+ * - `node bin/sifi-agent.mjs --prompt`            imprime el system prompt
  */
 
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { Context } from 'cordis'
-import * as sifiTools from '../plugins/sifi-tools/index.mjs'
+import { SifidClient } from '../src/client.mjs'
+import { TOOLS, callTool } from '../src/tools.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, '..')
@@ -34,16 +34,13 @@ function parseArgs(argv) {
 }
 
 const args = parseArgs(process.argv.slice(2))
-const ctx = new Context()
+const baseUrl = args.url ?? process.env.SIFID_URL ?? 'http://127.0.0.1:8765'
+const client = new SifidClient({ baseUrl, token: process.env.SIFID_TOKEN })
 
-await ctx.plugin(sifiTools, {
-  baseUrl: args.url ?? process.env.SIFID_URL ?? 'http://127.0.0.1:8765',
-})
-
-const registry = ctx.sifiTools
-if (!registry) {
-  console.error('sifi-tools no se registró. Revisá el log de cordis.')
-  process.exit(1)
+const registry = {
+  list: () => TOOLS,
+  get: (name) => TOOLS.find((t) => t.name === name),
+  call: (name, toolArgs) => callTool(name, toolArgs, { client }),
 }
 
 if (args['list-tools']) {
@@ -63,8 +60,7 @@ if (args.prompt) {
 
 if (args.health) {
   try {
-    const h = await ctx.sifiClient.health()
-    console.log('sifid OK:', JSON.stringify(h))
+    console.log('sifid OK:', JSON.stringify(await client.health()))
     process.exit(0)
   } catch (err) {
     console.error(err.message)
@@ -84,8 +80,7 @@ if (args.tool) {
   }
   try {
     const result = await registry.call(args.tool, toolArgs)
-    const tool = registry.get(args.tool)
-    console.log(args.json ? JSON.stringify(result, null, 2) : tool.render(result))
+    console.log(args.json ? JSON.stringify(result, null, 2) : registry.get(args.tool).render(result))
   } catch (err) {
     console.error(`${err.name ?? 'Error'}: ${err.message}`)
     process.exit(1)
@@ -93,9 +88,11 @@ if (args.tool) {
   process.exit(0)
 }
 
-console.log('sifi-agent (dev, standalone)')
-console.log(`sifid: ${ctx.sifiClient.baseUrl}`)
+console.log('sifi-agent (dev, sin harness)')
+console.log(`sifid: ${client.baseUrl}`)
 console.log(`tools: ${registry.list().map((t) => t.name).join(', ')}`)
+console.log('')
+console.log('Para el agente real con LLM: cd dsh && npm run headless -- "<tarea>"')
 console.log('')
 console.log('Ejemplos:')
 console.log('  node bin/sifi-agent.mjs --health')

@@ -1,0 +1,11 @@
+# Patch layer del bundle sifi-tools.
+#
+# Un bundle de dsh es una capa de patch: acá se inserta la fila del plugin, que
+# después el perfil puede re-configurar por id (`- id: sifi-tools`).
+- insert:
+    - id: sifi-tools
+      name: sifi-tools
+      config:
+        baseUrl: !!js process.env.SIFID_URL ?? 'http://127.0.0.1:8765'
+        token: !!js process.env.SIFID_TOKEN ?? ''
+        timeoutMs: 30000

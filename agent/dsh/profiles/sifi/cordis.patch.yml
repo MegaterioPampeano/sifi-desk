@@ -1,0 +1,20 @@
+# Perfil `sifi` — capa de usuario, aplicada después de los bundles
+# (`@deepseek-ai/dsh-base`, `@deepseek-ai/dsh-headless`, `sifi-tools`).
+#
+# dsh NO fusiona configs: cada fila reemplaza la config completa de la capa
+# anterior. Por eso acá se repite lo que se quiere cambiar tal cual.
+
+# 1) La persona del producto la aporta el plugin sifi-tools como sección del
+#    system prompt (leyendo prompts/system.md). Vaciamos el prefijo de
+#    "coding agent" que trae el bundle headless.
+- id: system-prompt
+  config:
+    personaPrefix: ''
+
+# 2) Endpoint de sifid y token, resueltos del entorno al montar. (El bundle ya
+#    trae los mismos defaults; esto deja explícito cómo se pisa por perfil.)
+- id: sifi-tools
+  config:
+    baseUrl: !!js process.env.SIFID_URL ?? 'http://127.0.0.1:8765'
+    token: !!js process.env.SIFID_TOKEN ?? ''
+    timeoutMs: 30000

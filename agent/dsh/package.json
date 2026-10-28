@@ -1,0 +1,20 @@
+{
+  "name": "sifi-dsh-home",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Harness home de dsh para el agente Si-Fi (perfil `sifi`)",
+  "type": "module",
+  "scripts": {
+    "config": "DSH_HOME=\"$PWD\" dsh --profile sifi --dump-config",
+    "headless": "DSH_HOME=\"$PWD\" dsh --profile sifi headless",
+    "smoke": "DSH_HOME=\"$PWD\" dsh --profile sifi headless --json \"Respondé solamente OK\""
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
+    "@deepseek-ai/schemastery": "3.18.5",
+    "sifi-tools": "file:./bundles/sifi-tools"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh": "0.2.1-rc.2"
+  }
+}
