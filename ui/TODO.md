@@ -40,4 +40,4 @@ servicio real y el empaquetado, que no dependen de este frente.
 * Chat lateral con el agente (simulado en la maqueta).
 * Corridas históricas y reapertura de resultados.
 * Maqueta con datos derivados del fixture y del scoring real del core.
-* Capturas en `docs/screens/` (10 PNG, 1440×950).
+* Capturas en `docs/screens/` (10 PNG, 1440×1000).

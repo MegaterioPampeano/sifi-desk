@@ -1,7 +1,4 @@
 // Cliente HTTP del servicio local (sifid). Sin dependencias.
-// En la maqueta el mismo origen sirve la UI y la API; en Tauri el sidecar
-// escucha en 127.0.0.1:<puerto efímero> y main.js fija API_BASE.
-
 // En el navegador la maqueta sirve UI y API en el mismo origen. En la ventana
 // Tauri el frontend se carga desde el asset protocol y el sidecar escucha en un
 // puerto fijo (ver ui/tauri/src-tauri/src/main.rs).
