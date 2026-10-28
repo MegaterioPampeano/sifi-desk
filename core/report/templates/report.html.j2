@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>{{ producto }} — informe de resultados</title>
+<style>{{ css | safe }}</style>
+</head>
+<body>
+
+<!-- ============================================================ PORTADA -->
+<section class="cover">
+  <div class="cover-top">
+    <div class="cover-brand">{{ empresa }}</div>
+    <h1>{{ producto }}</h1>
+    <div class="cover-sub">{{ tagline }}</div>
+  </div>
+  <div class="cover-rule"></div>
+
+  <div class="cover-body">
+    <table class="cover-meta">
+      <tr>
+        <th>Producto</th>
+        <td>{{ producto }} · {{ empresa }}</td>
+      </tr>
+      <tr>
+        <th>Corrida{{ "s" if multirun else "" }}</th>
+        <td class="mono">
+          {% if multirun %}
+            {% for rid in run_ids[:6] %}{{ rid }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+            {% if run_ids|length > 6 %}<br><span class="muted">(+{{ run_ids|length - 6 }} más en §2)</span>{% endif %}
+          {% else %}
+            {{ run_ids[0] }}
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th>Versión del core</th>
+        <td>
+          {% if multirun and runs|map(attribute="core_version")|unique|list|length > 1 %}
+            varias versiones declaradas — ver §2
+          {% else %}
+            {{ runs[0].core_version }}
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th>Fecha de generación</th>
+        <td>{{ generado }}</td>
+      </tr>
+      <tr>
+        <th>Contenido</th>
+        <td>{{ totales.n_candidates | pz("candidato", "candidatos") }} ·
+            {{ totales.n_records | pz("registro", "registros") }} de secuencia ·
+            {{ totales.n_runs | pz("corrida", "corridas") }}</td>
+      </tr>
+    </table>
+
+    <div class="cover-note">
+      <strong>Predicciones in silico.</strong> Este informe ordena candidatos para el trabajo de
+      laboratorio; no demuestra silenciamiento ni reemplaza los bioensayos de validación.
+      Leer las limitaciones (§6) antes de usar los resultados.
+    </div>
+  </div>
+
+  <div class="cover-foot">
+    Informe v{{ report_version }} · generado automáticamente a partir del manifest
+    <span class="mono">sifi.results/1</span> con el scoring v{{ scoring_version }} del núcleo.
+  </div>
+</section>
+
+<!-- ============================================================ 1. RESUMEN -->
+<h2><span class="num">1</span>Resumen</h2>
+
+<p class="lead">
+  Este informe reúne {{ totales.n_runs | pz("corrida", "corridas") }} del motor siFi,
+  {{ totales.n_records | pz("registro", "registros") }} de secuencia,
+  {{ totales.n_rows }} filas siRNA–hit y {{ totales.n_candidates }} candidatos únicos.
+  Cada candidato se evaluó con el scoring v{{ scoring_version }} del producto y se ordenó por score total
+  sobre 100.
+</p>
+
+<table class="stats">
+  <tr>
+    <td>
+      <div class="value">{{ totales.n_candidates }}</div>
+      <div class="label">Candidatos</div>
+    </td>
+    <td>
+      <div class="value">{{ totales.bandas.get("recomendado", 0) }}</div>
+      <div class="label">Recomendados</div>
+    </td>
+    <td>
+      <div class="value">{{ totales.bandas.get("revisar", 0) }}</div>
+      <div class="label">Para revisar</div>
+    </td>
+    <td>
+      <div class="value">{{ totales.bandas.get("bajo", 0) + totales.bandas.get("descartar", 0) }}</div>
+      <div class="label">Bajos / descartar</div>
+    </td>
+  </tr>
+</table>
+
+{% if totales.mejor %}
+<p>
+  <strong>Mejor candidato:</strong>
+  <span class="mono">{{ totales.mejor.id }}</span> con
+  <strong>{{ totales.mejor.total | f1 }} puntos</strong>
+  ({{ totales.mejor.banda | bandlabel }}), en la corrida
+  <span class="mono">{{ totales.mejor_run.run_id }}</span>.
+  {% if totales.mejor.n_hits %}Registra {{ totales.mejor.n_hits }} hit(s) de off-target; revisar §3 y §5.{% else %}
+  No registra hits de off-target en los paneles buscados.{% endif %}
+</p>
+{% else %}
+<div class="warn"><p>No hay candidatos puntuables en las corridas entregadas (ver registros y errores en §2).</p></div>
+{% endif %}
+
+{% if totales.errores %}
+<div class="alert">
+  <p><strong>Hay {{ totales.errores | pz("registro", "registros") }} con error.</strong> Los registros fallidos no aportan
+  candidatos al ranking. El detalle está en §2.</p>
+</div>
+{% endif %}
+
+{% if multirun %}
+<h3>Comparación de corridas</h3>
+<table class="data">
+  <thead>
+    <tr>
+      <th>Corrida</th>
+      <th>Fecha</th>
+      <th>Core</th>
+      <th>Modo</th>
+      <th class="num">Registros</th>
+      <th class="num">Candidatos</th>
+      <th class="num">Recomendados</th>
+      <th>Mejor candidato</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for run in runs %}
+    <tr>
+      <td class="mono">{{ run.run_id }}</td>
+      <td>{{ run.generated_at_largo }}</td>
+      <td>{{ run.core_version }}</td>
+      <td>{{ run.params.mode | default("—", true) | fmtv }}</td>
+      <td class="num">{{ run.records | length }}</td>
+      <td class="num">{{ run.n_candidates }}</td>
+      <td class="num">{{ run.band_counts.get("recomendado", 0) }}</td>
+      <td>{% if run.best %}<span class="mono">{{ run.best.id }}</span> · {{ run.best.total | f1 }}{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if totales.bandas %}
+<p class="muted small">
+  Bandas: recomendado ≥ 70 · revisar 50–69 · bajo 25–49 · descartar &lt; 25.
+  Las bandas son una guía de priorización, no una probabilidad de éxito (§6).
+</p>
+{% endif %}
+
+<!-- ================================================ 2. PARÁMETROS Y VERSIONES -->
+<h2><span class="num">2</span>Parámetros, versiones y trazabilidad</h2>
+
+<p>
+  Todo lo que sigue se copia del manifest de cada corrida, sin normalizar ni completar.
+  Cuando un dato no está declarado, el informe lo dice: un hash ausente es una limitación
+  de reproducibilidad, no un detalle cosmético.
+</p>
+
+{% for run in runs %}
+<div class="run-block">
+  <h3>{{ run.etiqueta }}</h3>
+
+  <table class="kv">
+    <tr>
+      <th>run_id</th>
+      <td class="mono">{{ run.run_id }}
+        {% if not run.run_id_declarado %}
+          <span class="muted">(derivado del contenido: el manifest no traía run_id)</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <th>Generado</th>
+      <td>{{ run.generated_at_largo }}
+        {% if run.generated_at %}<span class="muted mono small">{{ run.generated_at }}</span>{% endif %}
+      </td>
+    </tr>
+    <tr>
+      <th>Versión del core</th>
+      <td>{{ run.core_version }}
+        {% if not run.core_version_declarada %}
+          <span class="muted">(no declarada en el manifest; se informa la versión del paquete
+          que generó este documento)</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <th>Huella del manifest</th>
+      <td class="mono">{{ run.manifest_digest }}</td>
+    </tr>
+    <tr>
+      <th>Modo</th>
+      <td>{{ run.params.mode | default("—", true) | fmtv }}</td>
+    </tr>
+    {% if run.query_file %}
+    <tr>
+      <th>Query (FASTA)</th>
+      <td class="mono">{{ run.query_file }}
+        {% if run.query_sha256 %}<br><span class="sha">sha256 {{ run.query_sha256 }}</span>{% endif %}
+      </td>
+    </tr>
+    {% endif %}
+    {% if run.database %}
+    <tr>
+      <th>Base de datos</th>
+      <td>
+        {% if run.database.name %}<strong>{{ run.database.name }}</strong>{% endif %}
+        {% if run.database.dir %}<span class="mono small"> · {{ run.database.dir }}</span>{% endif %}
+        {% if run.database.fingerprint %}<br><span class="sha">fingerprint {{ run.database.fingerprint }}</span>{% endif %}
+        {% if run.database.n_seqs %}<span class="muted small"> · {{ run.database.n_seqs }} secuencias</span>{% endif %}
+      </td>
+    </tr>
+    {% endif %}
+  </table>
+
+  <h4>Parámetros de la corrida</h4>
+  {% if run.param_rows %}
+  <table class="data params">
+    <thead><tr><th>Parámetro</th><th>Valor</th></tr></thead>
+    <tbody>
+      {% for p in run.param_rows %}
+      <tr>
+        <td>{{ p.label }}{% if not p.conocido %} <span class="muted mono small">({{ p.clave }})</span>{% endif %}</td>
+        <td>{{ p.valor | fmtv }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">El manifest no declara parámetros.</p>
+  {% endif %}
+
+  <h4>Binarios y versiones</h4>
+  {% if run.tools %}
+  <table class="data tools">
+    <thead>
+      <tr><th>Herramienta</th><th>Ruta</th><th>Versión</th><th>SHA-256</th></tr>
+    </thead>
+    <tbody>
+      {% for t in run.tools %}
+      <tr>
+        <td>{{ t.nombre }}</td>
+        <td class="mono small">{{ t.path }}</td>
+        <td class="mono small">{{ t.version }}</td>
+        <td class="sha">{{ t.sha256 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted small">
+    Con estos hashes y el fingerprint del índice, la corrida se puede reproducir con los
+    mismos binarios. El comando exacto está en el apéndice A.
+  </p>
+  {% else %}
+  <div class="warn">
+    <p>El manifest <strong>no declara binarios ni hashes</strong> (corrida de ejemplo o generada
+    sin registro de herramientas). No se puede garantizar la reproducción al dígito de estos
+    resultados: para un informe definitivo, volver a correr el núcleo con el registro de
+    herramientas activo.</p>
+  </div>
+  {% endif %}
+
+  {% if run.records %}
+  <h4>Registros procesados</h4>
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Registro</th>
+        <th class="num">Largo</th>
+        <th class="num">Filas siRNA–hit</th>
+        <th>Estado</th>
+        <th>Observaciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rec in run.records %}
+      <tr>
+        <td class="mono">{{ rec.query_name | default("(sin nombre)", true) }}</td>
+        <td class="num">{{ rec.query_length | default("—", true) }}</td>
+        <td class="num">{{ (rec.sirnas or []) | length }}</td>
+        <td>
+          {% if rec.error %}<span class="band band-descartar">error</span>
+          {% elif rec.warnings %}<span class="band band-revisar">con avisos</span>
+          {% else %}<span class="band band-recomendado">ok</span>{% endif %}
+        </td>
+        <td class="muted small">
+          {% if rec.error %}{{ rec.error }}
+          {% elif rec.warnings %}{{ rec.warnings | join(" · ") }}
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if run.warnings %}
+  <div class="warn">
+    <p><strong>Avisos de la corrida:</strong></p>
+    <ul>{% for w in run.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  {% if run.errors %}
+  <div class="alert">
+    <p><strong>Errores por registro:</strong></p>
+    <ul>{% for e in run.errors %}<li><span class="mono">{{ e.query }}</span>: {{ e.error }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+<!-- ============================================================ 3. CANDIDATOS -->
+<h2><span class="num">3</span>Candidatos ordenados por score</h2>
+
+<p>
+  El score total (0–100) es la suma exacta de cinco aportes: <strong>E</strong> eficiencia
+  termodinámica (peso 40), <strong>R</strong> riesgo de off-target (15, alto = seguro),
+  <strong>S</strong> especificidad (15), <strong>T</strong> consenso con siFi (15) y
+  <strong>D</strong> calidad de diseño (15). Cada columna muestra el aporte en puntos
+  (peso × valor); las cinco suman el total impreso.
+</p>
+
+{% for run in runs %}
+<div class="run-block">
+  <h3>{{ run.etiqueta }}</h3>
+
+  {% if run.errors %}
+  <div class="alert"><p>Esta corrida tiene registros con error (ver §2); los candidatos listados
+  corresponden sólo a los registros procesados correctamente.</p></div>
+  {% endif %}
+
+  {% if run.candidates %}
+  <p class="muted small">
+    {{ run.n_candidates | pz("candidato", "candidatos") }}:
+    {% for b in ["recomendado", "revisar", "bajo", "descartar"] if run.band_counts.get(b) %}
+      {% if not loop.first %} · {% endif %}{{ b | bandlabel }}: {{ run.band_counts.get(b) }}
+    {% endfor %}
+  </p>
+
+  <table class="data cand">
+    <colgroup>
+      <col style="width:3%">
+      <col style="width:10%">
+      <col style="width:5%">
+      <col style="width:16.5%">
+      <col style="width:6.5%">
+      <col style="width:4.5%">
+      <col style="width:4.5%">
+      <col style="width:4.5%">
+      <col style="width:4.5%">
+      <col style="width:4.5%">
+      <col style="width:4.5%">
+      <col style="width:9%">
+      <col style="width:23%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="num">#</th>
+        <th>siRNA</th>
+        <th class="num">Pos.</th>
+        <th>Secuencia (5'→3')</th>
+        <th class="num">Total</th>
+        <th class="num">E</th>
+        <th class="num">R</th>
+        <th class="num">S</th>
+        <th class="num">T</th>
+        <th class="num">D</th>
+        <th class="num">Hits</th>
+        <th>Banda</th>
+        <th>Observaciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in run.candidates %}
+      <tr>
+        <td class="num muted">{{ loop.index }}</td>
+        <td class="id">{{ c.id }}</td>
+        <td class="num">{{ c.pos if c.pos is not none else "—" }}</td>
+        <td class="seq">{{ c.seq }}</td>
+        <td class="num total">{{ c.total | f1 }}</td>
+        <td class="num ax-E">{{ c.desglose.E.aporte | f1 }}</td>
+        <td class="num ax-R">{{ c.desglose.R.aporte | f1 }}</td>
+        <td class="num ax-S">{{ c.desglose.S.aporte | f1 }}</td>
+        <td class="num ax-T">{{ c.desglose.T.aporte | f1 }}</td>
+        <td class="num ax-D">{{ c.desglose.D.aporte | f1 }}</td>
+        <td class="num">{{ c.n_hits }}</td>
+        <td><span class="band band-{{ c.banda }}">{{ c.banda | bandlabel }}</span></td>
+        <td class="notas">
+          {% if c.notas %}
+            {% for n in c.notas %}{{ n | notalabel }}{% if not loop.last %} · {% endif %}{% endfor %}
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted small">
+    Aportes = peso × valor. E = 40 · R = 15 · S = 15 · T = 15 · D = 15.
+    «Hits» cuenta off-targets distintos en los paneles buscados. Las observaciones señalan
+    condiciones que el score no puede resolver solo (p. ej. un hit perfecto en un no blanco).
+  </p>
+  {% else %}
+  <p class="muted">No hay candidatos puntuables en esta corrida.</p>
+  {% endif %}
+</div>
+{% endfor %}
+
+<!-- ==================================================== 4. EFICIENCIA -->
+<h2><span class="num">4</span>Distribución de eficiencia</h2>
+
+<div class="figure">
+  <img src="{{ figs.eficiencia }}" alt="Distribución de eficiencia (eje E)">
+  <div class="caption">
+    <b>Figura 1.</b> Distribución del eje E del scoring v{{ scoring_version }} entre los
+    {{ totales.n_candidates }} candidatos{% if multirun %} (una serie por corrida){% endif %}.
+    E combina accesibilidad del sitio blanco (50 %), selección de hebra (25 %) y estabilidad
+    del extremo (25 %). Un valor cercano a 1 indica las tres condiciones favorables; la línea
+    punteada marca la media{% if not multirun %} de esta corrida{% endif %}. La forma de la
+    distribución importa: un lote concentrado en valores bajos no mejora por elegir «el mejor».
+  </div>
+</div>
+
+<!-- ==================================================== 5. HITS POR PANEL -->
+<h2><span class="num">5</span>Hits de off-target por panel</h2>
+
+<div class="figure">
+  <img src="{{ figs.paneles }}" alt="Hits de off-target por panel">
+  <div class="caption">
+    <b>Figura 2.</b> Filas siRNA–hit de off-target por panel, separadas en hits perfectos
+    (0 mismatches) y con mismatches (1 a N). Los hits perfectos son la señal más fuerte de
+    riesgo y se listan también como observación en la tabla de §3. Si el manifest no atribuye
+    cada hit a un panel, todos se agrupan en «sin panel declarado»: el informe no inventa la
+    atribución. La búsqueda cubre sólo los paneles indexados en la corrida (§6).
+  </div>
+</div>
+
+{% if totales.paneles_declarados == 0 %}
+<div class="note">
+  <p>Ninguna fila del manifest declara el panel de origen del hit. Para atribuir los hits por
+  panel, volver a correr el núcleo registrando el panel en cada fila o incluir un mapeo
+  <span class="mono">hit → panel</span> en la corrida. Mientras tanto, el conteo de §3 y la
+  Figura 2 siguen siendo válidos como total, no como atribución.</p>
+</div>
+{% endif %}
+
+<!-- ==================================================== 6. LIMITACIONES -->
+<h2><span class="num">6</span>Limitaciones</h2>
+
+<p>
+  Estas limitaciones son parte del resultado, no una advertencia legal al pie. Cualquier
+  decisión de avanzar con un candidato debe leerlas junto con la tabla de §3.
+</p>
+
+{% for lim in limitaciones %}
+<h3>{{ lim.titulo }}</h3>
+<p>{{ lim.texto | safe }}</p>
+{% endfor %}
+
+<!-- ==================================================== APÉNDICE A -->
+<section class="appendix">
+<h2>Apéndice A — Metodología</h2>
+
+<p>
+  El cálculo lo hace el port headless de <strong>si-Fi / siRNA-Finder v1.2.3</strong>
+  (siFi21, commit <span class="mono">d6296b7</span>), sin interfaz gráfica y con la misma
+  matemática del original. El reporte no recalcula termodinámica: toma el manifest
+  <span class="mono">sifi.results/1</span>, lo puntúa con el scoring del producto y lo presenta.
+</p>
+
+<h3>Parámetros clave del método</h3>
+<table class="meta-params">
+  <thead>
+    <tr><th>Parámetro</th><th>Valor canónico de siFi</th><th>Declarado en estas corridas</th></tr>
+  </thead>
+  <tbody>
+    {% for row in metodologia %}
+    <tr>
+      <td>{{ row.label }}</td>
+      <td class="valor">{{ row.canonico }}</td>
+      <td class="{% if row.difiere %}warn-cell{% endif %}">{{ row.en_corrida }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if diferencias_metodologia %}
+<div class="warn">
+  <p><strong>Una o más corridas se apartan de la configuración canónica.</strong> El scoring
+  se calculó con los valores declarados en §2, no con los canónicos de esta tabla:</p>
+  <ul>{% for d in diferencias_metodologia %}<li>{{ d }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<h3>Pasos del cálculo</h3>
+<ol>
+  <li><strong>Corte.</strong> La secuencia de la query se corta en x-mers de 21 nt con paso 1
+      (posición 1-based, como el original).</li>
+  <li><strong>Alineamiento.</strong> Todos los x-mers se alinean contra cada panel indexado con
+      <span class="mono">bowtie -a -v N -y</span>; se conservan todos los hits hasta N
+      mismatches (N se imprime en §2).</li>
+  <li><strong>Accesibilidad.</strong> El ARN de la query se pliega con
+      <span class="mono">RNAplfold -W 80 -L 40 -u 21 -T 22</span> y se lee la probabilidad de
+      sitio desplegado en la ventana de 8 nt del extremo 5' del siRNA.</li>
+  <li><strong>Reglas de eficiencia de siFi.</strong> Se combinan selección de hebra, estabilidad
+      del extremo y accesibilidad del sitio para emitir el veredicto <span class="mono">is_efficient</span>.</li>
+  <li><strong>Scoring v{{ scoring_version }}.</strong> Cinco ejes independientes, cada uno en [0, 1],
+      con pesos explícitos y versionados:</li>
+</ol>
+
+<div class="formula">
+total = 40·E + 15·R + 15·S + 15·T + 15·D<br>
+&nbsp;&nbsp;E eficiencia termodinámica (accesibilidad, hebra, extremo)<br>
+&nbsp;&nbsp;R riesgo de off-target (severidad por mismatches y rol del panel; alto = seguro)<br>
+&nbsp;&nbsp;S especificidad (1 / (1 + Σ 1/(1+mismatches)))<br>
+&nbsp;&nbsp;T consenso con el motor siFi (is_efficient y score propio)<br>
+&nbsp;&nbsp;D calidad de diseño (GC, homopolímeros, extremo 5')<br>
+&nbsp;&nbsp;E, R, S, T, D ∈ [0, 1] &nbsp;→&nbsp; total ∈ [0, 100]
+</div>
+
+<p>
+  El desglose impreso usa el valor redondeado de cada eje, de modo que el total se puede
+  reproducir a mano sumando las cinco columnas. Los umbrales de banda son 70 (recomendado),
+  50 (revisar) y 25 (descartar), y también están versionados en <span class="mono">score.yaml</span>.
+</p>
+
+<h3>Cómo repetir una corrida</h3>
+<pre class="cmd"># 1) núcleo: misma query, mismo índice y mismos binarios (hashes de §2)
+python3 core/cli.py design -q query.fa -d /ruta/al/indice --db-name NOMBRE -o out/
+
+# 2) informe (desde core/)
+cd core && python3 -m report.cli --results ../out/results.json --out reporte.pdf</pre>
+
+<p>
+  La reproducción exacta exige los mismos binarios (bowtie y RNAplfold), el mismo fingerprint
+  del índice y los mismos parámetros. Si el manifest no declara hashes (§2), la comparación
+  entre corridas es sólo cualitativa.
+</p>
+
+<h3>Referencias</h3>
+<ul class="refs">
+  <li>Lück, S. et al. «si-Fi: A Web Tool for Designing RNAi Experiments…».
+      <em>Frontiers in Plant Science</em> 10:1023 (2019). doi:10.3389/fpls.2019.01023.</li>
+  <li>siFi21- (si-Fi v1.2.3-0008), commit d6296b7.
+      https://github.com/snowformatics/siFi21- · licencia CC BY-NC-SA 2.0.</li>
+  <li>ViennaRNA 2.7.2 — RNAplfold (Lorenz et al., 2011). Licencia académica/no comercial.</li>
+  <li>Bowtie 1.3.1 (Langmead et al., 2009). Artistic License 2.0.</li>
+</ul>
+
+<p class="muted small">
+  Informe generado con {{ producto }} v{{ report_version }} · {{ generado }}.
+  El contenido es reproducible a partir del manifest: la fecha de generación es el único
+  dato del texto que cambia entre dos renders de la misma entrada.
+</p>
+</section>
+
+</body>
+</html>
