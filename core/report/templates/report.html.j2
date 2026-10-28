@@ -473,8 +473,37 @@
   </div>
 </div>
 
-<!-- ==================================================== 7. LIMITACIONES -->
-<h2><span class="num">7</span>Limitaciones</h2>
+
+<!-- ============================================ 7. EFICIENCIA vs ESPECIFICIDAD -->
+<h2><span class="num">7</span>Eficiencia contra especificidad</h2>
+
+<div class="figure">
+  <img src="{{ figs.dispersion }}" alt="Dispersión eficiencia contra especificidad">
+  <div class="caption">
+    <b>Figura 4.</b> Cada punto es un candidato: a la derecha, más específico (eje S, sin
+    off-targets); arriba, más eficiente (eje E). El recuadro verde marca la zona deseable y
+    la circunferencia señala el candidato de mejor score total. El compromiso se ve de un
+    golpe: hay puntos con E alto que caen a la izquierda porque pegan en algún panel, y
+    elegirlos «porque tienen buen score» es exactamente el error que este gráfico evita.
+  </div>
+</div>
+
+<!-- ============================================== 8. PERFIL POR GEN AFECTADO -->
+<h2><span class="num">8</span>Perfil por gen afectado</h2>
+
+<div class="figure">
+  <img src="{{ figs.por_gen }}" alt="Perfil por gen afectado">
+  <div class="caption">
+    <b>Figura 5.</b> Los {{ 5 }} genes con más filas de off-target, uno por panel vertical:
+    azul, todos los siRNAs que lo alcanzan; verde, los que además son eficientes. Sirve para
+    distinguir un gen golpeado por muchos siRNAs distintos de uno alcanzado siempre por el
+    mismo tramo: lo primero es un riesgo estructural del transcrito, lo segundo se resuelve
+    moviendo la ventana de corte.
+  </div>
+</div>
+
+<!-- ==================================================== 9. LIMITACIONES -->
+<h2><span class="num">9</span>Limitaciones</h2>
 
 <p>
   Estas limitaciones son parte del resultado, no una advertencia legal al pie. Cualquier

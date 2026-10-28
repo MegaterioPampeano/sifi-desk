@@ -165,11 +165,12 @@ def test_run_bowtie_panels_normaliza_columnas(tmp_path, panels):
                                          "TGTGAATCGCTTAAGGG", 21)
         filas = pl.run_bowtie_panels(sirna_file, panels, 1)
         assert filas
-        for linea in filas:
-            campos = linea.split("\t")
+        for campos in filas:
             assert len(campos) == 9, campos
             assert campos[8] in {"maiz", "simbionte"}
-            assert campos[7] in ("", "0") or ">" in campos[7], campos[7]
+            # el 8º campo (mismatches) nunca puede quedar vacío ni comerse el panel
+            assert campos[7] != "", campos
             assert campos[7] not in ("maiz", "simbionte")
+            assert isinstance(campos[7], int) or campos[7].isdigit() or ">" in str(campos[7])
     finally:
         pl.cleanup()

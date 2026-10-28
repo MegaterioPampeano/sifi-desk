@@ -254,11 +254,19 @@ class SifiPipeline:
         return paneles.pop() if len(paneles) == 1 else None
 
     # ------------------------------------------------------------- helpers
-    def bowtie_to_lst(self, bowtie_data: Iterable[str]) -> List[list]:
-        """Convierte la salida de bowtie en listas. Añade 0 si no hubo mismatches."""
+    def bowtie_to_lst(self, bowtie_data: Iterable) -> List[list]:
+        """Convierte la salida de bowtie en listas. Añade 0 si no hubo mismatches.
+
+        Acepta líneas de texto (una base) o listas de campos ya normalizadas (multi-panel).
+        El 0 va como entero, igual que el original: si quedara como cadena vacía, un hit
+        perfecto no se distinguiría de un campo ausente en el JSON.
+        """
         bowtie_lst = []
         for line in bowtie_data:
-            parts = line.strip().split("\t")
+            if isinstance(line, (list, tuple)):
+                parts = list(line)
+            else:
+                parts = line.strip().split("\t")
             if len(parts) == 7:
                 parts.append(0)
             bowtie_lst.append(parts)
@@ -312,13 +320,13 @@ class SifiPipeline:
             return fh.readlines()
 
     def run_bowtie_panels(self, sequence: str, panels: Sequence[dict],
-                          mismatches: int) -> List[str]:
+                          mismatches: int) -> List[list]:
         """Corre bowtie contra el índice de cada panel y etiqueta cada hit con su panel.
 
         La etiqueta viaja como novena columna (las ocho de bowtie no se tocan), así el
         resto del pipeline no cambia: ``data_to_json`` la lee y la publica en la fila.
         """
-        rows: List[str] = []
+        rows: List[list] = []
         for i, pnl in enumerate(panels):
             pid = str(pnl.get("panel") or pnl.get("id") or pnl.get("db_name") or f"panel{i + 1}")
             data = self.run_bowtie(sequence, pnl["db_name"], mismatches,
@@ -330,11 +338,11 @@ class SifiPipeline:
                 # bowtie -v escribe 7 columnas; el pipeline agrega 0 (mismatches) si falta.
                 # Normalizamos a 8 ANTES de agregar el panel, para que la novena sea el panel
                 # y no se pise la columna de mismatches.
-                parts = line.rstrip("\n").split("\t")
+                parts = line.strip().split("\t")
                 if len(parts) == 7:
-                    parts.append("0")
+                    parts.append(0)  # int, como el original
                 parts.append(pid)
-                rows.append("\t".join(parts))
+                rows.append(parts)
             log.debug("panel %s: %d hits", pid, len(data))
         return rows
 

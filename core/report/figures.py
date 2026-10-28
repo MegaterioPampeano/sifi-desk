@@ -212,25 +212,138 @@ def perfil_posicion(records, path: str) -> str:
     return _save(fig, path)
 
 
+def dispersion_especificidad_eficacia(candidates, path: str) -> str:
+    """Dispersión eficiencia (E) × especificidad (S): el plano donde se elige una ventana.
+
+    Arriba y a la derecha es lo bueno: muchos siRNAs eficientes y pocos off-targets. El punto
+    de mejor score total queda marcado; la zona verde claro es la combinación deseable.
+    """
+    fig, ax = plt.subplots(figsize=(6.9, 3.4), constrained_layout=True)
+    cands = [c for c in candidates if c.get("desglose")]
+    if not cands:
+        _empty(ax, "Sin candidatos puntuables")
+        ax.set_title("Eficiencia contra especificidad")
+        return _save(fig, path)
+
+    # zona deseable
+    ax.axvspan(0.66, 1.0, ymin=0.66, ymax=1.0, color=VERDE_CLARO, alpha=0.20,
+               linewidth=0, zorder=0)
+    colores = {"recomendado": VERDE, "revisar": AMBAR, "bajo": GRIS,
+               "descartar": "#c53030"}
+    grupos = {}
+    for c in cands:
+        grupos.setdefault(c.get("banda") or "revisar", []).append(c)
+    orden = [b for b in ("recomendado", "revisar", "bajo", "descartar") if b in grupos]
+    orden += [b for b in grupos if b not in orden]  # una banda nueva no puede quedar afuera
+    for banda in orden:
+        xs = [float(c["desglose"]["S"]["valor"]) for c in grupos[banda]]
+        ys = [float(c["desglose"]["E"]["valor"]) for c in grupos[banda]]
+        ax.scatter(xs, ys, s=16, color=colores.get(banda, GRIS), alpha=0.72,
+                   linewidths=0, zorder=3, label=f"{banda} (n={len(xs)})")
+
+    mejor = max(cands, key=lambda c: float(c.get("total") or 0))
+    ax.scatter([float(mejor["desglose"]["S"]["valor"])],
+               [float(mejor["desglose"]["E"]["valor"])],
+               s=90, facecolors="none", edgecolors=TINTA, linewidths=1.2, zorder=4)
+    ax.annotate(f"mejor score · {mejor.get('id')} · pos {mejor.get('pos')}",
+                xy=(float(mejor["desglose"]["S"]["valor"]),
+                    float(mejor["desglose"]["E"]["valor"])),
+                xytext=(6, 6), textcoords="offset points", fontsize=7, color=TINTA)
+
+    ax.set_xlim(-0.02, 1.02)
+    ax.set_ylim(-0.02, 1.02)
+    ax.set_xlabel("Especificidad (eje S): 1 = sin off-targets")
+    ax.set_ylabel("Eficiencia (eje E)")
+    ax.grid(color="#e3e8eb", linewidth=0.6, zorder=1)
+    ax.set_axisbelow(True)
+    ax.legend(frameon=False, fontsize=6.8, loc="lower left")
+    ax.set_title("Eficiencia contra especificidad — dónde está el compromiso")
+    return _save(fig, path)
+
+
+def perfil_por_gen(records, path: str, top: int = 5) -> str:
+    """Perfil por posición para los genes más golpeados (todos vs eficientes).
+
+    Equivale al «off target plot» del siFi original, pero con la estética del informe y sin
+    la tabla: acá importa ver *dónde* pega cada gen, no cuántas filas suma.
+    """
+    from collections import Counter
+    conteo: Counter = Counter()
+    largo = 0
+    for rec in records:
+        largo = max(largo, int(rec.get("query_length") or 0))
+        for r in rec.get("sirnas") or []:
+            if r.get("hit_name"):
+                conteo[str(r["hit_name"])] += 1
+    if not conteo or not largo:
+        fig, ax = plt.subplots(figsize=(6.9, 2.2), constrained_layout=True)
+        _empty(ax, "Sin hits de off-target para desglosar")
+        ax.set_title("Perfil por gen afectado")
+        return _save(fig, path)
+
+    elegidos = [h for h, _ in conteo.most_common(top)]
+    filas_n = len(elegidos)
+    fig, axes = plt.subplots(filas_n, 1, figsize=(6.9, 1.35 * filas_n + 0.5),
+                             sharex=True, constrained_layout=True)
+    if filas_n == 1:
+        axes = [axes]
+
+    for ax, hit in zip(axes, elegidos):
+        todos = [0] * largo
+        eff = [0] * largo
+        for rec in records:
+            for r in rec.get("sirnas") or []:
+                if str(r.get("hit_name") or "") != hit:
+                    continue
+                pos = int(r.get("sirna_position") or 0) - 1
+                if pos < 0:
+                    continue
+                for i in range(pos, min(pos + 21, largo)):
+                    todos[i] += 1
+                    if r.get("is_efficient"):
+                        eff[i] += 1
+        ax.fill_between(range(largo), todos, color="#2b6cb0", alpha=0.22, linewidth=0)
+        ax.plot(range(largo), todos, color="#2b6cb0", linewidth=0.9)
+        ax.plot(range(largo), eff, color=VERDE, linewidth=1.1)
+        ax.set_xlim(0, largo)
+        ax.set_ylim(bottom=0)
+        ax.set_ylabel("siRNAs", fontsize=7)
+        ax.tick_params(labelsize=6.5)
+        ax.grid(axis="y", color="#e3e8eb", linewidth=0.5)
+        ax.set_axisbelow(True)
+        ax.set_title(f"{hit} — {conteo[hit]} fila(s)", loc="left", fontsize=8)
+    axes[-1].set_xlabel(f"Posición sobre el transcrito ({largo} nt)")
+    fig.suptitle("Perfil por gen afectado (azul: todos · verde: eficientes)", fontsize=8.5)
+    return _save(fig, path)
+
+
 def figuras(runs, assets_dir: str) -> Dict[str, str]:
     """Genera las dos figuras y devuelve rutas relativas al out_dir."""
     os.makedirs(assets_dir, exist_ok=True)
     eff_path = os.path.join(assets_dir, "fig_eficiencia.png")
     panel_path = os.path.join(assets_dir, "fig_paneles.png")
     perfil_path = os.path.join(assets_dir, "fig_perfil.png")
+    disp_path = os.path.join(assets_dir, "fig_dispersion.png")
+    gen_path = os.path.join(assets_dir, "fig_por_gen.png")
 
     series = [(run.run_id, run.e_values) for run in runs]
     eficiencia_hist(series, eff_path)
     hits_por_panel(_merge_panels(runs), panel_path)
     perfil_posicion([rec for run in runs for rec in run.records], perfil_path)
+    dispersion_especificidad_eficacia([c for run in runs for c in run.candidates], disp_path)
+    perfil_por_gen([rec for run in runs for rec in run.records], gen_path)
 
     return {
         "eficiencia": "assets/fig_eficiencia.png",
         "paneles": "assets/fig_paneles.png",
         "perfil": "assets/fig_perfil.png",
+        "dispersion": "assets/fig_dispersion.png",
+        "por_gen": "assets/fig_por_gen.png",
         "eficiencia_path": eff_path,
         "paneles_path": panel_path,
         "perfil_path": perfil_path,
+        "dispersion_path": disp_path,
+        "por_gen_path": gen_path,
     }
 
 
