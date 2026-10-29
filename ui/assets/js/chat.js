@@ -143,7 +143,7 @@ export function actualizarContexto() {
     chip.textContent = "sin corrida activa";
   }
   const st = $("#chat-status");
-  st.textContent = "local";
+  if (st) st.textContent = "local";   // el elemento puede no existir en esta vista
 }
 
 async function enviar(texto) {

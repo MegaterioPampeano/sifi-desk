@@ -1,5 +1,6 @@
 // Arranque de la ventana: tema, navegación, servicio y cableado entre vistas.
 import { api, setApiBase, ApiError } from "./api.js";
+import { toast } from "./toast.js";
 import { state, loadDraft, clearDraft } from "./state.js";
 import { initWizard, setPanels, goStep } from "./wizard.js";
 import { initProgress, followRun, stop as stopProgress } from "./progress.js";
@@ -152,9 +153,6 @@ async function cargarCorridas() {
       return;
     }
     cont.innerHTML = runs.map((r) => filaRun(r)).join("");
-    cont.querySelectorAll("[data-run]").forEach((btn) => {
-      btn.addEventListener("click", () => abrirCorrida(btn.dataset.run));
-    });
   } catch (err) {
     cont.innerHTML = `<div class="readout-empty">No se pudo leer el historial: ${esc(err.message)}</div>`;
   }
@@ -199,9 +197,20 @@ async function abrirCorrida(id) {
       followRun(run);
     }
   } catch (err) {
+    console.error("[abrirCorrida]", err);
     toast(err.message, true);
   }
 }
+
+// Un solo listener para toda la lista: si la tabla se repinta (polling, "Actualizar"),
+// los botones nuevos siguen funcionando. Antes se enganchaba fila por fila y al
+// refrescar quedaban muertos.
+document.addEventListener("click", (ev) => {
+  const btn = ev.target.closest("[data-run]");
+  if (!btn || btn.disabled) return;
+  ev.preventDefault();
+  abrirCorrida(btn.dataset.run);
+});
 
 // ------------------------------------------------------------------ arranque
 function initToasts() {

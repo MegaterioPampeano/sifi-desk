@@ -39,11 +39,15 @@ class Ventana(Gtk.Window):
         except Exception:
             pass
 
+        self.base_url = url
         self.web = WebKit2.WebView()
         self.web.load_uri(url)
         self.add(self.web)
 
         self.web.connect("load-failed", self._fallo)
+        # Los links con target="_blank" (papers de Novedades) no hacen nada en WebKitGTK:
+        # hay que decidir explícitamente si se abren adentro o en el navegador del sistema.
+        self.web.connect("decide-policy", self._politica)
         if os.environ.get("SIFI_UI_DEBUG"):
             # consola del WebView al stdout: sirve para depurar la interfaz sin
             # abrir las herramientas de desarrollo (el nombre del signal cambió
@@ -59,6 +63,31 @@ class Ventana(Gtk.Window):
     def _consola(self, _web, _fuente, linea, mensaje):
         print(f"[ui] {mensaje} ({linea})", flush=True)
         return False
+
+    def _politica(self, _web, decision, tipo):
+        if tipo == WebKit2.PolicyDecisionType.NEW_WINDOW_ACTION:
+            nav = decision.get_navigation_action()
+            uri = nav.get_request().get_uri() if nav else ""
+            if uri:
+                decision.ignore()
+                self._externo(uri)
+                return True
+        if tipo == WebKit2.PolicyDecisionType.NAVIGATION_ACTION:
+            nav = decision.get_navigation_action()
+            uri = nav.get_request().get_uri() if nav else ""
+            # sólo dejamos navegar dentro de la app; el resto va al navegador
+            if uri and not uri.startswith(self.base_url.split("?")[0]):
+                decision.ignore()
+                self._externo(uri)
+                return True
+        return False
+
+    def _externo(self, uri: str) -> None:
+        try:
+            ok = Gtk.show_uri_on_window(self, uri, Gtk.get_current_event_time())
+            print(f"[ui] abrir externo {uri}: {ok}", flush=True)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[ui] no pude abrir {uri}: {exc}", flush=True)
 
     def _fallo(self, _web, _evento, uri, error):
         dialogo = Gtk.MessageDialog(

@@ -3,6 +3,7 @@ import { state, saveDraft, selectedPanels, parseFasta, queryPath } from "./state
 import { DEMO_FASTA } from "./demo.js";
 import { esc, num, roleLabel, gc } from "./format.js";
 import { api } from "./api.js";
+import { toast } from "./toast.js";
 
 let onRun = null;
 let maxStep = 1;
@@ -390,7 +391,3 @@ function debounce(fn, ms) {
   };
 }
 
-function toast(msg, err) {
-  const ev = new CustomEvent("sifi:toast", { detail: { msg, err } });
-  document.dispatchEvent(ev);
-}

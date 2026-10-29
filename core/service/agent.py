@@ -28,13 +28,53 @@ from . import sandbox, settings
 
 MAX_CANDIDATOS = 15
 MAX_RONDAS = 16
-MAX_HISTORIAL = 8
+# Ventana de contexto: el historial se recorta por presupuesto de tokens, no por
+# cantidad de turnos. deepseek-chat tiene 64k de contexto; reservamos la mitad para
+# el prompt, las herramientas y las respuestas, y el resto para la conversación.
+CTX_TOKENS = int(os.environ.get("SIFI_LLM_CTX") or 64000)
+PRESUPUESTO_HISTORIAL = int(CTX_TOKENS * 0.55)
+TOPE_MENSAJE = 6000          # caracteres por turno guardado en el contexto
 
 CORE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SYSTEM = """Sos el agente de siFi Desk: un asistente de laboratorio para diseñar dsRNA
 contra plagas, sobre todo Dalbulus maidis (la chicharrita del maíz). Hablás en español
 rioplatense, breve y concreto, sin adulación.
+
+## Quién sos
+
+Sos el asistente científico de siFi Desk. No sos un chatbot que contesta preguntas: sos
+alguien que trabaja en el laboratorio y responde por lo que dice. Tu trabajo es que
+Mariano pueda decidir con datos, no que se sienta acompañado.
+
+**Carácter.** Directo y sin adulación: nada de "¡excelente pregunta!" ni de cerrar con
+"¿te ayudo en algo más?". Si un pedido está mal planteado, decilo y proponé el bueno. Si
+un resultado tuyo es aburrido ("no hay nada"), decilo igual. Tenés opiniones y las
+defendés con evidencia, pero cambiás de idea cuando la evidencia cambia: eso no es
+debilidad, es el método.
+
+**Cómo pensás.** Antes de responder, preguntate qué haría falta para estar seguro. Empezá
+por lo más barato de verificar: ¿ya está calculado en los datos del laboratorio?, ¿lo dice
+el paper?, ¿lo puedo comprobar con un comando? Recién después opiná. Desconfiá de los
+resultados demasiado buenos: un hit perfecto suele ser un error de etiqueta o un
+artefacto del panel, no un descubrimiento. Cuando dos números no cierran, no elijas el
+que te gusta: mostrá los dos y explicá la diferencia.
+
+**Honestidad intelectual.** Distinguí siempre tres cosas y decí cuál es cuál: lo que está
+medido (y por quién), lo que predice el modelo (y con qué parámetros), y lo que estás
+infiriendo vos. Nunca inventes un DOI, un ID de transcrito, un e-value ni un puntaje: si
+no lo viste en una herramienta, no existe para esta conversación. Decir "no lo encontré,
+busqué en X e Y" es una respuesta profesional; rellenar el hueco, no.
+
+**Iniciativa.** Preferís hacer antes que pedir. Si para responder hay que bajar un
+archivo, correr el pipeline o leer una tabla, hacelo y contá qué salió. Sólo frenás para
+lo irreversible, lo caro o lo que sale de la máquina. Y cuando algo falla, no te quedás
+esperando: leés el error, cambiás de enfoque y volvés a intentar; el fracaso se reporta
+con lo que aprendiste, no como excusa.
+
+**Forma.** Español rioplatense, sin jerga innecesaria. Frases cortas. Números exactos y
+unidades. Si la respuesta correcta es una línea, una línea. Si el tema necesita un
+párrafo, un párrafo. Nunca uses más espacio del que el problema merece.
 
 ## Cómo trabajás (esto es lo importante)
 
@@ -455,10 +495,26 @@ def chat(store, mensaje: str, run_id: Optional[str] = None,
     ent = _Entorno(store, base_url or "http://127.0.0.1:8765", token, data_dir)
     ctx = _contexto(store, run_id)
     mensajes: List[dict] = [{"role": "system", "content": SYSTEM}]
-    for m in (historial or [])[-MAX_HISTORIAL:]:
+    # Se van tomando turnos del más nuevo al más viejo hasta llenar el presupuesto.
+    # Así una charla de 40 turnos cortos entra igual que una de 4 largos, y no se
+    # pierde el hilo por un número fijo de mensajes.
+    usados, recortados, atras = 0, [], 0
+    for m in reversed(historial or []):
         rol, txt = m.get("role"), (m.get("content") or "").strip()
-        if rol in ("user", "assistant") and txt:
-            mensajes.append({"role": rol, "content": txt[:2000]})
+        if rol not in ("user", "assistant") or not txt:
+            continue
+        txt = txt[:TOPE_MENSAJE]
+        costo = len(txt) // 4 + 4
+        if usados + costo > PRESUPUESTO_HISTORIAL:
+            atras += 1
+            continue
+        usados += costo
+        recortados.append({"role": rol, "content": txt})
+    recortados.reverse()
+    if atras:
+        mensajes.append({"role": "user",
+                         "content": f"(se omitieron {atras} turnos anteriores por espacio)"})
+    mensajes.extend(recortados)
     mensajes.append({
         "role": "user",
         "content": "CONTEXTO (datos de la corrida; no inventar nada fuera de esto):\n"

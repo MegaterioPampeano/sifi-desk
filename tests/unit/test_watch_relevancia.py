@@ -57,7 +57,10 @@ def test_pubmed_usa_pubmed_term_configurado():
     client = sources.HttpClient(transport=transport, sleep=lambda s: None)
     q = query(pubmed_term='(RNAi[tiab] OR dsRNA[tiab]) AND (insect*[tiab])',
               keywords=["RNAi"])
-    assert sources.fetch_pubmed(q, date(2026, 10, 21), 5, client) == []
+    # `until` explícito: sin esto el test depende del día en que se corre
+    # (fetch_pubmed usa today_utc() y fallaba al cambiar la fecha).
+    assert sources.fetch_pubmed(q, date(2026, 10, 21), 5, client,
+                                until=date(2026, 10, 28)) == []
 
     term = transport.calls[0]["params"]["term"]
     assert term.startswith('(RNAi[tiab] OR dsRNA[tiab]) AND (insect*[tiab])')
