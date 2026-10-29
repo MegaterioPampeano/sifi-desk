@@ -198,7 +198,10 @@ def resolve_panel(panels_root: str, panel_id: str, version: Optional[str] = None
     versions = sorted(v for v in os.listdir(pdir) if read_meta(os.path.join(pdir, v)))
     if not versions:
         raise PanelError(f"el panel {panel_id!r} no tiene versiones válidas")
-    ver = version or versions[-1]
+    # "La última" se decide por fecha de creación, no por orden alfabético: si no,
+    # 'v1' gana sobre '20261029' y el servicio sigue usando un panel demo viejo sin avisar.
+    ver = version or max(versions, key=lambda v: (read_meta(os.path.join(pdir, v)) or {})
+                         .get("creado") or "")
     if ver not in versions:
         raise PanelError(f"el panel {panel_id!r} no tiene la versión {ver!r} (hay: {', '.join(versions)})")
     meta = read_meta(os.path.join(pdir, ver))

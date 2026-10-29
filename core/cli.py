@@ -184,6 +184,34 @@ def cmd_doctor(_args) -> int:
     return 0
 
 
+def cmd_dossier(args) -> int:
+    """Figuras A-D + PDF del dossier, usando los paneles registrados en el servicio."""
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from core.report import dossier as dossiermod
+    import json as _json
+
+    ids = list(args.panel) or [p["id"] for p in panelmod.list_panels(PANELS_ROOT)
+                               if p.get("rol") in ("no_blanco", "simbionte", "patogeno")]
+    paneles = {}
+    for pid in ids:
+        if "=" in pid:  # nombre=ruta: FASTA suelto, para paneles que todavía no están indexados
+            nombre, _, ruta = pid.partition("=")
+            paneles[nombre] = ruta
+            continue
+        info = panelmod.resolve_panel(PANELS_ROOT, pid)
+        if not info:
+            print(f"panel desconocido: {pid}", file=sys.stderr)
+            return 2
+        paneles[pid] = os.path.join(info["path"], "seqs.fa")
+    resumen = dossiermod.build(args.ventanas, paneles, args.out,
+                               blastn=os.environ.get("SIFI_BLASTN") or "blastn",
+                               hilos=args.hilos)
+    pdf = args.pdf or os.path.join(args.out, "dossier.pdf")
+    dossiermod.to_pdf(resumen, pdf, titulo=args.titulo, subtitulo=args.subtitulo)
+    print(_json.dumps({"figuras": resumen["figuras"], "pdf": pdf}, ensure_ascii=False, indent=1))
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="sifi", description="siFi-Desk core (headless)")
     ap.add_argument("--version", action="version", version=f"siFi-Desk core {__version__}")
@@ -217,6 +245,17 @@ def main(argv=None) -> int:
     sc.add_argument("-o", "--out", default=None, help="salida (default: sobreescribe)")
     sc.add_argument("--weights", default=None, help="score.yaml alternativo")
     sc.set_defaults(func=cmd_score)
+
+    dos = sub.add_parser("dossier", help="figuras A-D para elegir un blanco (PDF)")
+    dos.add_argument("ventanas", help="JSON con las ventanas del dossier")
+    dos.add_argument("out", help="directorio de salida")
+    dos.add_argument("--panel", action="append", default=[], metavar="ID",
+                     help="panel a evaluar (repetible; default: todos los no_blanco + simbionte)")
+    dos.add_argument("--pdf", default=None, help="ruta del PDF (default: <out>/dossier.pdf)")
+    dos.add_argument("--titulo", default="Cuatro gráficos para elegir el blanco")
+    dos.add_argument("--subtitulo", default="Candidatos de dsRNA")
+    dos.add_argument("--hilos", type=int, default=8)
+    dos.set_defaults(func=cmd_dossier)
 
     doc = sub.add_parser("doctor", help="verifica binarios y entorno")
     doc.add_argument("--bowtie", default=None)

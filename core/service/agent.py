@@ -273,7 +273,10 @@ TOOLS: List[dict] = [
                        "de resultados, en vez de buscar archivos.",
         "parameters": {"type": "object", "properties": {
             "run_id": {"type": "string"}, "top": {"type": "integer"},
-            "gen": {"type": "string", "description": "opcional: filtrar por registro del FASTA"}},
+            "gen": {"type": "string", "description": "opcional: filtrar por registro del FASTA"},
+            "desde": {"type": "integer", "description": "opcional: sólo posiciones >= desde"},
+            "hasta": {"type": "integer", "description": "opcional: sólo posiciones <= hasta"},
+            "minimo": {"type": "number", "description": "opcional: sólo score >= minimo"}},
             "required": ["run_id"]}}},
     {"type": "function", "function": {
         "name": "informe",
@@ -440,20 +443,45 @@ def _ejecutar(nombre: str, args: dict, ent: _Entorno) -> Dict[str, Any]:
             data = json.load(fh)
         top = max(1, min(int(args.get("top") or 10), 50))
         filtro = (args.get("gen") or "").strip().lower()
+        desde = int(args.get("desde") or 0)
+        hasta = int(args.get("hasta") or 0)
+        minimo = float(args.get("minimo") or 0)
         filas = []
         for rec in data.get("records", []):
             nombre = str(rec.get("name") or rec.get("query_name") or "")
             if filtro and filtro not in nombre.lower():
                 continue
             cands = sorted(rec.get("candidates") or [], key=lambda c: c.get("total") or 0,
-                           reverse=True)[:top]
+                           reverse=True)
+            if desde or hasta:
+                cands = [c for c in cands
+                         if (not desde or (c.get("pos") or 0) >= desde)
+                         and (not hasta or (c.get("pos") or 0) <= hasta)]
+            if minimo:
+                cands = [c for c in cands if (c.get("total") or 0) >= minimo]
+            cands = cands[:top]
             for c in cands:
                 filas.append({"gen": nombre, "id": c.get("id"), "pos": c.get("pos"),
                               "seq": c.get("seq"), "score": c.get("total"),
                               "banda": c.get("banda"), "hits": c.get("n_hits")})
         if not filas:
             return {"ok": True, "salida": "la corrida no tiene candidatos"}
-        lineas = [f"{len(filas)} candidatos (ordenados por score):"]
+        # Resumen por registro: el top 10 no dice cuántos candidatos hay ni cómo se
+        # reparte el off-target, y sin eso el agente no puede contestar preguntas de
+        # conteo (y las inventa).
+        resumen = []
+        for rec in data.get("records", []):
+            nombre = str(rec.get("name") or rec.get("query_name") or "")
+            if filtro and filtro not in nombre.lower():
+                continue
+            cands = rec.get("candidates") or []
+            if not cands:
+                continue
+            cero = sum(1 for c in cands if not c.get("n_hits"))
+            fuertes = sum(1 for c in cands if (c.get("total") or 0) >= 70)
+            resumen.append(f"{nombre}: {len(cands)} candidatos · {cero} sin off-target · "
+                           f"{fuertes} con score>=70 · largo {rec.get('query_length')} nt")
+        lineas = resumen + [f"{len(filas)} candidatos (ordenados por score):"]
         for f in filas:
             lineas.append(f"- {f['id']} pos {f['pos']} score {f['score']:.2f} "
                           f"banda {f['banda']} hits {f['hits']} seq {f['seq']}")

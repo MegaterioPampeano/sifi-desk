@@ -256,9 +256,16 @@ class SifiPipeline:
                                 faltantes, extra)
                     resueltos.extend(extra)
                 else:
-                    log.warning("main target %r no está en el panel y el encabezado no "
-                                "trae un accession conocido: todo cuenta como off-target",
-                                faltantes)
+                    # Ni el nombre pedido ni el encabezado sirven: se cae a la diagonal.
+                    deducido = self._target_por_diagonal()
+                    if deducido:
+                        log.warning("main target %r no está en el panel; deducido por "
+                                    "diagonal: %r", faltantes, deducido)
+                        resueltos.extend(deducido)
+                    else:
+                        log.warning("main target %r no está en el panel y el encabezado no "
+                                    "trae un accession conocido: todo cuenta como off-target",
+                                    faltantes)
             self._main_panel = self._panel_of(resueltos)
             return resueltos or None
 
