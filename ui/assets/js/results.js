@@ -8,6 +8,11 @@ const $ = (sel) => document.querySelector(sel);
 const BAND_ORDER = { recomendado: 0, revisar: 1, bajo: 2, descartar: 3 };
 
 export function initResults({ onNewRun }) {
+  const zin = $("#perfil-in"), zout = $("#perfil-out"), ztodo = $("#perfil-todo");
+  if (zin) zin.addEventListener("click", () => perfilZoom(0.6));
+  if (zout) zout.addEventListener("click", () => perfilZoom(1.6));
+  if (ztodo) ztodo.addEventListener("click", perfilReset);
+
   $("#band-filters").addEventListener("click", (ev) => {
     const chip = ev.target.closest("[data-band]");
     if (!chip) return;
@@ -188,8 +193,24 @@ function renderMap() {
 
 
 // Perfil por posición: score de cada candidato contra su posición en el transcrito, con
-// una media móvil para ver dónde conviene cortar. El mapa de arriba dice *dónde* están;
+// una media móvil para ver dónde conviene cortar. Tiene zoom (rueda o botones), arrastre
+// para moverse y doble clic para volver a ver todo. El mapa de arriba dice *dónde* están;
 // esto dice *qué tan buenos* son en cada zona, que es lo que decide la ventana.
+
+const PERFIL_ANCHO = 720;
+const PERFIL_ALTO = 220;
+const PERFIL_M = { top: 12, right: 12, bottom: 26, left: 34 };
+
+// dominio visible por gen: {x0, x1, y0, y1}. Vive en memoria, no se guarda en disco.
+const perfilVista = new Map();
+
+function perfilDominio(rec) {
+  const L = (rec.gene && rec.gene.longitud) || 1;
+  const clave = rec.query_name;
+  if (!perfilVista.has(clave)) perfilVista.set(clave, { x0: 1, x1: L, y0: 0, y1: 100 });
+  return perfilVista.get(clave);
+}
+
 function renderPerfil() {
   const cont = $("#gene-perfil");
   if (!cont) return;
@@ -201,69 +222,188 @@ function renderPerfil() {
     return;
   }
 
-  const ANCHO = 720, ALTO = 220, M = { top: 12, right: 12, bottom: 26, left: 34 };
-  const iw = ANCHO - M.left - M.right, ih = ALTO - M.top - M.bottom;
+  const { top, right, bottom, left } = PERFIL_M;
+  const iw = PERFIL_ANCHO - left - right;
+  const ih = PERFIL_ALTO - top - bottom;
 
-  cont.innerHTML = recs.map((rec) => {
+  cont.innerHTML = recs.map((rec, idx) => {
     const cands = rec.candidates.slice().sort((a, b) => a.pos - b.pos);
     if (!cands.length) return `<div class="d-empty">Sin candidatos.</div>`;
-    const L = (rec.gene && rec.gene.longitud) || cands[cands.length - 1].pos || 1;
-    const x = (pos) => M.left + (iw * (pos - 1)) / Math.max(1, L - 1);
-    const y = (v) => M.top + ih * (1 - Math.max(0, Math.min(100, v)) / 100);
+    const dom = perfilDominio(rec);
+    const x = (pos) => left + iw * (pos - dom.x0) / Math.max(1e-9, dom.x1 - dom.x0);
+    const y = (v) => top + ih * (1 - (v - dom.y0) / Math.max(1e-9, dom.y1 - dom.y0));
+    const dentro = (c) => c.pos >= dom.x0 && c.pos <= dom.x1
+      && c.total >= dom.y0 && c.total <= dom.y1;
 
-    const puntos = cands.map((c) => {
+    const visibles = cands.filter(dentro);
+    const puntos = visibles.map((c) => {
       const clase = c.banda === "recomendado" ? "ok" : c.banda === "revisar" ? "mid" : "low";
+      const r = visibles.length > 1500 ? 1.8 : 2.4;
       return `<circle class="pf ${clase}" cx="${x(c.pos).toFixed(1)}" cy="${y(c.total).toFixed(1)}" `
-        + `r="2.2" data-id="${esc(c.id)}" data-query="${esc(rec.query_name)}">`
+        + `r="${r}" data-id="${esc(c.id)}" data-query="${esc(rec.query_name)}">`
         + `<title>${esc(c.id)} · pos ${c.pos} · ${num(c.total, 1)} · ${bandLabel(c.banda)}</title></circle>`;
     }).join("");
 
     // media móvil de 50 candidatos: suaviza el ruido de la secuencia sin esconder la forma
     const VENTANA = 50;
-    const media = [];
+    const puntosMedia = [];
     for (let i = 0; i < cands.length; i += 1) {
       const desde = Math.max(0, i - VENTANA + 1);
       const trozo = cands.slice(desde, i + 1);
-      media.push([cands[i].pos, trozo.reduce((a, c) => a + c.total, 0) / trozo.length]);
+      puntosMedia.push([cands[i].pos, trozo.reduce((a, c) => a + c.total, 0) / trozo.length]);
     }
-    const linea = media.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+    const linea = puntosMedia.map((pt, i) =>
+      `${i ? "L" : "M"}${x(pt[0]).toFixed(1)},${y(pt[1]).toFixed(1)}`).join("");
 
-    const grilla = [0, 25, 50, 75, 100].map((v) =>
-      `<line class="pf-grid" x1="${M.left}" x2="${M.left + iw}" y1="${y(v)}" y2="${y(v)}"/>`
-      + `<text class="pf-tick" x="${M.left - 6}" y="${y(v) + 3}" text-anchor="end">${v}</text>`).join("");
+    const grilla = [0, 25, 50, 75, 100].filter((v) => v >= dom.y0 && v <= dom.y1).map((v) =>
+      `<line class="pf-grid" x1="${left}" x2="${left + iw}" y1="${y(v)}" y2="${y(v)}"/>`
+      + `<text class="pf-tick" x="${left - 6}" y="${y(v) + 3}" text-anchor="end">${v}</text>`).join("");
     const marcasX = [0, 0.25, 0.5, 0.75, 1].map((f) => {
-      const pos = Math.round(1 + f * (L - 1));
-      return `<text class="pf-tick" x="${x(pos)}" y="${ALTO - 8}" text-anchor="middle">${entero(pos)}</text>`;
+      const pos = Math.round(dom.x0 + f * (dom.x1 - dom.x0));
+      return `<text class="pf-tick" x="${x(pos)}" y="${PERFIL_ALTO - 8}" text-anchor="middle">${entero(pos)}</text>`;
     }).join("");
 
     const mejor = cands.slice().sort((a, b) => b.total - a.total)[0];
-    return `<figure class="perfil-fig">
-      <svg viewBox="0 0 ${ANCHO} ${ALTO}" role="img"
-           aria-label="Perfil de score por posición en ${esc(rec.query_name)}">
+    const mostrarMejor = mejor.pos >= dom.x0 && mejor.pos <= dom.x1;
+    return `<figure class="perfil-fig" data-query="${esc(rec.query_name)}" data-idx="${idx}">
+      <svg viewBox="0 0 ${PERFIL_ANCHO} ${PERFIL_ALTO}" role="img" tabindex="0"
+           aria-label="Perfil de score por posición en ${esc(rec.query_name)}. Rueda para acercar, arrastrar para moverse, doble clic para ver todo.">
         ${grilla}${marcasX}
         <path class="pf-media" d="${linea}"/>
         ${puntos}
-        <line class="pf-mejor" x1="${x(mejor.pos)}" x2="${x(mejor.pos)}"
-              y1="${M.top}" y2="${M.top + ih}"/>
-        <text class="pf-tag" x="${Math.min(x(mejor.pos) + 4, ANCHO - 90)}" y="${M.top + 10}">
+        ${mostrarMejor ? `<line class="pf-mejor" x1="${x(mejor.pos)}" x2="${x(mejor.pos)}"
+              y1="${top}" y2="${top + ih}"/>
+        <text class="pf-tag" x="${Math.min(Math.max(x(mejor.pos) + 4, left), PERFIL_ANCHO - 90)}" y="${top + 10}">
           mejor ${num(mejor.total, 1)}
-        </text>
+        </text>` : ""}
       </svg>
-      <figcaption>${esc(rec.query_name)} · ${entero(cands.length)} candidatos en ${entero(L)} nt ·
-        mejor en ${entero(mejor.pos)} (${esc(mejor.id)})</figcaption>
+      <figcaption>${esc(rec.query_name)} · ${entero(cands.length)} candidatos en
+        ${entero(rec.gene?.longitud || 1)} nt · ventana ${entero(Math.round(dom.x0))}–${entero(Math.round(dom.x1))} nt
+        (${visibles.length} a la vista) · mejor en ${entero(mejor.pos)} (${esc(mejor.id)})</figcaption>
     </figure>`;
   }).join("");
 
   cont.querySelectorAll("circle.pf").forEach((c) => {
-    c.addEventListener("click", () => {
+    c.addEventListener("click", (ev) => {
+      ev.stopPropagation();
       const rec = state.results.records.find((r) => r.query_name === c.dataset.query);
       const cand = rec && rec.candidates.find((x) => x.id === c.dataset.id);
       if (cand) openCandidate(rec, cand);
     });
   });
+  cont.querySelectorAll("figure.perfil-fig").forEach((fig) => {
+    engancharZoom(fig);
+  });
   const cap = $("#perfil-caption");
   if (cap) cap.textContent = "score de cada candidato a lo largo del transcrito";
-  if (nota) nota.textContent = "clic en un punto para abrir el candidato";
+  if (nota) nota.textContent = "rueda para acercar · arrastrá para moverte · doble clic para ver todo";
+}
+
+// Zoom y arrastre sobre el SVG. Se cambia el dominio visible y se redibuja: son ~5.000
+// puntos, entra de sobra en un frame.
+function engancharZoom(fig) {
+  const svg = fig.querySelector("svg");
+  const rec = state.results.records.find((r) => r.query_name === fig.dataset.query);
+  if (!svg || !rec) return;
+  const { left, right, top, bottom } = PERFIL_M;
+  const ancho = PERFIL_ANCHO - left - right;
+  const alto = PERFIL_ALTO - top - bottom;
+
+  const aDominioX = (clientX) => {
+    const caja = svg.getBoundingClientRect();
+    const f = (clientX - caja.left) / caja.width;
+    const dom = perfilDominio(rec);
+    return dom.x0 + Math.max(0, Math.min(1, (f * PERFIL_ANCHO - left) / ancho)) * (dom.x1 - dom.x0);
+  };
+
+  svg.addEventListener("wheel", (ev) => {
+    ev.preventDefault();
+    const dom = perfilDominio(rec);
+    const L = rec.gene?.longitud || 1;
+    const factor = ev.deltaY > 0 ? 1.25 : 0.8;
+    const centro = aDominioX(ev.clientX);
+    let anchoNuevo = (dom.x1 - dom.x0) * factor;
+    anchoNuevo = Math.max(20, Math.min(L, anchoNuevo));   // ni 20 nt ni más que el gen
+    const prop = (centro - dom.x0) / Math.max(1e-9, dom.x1 - dom.x0);
+    let x0 = centro - prop * anchoNuevo;
+    x0 = Math.max(1, Math.min(L - anchoNuevo, x0));
+    dom.x0 = x0;
+    dom.x1 = x0 + anchoNuevo;
+
+    // el eje Y se acompaña: si estás muy cerca, el rango se angosta alrededor del centro
+    if (anchoNuevo < 400) {
+      const rango = Math.max(15, 100 * anchoNuevo / 400);
+      const medio = (dom.y0 + dom.y1) / 2;
+      dom.y0 = Math.max(0, Math.max(0, medio - rango / 2));
+      dom.y1 = Math.min(100, dom.y0 + rango);
+      dom.y0 = Math.max(0, dom.y1 - rango);
+    } else {
+      dom.y0 = 0;
+      dom.y1 = 100;
+    }
+    renderPerfil();
+  }, { passive: false });
+
+  let arrastre = null;
+  svg.addEventListener("pointerdown", (ev) => {
+    if (ev.button !== 0) return;
+    arrastre = { x: ev.clientX, y: ev.clientY, dom: { ...perfilDominio(rec) } };
+    svg.setPointerCapture(ev.pointerId);
+    svg.classList.add("arrastrando");
+  });
+  svg.addEventListener("pointermove", (ev) => {
+    if (!arrastre) return;
+    const caja = svg.getBoundingClientRect();
+    const dom = perfilDominio(rec);
+    const L = rec.gene?.longitud || 1;
+    const dx = (ev.clientX - arrastre.x) / caja.width * PERFIL_ANCHO / ancho * (arrastre.dom.x1 - arrastre.dom.x0);
+    const dy = (ev.clientY - arrastre.y) / caja.height * PERFIL_ALTO / alto * (arrastre.dom.y1 - arrastre.dom.y0);
+    const anchoDom = arrastre.dom.x1 - arrastre.dom.x0;
+    let x0 = arrastre.dom.x0 - dx;
+    x0 = Math.max(1, Math.min(L - anchoDom, x0));
+    dom.x0 = x0;
+    dom.x1 = x0 + anchoDom;
+    const altoDom = arrastre.dom.y1 - arrastre.dom.y0;
+    let y0 = arrastre.dom.y0 - dy;   // el contenido sigue al puntero
+    y0 = Math.max(0, Math.min(100 - altoDom, y0));
+    dom.y0 = y0;
+    dom.y1 = y0 + altoDom;
+    renderPerfil();
+  });
+  const soltar = () => { arrastre = null; svg.classList.remove("arrastrando"); };
+  svg.addEventListener("pointerup", soltar);
+  svg.addEventListener("pointercancel", soltar);
+  svg.addEventListener("dblclick", () => {
+    const L = rec.gene?.longitud || 1;
+    perfilVista.set(rec.query_name, { x0: 1, x1: L, y0: 0, y1: 100 });
+    renderPerfil();
+  });
+}
+
+// Botones del encabezado: acercar, alejar y ver todo, sobre el gen visible.
+function perfilZoom(factor) {
+  const recs = recordsVisibles();
+  if (!recs.length) return;
+  for (const rec of recs) {
+    const dom = perfilDominio(rec);
+    const L = rec.gene?.longitud || 1;
+    const centro = (dom.x0 + dom.x1) / 2;
+    let anchoNuevo = (dom.x1 - dom.x0) * factor;
+    anchoNuevo = Math.max(20, Math.min(L, anchoNuevo));
+    let x0 = Math.max(1, Math.min(L - anchoNuevo, centro - anchoNuevo / 2));
+    dom.x0 = x0;
+    dom.x1 = x0 + anchoNuevo;
+    dom.y0 = 0;
+    dom.y1 = 100;
+  }
+  renderPerfil();
+}
+
+function perfilReset() {
+  for (const rec of recordsVisibles()) {
+    perfilVista.delete(rec.query_name);
+  }
+  renderPerfil();
 }
 
 function flat() {
