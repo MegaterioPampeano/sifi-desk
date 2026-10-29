@@ -214,7 +214,9 @@ def _revisar(cmd: str) -> None:
         for secreto in _SECRETOS:
             if _dentro(real, secreto):
                 raise Denegado(f"{objetivo} tiene credenciales o estado privado: no lo toco")
-        if _dentro(real, RAIZ) or _dentro(real, "/tmp") or _dentro(real, "/var/tmp"):
+        if (real in ("/dev/null", "/dev/stdout", "/dev/stderr")
+                or _dentro(real, RAIZ) or _dentro(real, "/tmp")
+                or _dentro(real, "/var/tmp")):
             continue
         raise Pendiente(
             f"escribir en {objetivo} está fuera de tu carpeta ({RAIZ}) y necesita "

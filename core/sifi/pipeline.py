@@ -235,6 +235,16 @@ class SifiPipeline:
         desc_tokens = [t.strip(",;()[]") for t in (getattr(self, "_query_desc", "") or "").split()]
         desc_hits = [t for t in desc_tokens if t in all_targets]
 
+        if self.main_target_mode == "explicit" and not (self.main_targets or ()):
+            # Sin blanco explícito se deduce: por el accession del encabezado si lo hay,
+            # y si no, por la diagonal de los hits (el transcripto del que salió la
+            # secuencia consultada). Si no, el hit del propio gen se cuenta como
+            # off-target y TODO el ranking queda ~12 puntos abajo.
+            deducido = desc_hits[:1] or self._target_por_diagonal()
+            log.info("main target: no se indicó ninguno; deducido %r", deducido)
+            self._main_panel = self._panel_of(deducido or ())
+            return deducido or None
+
         if self.main_target_mode == "explicit":
             pedidos = list(self.main_targets or ())
             resueltos = [t for t in pedidos if t in all_targets]
@@ -264,11 +274,45 @@ class SifiPipeline:
             if len(pref) == 1:
                 chosen = pref
             else:
-                log.warning("main_target auto: no pude identificar el blanco principal para %r (%d hits)",
-                            query_name, len(all_targets))
-                chosen = pref or None
+                chosen = self._target_por_diagonal()
+                if not chosen:
+                    log.warning("main_target auto: no pude identificar el blanco principal "
+                                "para %r (%d hits en el panel)", query_name, len(all_targets))
+                    chosen = pref or None
         self._main_panel = self._panel_of(chosen or ())
         return chosen
+
+    def _target_por_diagonal(self) -> List[str]:
+        """Transcripto del panel del que salió la secuencia consultada.
+
+        Con 0 mismatches, un siRNA de la posición p alinea en el panel en p-1+offset:
+        si se resta esa posición, todos los candidatos del mismo transcripto caen en la
+        misma diagonal. El que más candidatos explica es el blanco. Sirve cuando el
+        encabezado del FASTA no trae accession (p. ej. una secuencia bajada de NCBI).
+        """
+        diagonales: Dict[str, Counter] = {}
+        for fila in self.bowtie_data_l:
+            if len(fila) < 4:
+                continue
+            try:
+                pos_query = int(str(fila[0]).split("sirna")[-1])
+                ref = int(fila[3])
+            except (TypeError, ValueError):
+                continue
+            mm = fila[7] if len(fila) > 7 else 0
+            if str(mm).strip() not in ("0", "", "None"):
+                continue
+            nombre = fila[2]
+            diagonales.setdefault(nombre, Counter())[ref - (pos_query - 1)] += 1
+        mejor, apoyo = None, 0
+        for nombre, cuenta in diagonales.items():
+            n = cuenta.most_common(1)[0][1]
+            if n > apoyo:
+                mejor, apoyo = nombre, n
+        if mejor and apoyo >= 10:
+            log.info("main target por diagonal: %r (%d candidatos alineados)", mejor, apoyo)
+            return [mejor]
+        return []
 
     def _panel_of(self, hit_names: Iterable[str]) -> Optional[str]:
         """Panel al que pertenece el blanco principal (None si no aplica o es ambiguo).
