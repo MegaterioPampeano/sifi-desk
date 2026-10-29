@@ -284,6 +284,31 @@ def salt_correction(Na=0, K=0, Tris=0, Mg=0, dNTPs=0, method=1, seq=None):
     return corr
 
 
+# La tabla de dangling ends (RNA_DE2) no tiene todas las combinaciones: faltan, por
+# ejemplo, '.G/CA' y '.G/GA'. El código original hacía de_table[clave] directo y moría con
+# KeyError en cuanto la secuencia caía en una de esas (bug heredado de siFi 2.1).
+# Acá se resuelve en tres pasos: exacto → equivalente por simetría (se invierte el dúplex:
+# '.G/CA' es 'AC/.G') → 0 (se ignora el aporte del extremo). Los casos que caen al final
+# se cuentan en _faltantes para poder auditar cuántas veces se aproximó.
+_faltantes = []
+_aproximados = []
+
+
+def _dangling(tabla, clave):
+    if clave in tabla:
+        return tabla[clave]
+    # simetría: '.X/YZ' ↔ 'ZY/.X'
+    if clave.startswith('.'):
+        base, par = clave[1:].split('/')
+        espejo = par[::-1] + '/.' + base
+    else:
+        par, base = clave.split('/.')
+        espejo = '.' + base + '/' + par[::-1]
+    if espejo in tabla:
+        return tabla[espejo]
+    return None
+
+
 def calculate_free_energy(seq, check=True, strict=True, c_seq=None, shift=0, nn_table=RNA_NN3,
           tmm_table=DNA_TMM1, imm_table=DNA_IMM1, de_table=RNA_DE2,
           dnac1=25, dnac2=0, selfcomp=False, Na=20, K=50, Tris=0, Mg=0,
@@ -333,14 +358,22 @@ def calculate_free_energy(seq, check=True, strict=True, c_seq=None, shift=0, nn_
         if tmpseq.startswith('.') or tmp_cseq.startswith('.'):
             left_de = tmpseq[:2] + '/' + tmp_cseq[:2]
             #print 'left ', left_de
-            deltaH += de_table[left_de][dH]
-            deltaS += de_table[left_de][dS]
+            par = _dangling(de_table, left_de)
+            if par is None:
+                _faltantes.append(left_de)
+                par = (0.0, 0.0)
+            deltaH += par[dH]
+            deltaS += par[dS]
             tmpseq = tmpseq[1:]
             tmp_cseq = tmp_cseq[1:]
         if tmpseq.endswith('.') or tmp_cseq.endswith('.'):
             right_de = tmp_cseq[-2:][::-1] + '/' + tmpseq[-2:][::-1]
-            deltaH += de_table[right_de][dH]
-            deltaS += de_table[right_de][dS]
+            par = _dangling(de_table, right_de)
+            if par is None:
+                _faltantes.append(right_de)
+                par = (0.0, 0.0)
+            deltaH += par[dH]
+            deltaS += par[dS]
             tmpseq = tmpseq[:-1]
             tmp_cseq = tmp_cseq[:-1]
     # Now for terminal mismatches
@@ -408,8 +441,16 @@ def calculate_free_energy(seq, check=True, strict=True, c_seq=None, shift=0, nn_
             deltaH += nn_table[neighbors[::-1]][dH]
             deltaS += nn_table[neighbors[::-1]][dS]
         else:
-            # We haven't found the key...
-            if strict:
+            # Falta la clave: el dúplex no es perfectamente complementario en ese paso
+            # (pasa cuando las secuencias vienen de dos siRNAs distintos). El original
+            # tiraba ValueError y abortaba la corrida entera. Se aproxima con el par
+            # Watson-Crick equivalente de la hebra de arriba y se anota el caso.
+            aprox = neighbors[:2] + '/' + str(Seq(neighbors[:2]).complement())
+            if aprox in nn_table:
+                _aproximados.append(neighbors)
+                deltaH += nn_table[aprox][dH]
+                deltaS += nn_table[aprox][dS]
+            elif strict:
                 raise ValueError('no data for neighbors \'' + neighbors + '\'')
             else:
                 warnings.warn('no data for neighbors \'' + neighbors +

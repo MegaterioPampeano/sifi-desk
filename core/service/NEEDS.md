@@ -67,3 +67,14 @@ fallidos" de "corrida rota", el servicio puede reflejarlo en `status` (`done` co
 * `ui` no puede leer `SIFID_URL`/`SIFID_TOKEN` del entorno del proceso: los recibe por
   `window.__SIFI_CONFIG__` (inyectado al servir la UI) o `?api=&token=`. El lanzador
   nativo debe hacer esa inyección.
+
+## core/sifi: termodinámica (2026-10-28)
+- `free_energy.calculate_free_energy` moría con `KeyError`/`ValueError` cuando la secuencia
+  caía en una combinación ausente de las tablas: pasó con un transcripto real de BicC
+  (`.G/CA` en dangling ends y `GT/AT` en vecinos, dúplex no perfectamente complementario).
+  El bug está también en `vendor/siFi21` → no es de la migración.
+- Parche: en dangling ends se prueba el equivalente por simetría (`.G/CA` ↔ `AC/.G`) y si no
+  está se usa 0; en los vecinos se aproxima con el par Watson-Crick de la hebra de arriba.
+  Los casos quedan en `free_energy._faltantes` / `._aproximados` para auditar.
+- Impacto: ΔG levemente aproximado **sólo** en esos siRNAs. Verificado con la corrida
+  `r-1fe226471974` (BicC completo, 4.875 siRNAs, terminó sin errores).
