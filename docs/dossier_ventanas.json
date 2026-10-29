@@ -7,7 +7,7 @@
   "homopolimero": 5,
   "transcrito": "GITV01041350.1",
   "inicio_transcrito": 376,
-  "termo": "/mnt/datos/biotech/out/aa/termo.json"
+  "termo": "termo_ventanas.json"
  },
  {
   "gen": "YLAT2",
@@ -17,7 +17,7 @@
   "homopolimero": 5,
   "transcrito": "GITV01003928.1",
   "inicio_transcrito": 1366,
-  "termo": "/mnt/datos/biotech/out/aa/termo.json"
+  "termo": "termo_ventanas.json"
  },
  {
   "gen": "CAT",
@@ -27,7 +27,7 @@
   "homopolimero": 4,
   "transcrito": "GITV01009712.1",
   "inicio_transcrito": 3351,
-  "termo": "/mnt/datos/biotech/out/aa/termo.json"
+  "termo": "termo_ventanas.json"
  },
  {
   "gen": "DMGLU",
@@ -37,7 +37,7 @@
   "homopolimero": 5,
   "transcrito": "GITV01001640.1",
   "inicio_transcrito": 234,
-  "termo": "/mnt/datos/biotech/out/aa/termo.json"
+  "termo": "termo_ventanas.json"
  },
  {
   "gen": "B0AT1",
@@ -47,7 +47,7 @@
   "homopolimero": 4,
   "transcrito": "GITV01003587.1",
   "inicio_transcrito": 3950,
-  "termo": "/mnt/datos/biotech/out/aa/termo.json"
+  "termo": "termo_ventanas.json"
  },
  {
   "gen": "PAT",
@@ -57,7 +57,7 @@
   "homopolimero": 5,
   "transcrito": "GITV01012743.1",
   "inicio_transcrito": 1551,
-  "termo": "/mnt/datos/biotech/out/aa/termo.json"
+  "termo": "termo_ventanas.json"
  },
  {
   "gen": "Sec23",
@@ -67,7 +67,7 @@
   "homopolimero": 4,
   "transcrito": "GITV01002633.1",
   "inicio_transcrito": 265,
-  "termo": "/mnt/datos/biotech/out/termo.json"
+  "termo": "termo_ventanas.json"
  },
  {
   "gen": "Arf1",
@@ -77,7 +77,7 @@
   "homopolimero": 4,
   "transcrito": "GITV01003292.1",
   "inicio_transcrito": 351,
-  "termo": "/mnt/datos/biotech/out/termo.json"
+  "termo": "termo_ventanas.json"
  },
  {
   "gen": "kkv",
@@ -87,7 +87,7 @@
   "homopolimero": 4,
   "transcrito": "GITV01002911.1",
   "inicio_transcrito": 1297,
-  "termo": "/mnt/datos/biotech/out/termo.json"
+  "termo": "termo_ventanas.json"
  },
  {
   "gen": "Mdr49",
@@ -97,7 +97,7 @@
   "homopolimero": 5,
   "transcrito": "GITV01000542.1",
   "inicio_transcrito": 2156,
-  "termo": "/mnt/datos/biotech/out/termo.json"
+  "termo": "termo_ventanas.json"
  },
  {
   "gen": "RpS13",
@@ -107,7 +107,7 @@
   "homopolimero": 5,
   "transcrito": "GITV01001161.1",
   "inicio_transcrito": 1292,
-  "termo": "/mnt/datos/biotech/out/termo.json"
+  "termo": "termo_ventanas.json"
  },
  {
   "gen": "BicC",
@@ -117,6 +117,6 @@
   "homopolimero": 4,
   "transcrito": "GITV01002238.1",
   "inicio_transcrito": 1412,
-  "termo": "/mnt/datos/biotech/out/bicc/termo.json"
+  "termo": "termo_ventanas.json"
  }
 ]

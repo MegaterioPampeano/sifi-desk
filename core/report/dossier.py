@@ -185,9 +185,17 @@ def _componentes(gc: float, seed_gc: float, asimetria: float, acceso: float,
                         + 0.20 * acc_c - (0 if homopolimero <= 5 else 25)))
 
 
+def _ruta_termo(ventana: dict, base: str = "") -> str:
+    """Resuelve el FASTA/JSON de términos relativos al directorio del JSON de ventanas."""
+    ruta = ventana.get("termo") or ""
+    if ruta and not os.path.isabs(ruta) and base:
+        ruta = os.path.join(base, ruta)
+    return ruta
+
+
 def eficacia_ic(ventana: dict, n: int = 4000) -> Tuple[float, float, float]:
     """Media e IC 95 % (bootstrap) del índice de eficacia de la ventana."""
-    termo = ventana.get("termo")
+    termo = _ruta_termo(ventana, ventana.get("_base", ""))
     if not termo or not os.path.isfile(termo):
         return (float("nan"),) * 3
     with open(termo, encoding="utf-8") as fh:
@@ -364,6 +372,9 @@ def build(ventanas_json: str, paneles: Dict[str, str], out_dir: str, blastn: str
     """Genera A, B, C y D y devuelve las rutas y los números que las respaldan."""
     os.makedirs(out_dir, exist_ok=True)
     ventanas = cargar_ventanas(ventanas_json)
+    base = os.path.dirname(os.path.abspath(ventanas_json))
+    for v in ventanas:  # rutas del JSON de ventanas son relativas a su propio directorio
+        v["_base"] = base
     conteo = contar_semilla(ventanas, paneles, blastn=blastn, hilos=hilos)
 
     datos_c: List[Tuple[str, float, float, float]] = []
