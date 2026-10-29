@@ -1,0 +1,14 @@
+# Dependencias de ejecución del núcleo + servicio (Linux/Windows, sin binarios).
+# Los binarios externos (bowtie, RNAplfold, blastn) NO se instalan con pip:
+#   bash packaging/vendor/fetch_binaries.sh
+numpy>=1.24
+biopython>=1.81
+fastapi>=0.110
+uvicorn>=0.27
+pydantic>=2.5
+matplotlib>=3.7
+jinja2>=3.1
+
+# PDF del dossier (core/report/dossier.py). WeasyPrint necesita también libpango
+# en el sistema (Debian/Ubuntu: libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b).
+weasyprint>=60

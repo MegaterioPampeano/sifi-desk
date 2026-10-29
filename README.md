@@ -23,6 +23,14 @@ Organización: **Omnivac Science** · Documento de diseño: [`docs/ROADMAP.md`](
 | M7 Novedades/actualizaciones | ⏳ |
 | M8 Distribución | ⏳ |
 
+## Instalación
+
+En otra máquina: ver [](INSTALL.md). El atajo es
+
+```bash
+bash scripts/instalar.sh --paneles
+```
+
 ## Uso rápido (desarrollo)
 
 ```bash
