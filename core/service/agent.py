@@ -106,10 +106,15 @@ qué haría falta.
 
 ## Autonomía
 
+Para entregar un informe usá la herramienta `informe` (arma el PDF con figuras, tabla y metodología): no redactes PDFs a mano ni copies tablas enteras al chat.
+
 No pidas permiso para lo que es reversible y está en tu carpeta: leer, buscar, descargar
 hasta ~100 MB, correr Python, procesar FASTA, mirar los datos del laboratorio. Hacelo y
-contá el resultado. **Sólo** consultá antes de: bajar algo de más de 300 MB, lanzar una
-corrida del servicio, o escribir fuera de tu carpeta de trabajo.
+contá el resultado. **Sólo** consultá antes de: bajar algo de más de 300 MB o lanzar una
+corrida cara del servicio. Para escribir fuera de tu carpeta **no preguntes**: mandá el
+comando igual. El sistema lo deja en una cola de aprobación, te devuelve un id (`ap-...`)
+y Mariano lo aprueba con un botón en la app. En ese caso: no busques rodeos, no lo
+reintentes y decile el id.
 
 Nunca pegues código en el chat para que lo ejecute Mariano. Si hace falta código, usá
 `python` o `ejecutar` y mostrá la salida real.
@@ -252,6 +257,16 @@ TOOLS: List[dict] = [
         "parameters": {"type": "object", "properties": {
             "run_id": {"type": "string"}, "top": {"type": "integer"},
             "gen": {"type": "string", "description": "opcional: filtrar por registro del FASTA"}},
+            "required": ["run_id"]}}},
+    {"type": "function", "function": {
+        "name": "informe",
+        "description": "Genera el informe A4 de una corrida terminada (PDF u HTML) con las "
+                       "figuras, la tabla de candidatos, los off-target por panel y la "
+                       "metodología. Es la forma correcta de entregar un informe: no armes "
+                       "PDFs a mano ni pegues tablas en el chat.",
+        "parameters": {"type": "object", "properties": {
+            "run_id": {"type": "string"},
+            "formato": {"type": "string", "enum": ["pdf", "html"]}},
             "required": ["run_id"]}}},
     {"type": "function", "function": {
         "name": "ver_error_corrida",
@@ -426,6 +441,27 @@ def _ejecutar(nombre: str, args: dict, ent: _Entorno) -> Dict[str, Any]:
             lineas.append(f"- {f['id']} pos {f['pos']} score {f['score']:.2f} "
                           f"banda {f['banda']} hits {f['hits']} seq {f['seq']}")
         return {"ok": True, "salida": "\n".join(lineas)}
+    if nombre == "informe":
+        rid = (args.get("run_id") or "").strip()
+        fmt = (args.get("formato") or "pdf").lower()
+        if fmt not in ("pdf", "html"):
+            return {"ok": False, "salida": f"formato inválido: {fmt} (pdf o html)"}
+        manifest = os.path.join(ent.data_dir, "runs", rid, "out", "results.json")
+        if not os.path.isfile(manifest):
+            return {"ok": False, "salida": f"la corrida {rid} no tiene resultados "
+                                          f"(todavía corre o falló); revisá estado_corrida"}
+        destino = os.path.join(ent.data_dir, "runs", rid, "out", "report")
+        try:
+            from report.render import render
+            ruta = render([manifest], out_dir=destino, fmt=fmt,
+                          filename=f"informe-{rid}")
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "salida": f"no pude generar el informe: "
+                                          f"{type(exc).__name__}: {exc}"}
+        kb = os.path.getsize(ruta) / 1024 if os.path.isfile(ruta) else 0
+        return {"ok": True, "ruta": ruta,
+                "salida": f"informe {fmt.upper()} listo: {ruta} ({kb:.0f} KB). "
+                          f"Decile a Mariano que lo baje desde Resultados → Informe."}
     if nombre == "ver_error_corrida":
         rid = args.get("run_id") or ""
         ruta = os.path.join(ent.data_dir, "runs", rid, "stderr.log")
@@ -551,6 +587,15 @@ def chat(store, mensaje: str, run_id: Optional[str] = None,
                     args = {}
                 try:
                     res = _ejecutar(nombre, args, ent)
+                except sandbox.Pendiente as exc:
+                    from . import aprobaciones
+                    ap = aprobaciones.pedir(ent.data_dir, exc.cmd or "",
+                                            exc.motivo, origen="agente")
+                    res = {"ok": False,
+                           "salida": f"quedó pendiente de aprobación (id {ap['id']}): "
+                                     f"{exc}. No lo reintentes ni busques rodeos: "
+                                     f"decile a Mariano que lo apruebe en la app, "
+                                     f"panel del agente."}
                 except sandbox.Denegado as exc:
                     res = {"ok": False, "salida": f"bloqueado: {exc}"}
                 except Exception as exc:  # noqa: BLE001 - el agente tiene que ver el motivo

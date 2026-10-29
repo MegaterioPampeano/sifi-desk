@@ -208,6 +208,9 @@ export const api = {
   },
   chat: (mensaje, runId, signal, historial, sesionId) =>
     request("POST", "/agent/chat", { mensaje, run_id: runId || null, historial: historial || [], sesion_id: sesionId || null }, signal),
+  aprobaciones: (signal) => request("GET", "/aprobaciones?estado=pendiente", undefined, signal),
+  resolverAprobacion: (id, aprobar, signal) =>
+    request("POST", `/aprobaciones/${encodeURIComponent(id)}`, { aprobar }, signal),
   sesiones: (signal) => request("GET", "/agent/sesiones", undefined, signal),
   sesion: (id, signal) => request("GET", `/agent/sesiones/${id}`, undefined, signal),
   nuevaSesion: (signal) => request("POST", "/agent/sesiones", {}, signal),

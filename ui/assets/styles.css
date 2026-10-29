@@ -727,3 +727,33 @@ select.input.sm { padding: 5px 8px; font-size: 12px; }
 .perfil svg { cursor: grab; touch-action: none; }
 .perfil svg.arrastrando { cursor: grabbing; }
 .perfil svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- pedidos de permiso del agente ---------- */
+.aprobaciones {
+  margin: 0 12px 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--warn, #b9770e);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--warn, #b9770e) 8%, transparent);
+  max-height: 40%;
+  overflow: auto;
+}
+.aprob-head {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 600; letter-spacing: .02em;
+  margin-bottom: 6px;
+}
+.aprob-punto {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--warn, #b9770e); flex: 0 0 auto;
+}
+.aprob-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.aprob-item { display: grid; gap: 4px; }
+.aprob-cmd {
+  display: block; font-size: 11.5px; line-height: 1.35;
+  padding: 6px 8px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap;
+  background: rgba(0,0,0,.28); word-break: break-all;
+}
+.aprob-motivo { margin: 0; font-size: 11.5px; opacity: .75; }
+.aprob-botones { display: flex; gap: 6px; }
+.aprob-botones .btn.small { padding: 3px 9px; font-size: 11.5px; }

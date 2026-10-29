@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -75,6 +76,15 @@ class Denegado(Exception):
     """El pedido no pasa la política: se le devuelve el motivo al agente."""
 
 
+class Pendiente(Denegado):
+    """Escritura fuera de la carpeta del agente: se puede aprobar desde la app."""
+
+    def __init__(self, mensaje: str, cmd: str = "", motivo: str = ""):
+        super().__init__(mensaje)
+        self.cmd = cmd
+        self.motivo = motivo or mensaje
+
+
 def _dentro(ruta: str, base: str) -> bool:
     ruta = os.path.realpath(ruta)
     base = os.path.realpath(base)
@@ -117,6 +127,72 @@ def _absoluta(ruta: str) -> str:
     return os.path.realpath(ruta)
 
 
+_SEPARADORES = re.compile(r"[;\n]|&&|\|\||\|")
+_COMANDOS_DESTINO_FINAL = {"cp", "rsync", "mv", "install"}
+_COMANDOS_SOBRE_ARCHIVOS = {"rm", "mkdir", "rmdir", "touch", "chmod", "ln",
+                            "truncate", "tee", "unlink"}
+
+
+def _tokens(segmento: str) -> List[str]:
+    """Tokens del segmento conservando las comillas.
+
+    Con `posix=False` un `'>'` citado llega como "'>'" y no se confunde con una
+    redirección (era el falso positivo del `grep -c '>' archivo`).
+    """
+    try:
+        return shlex.split(segmento, posix=False)
+    except ValueError:
+        return segmento.split()
+
+
+def _limpio(tok: str) -> str:
+    return tok.strip("'\"")
+
+
+def _es_operador(tok: str) -> bool:
+    return not tok[:1] in "'\"" and bool(re.fullmatch(r"\d?>>?&?|\d?>\|", tok))
+
+
+def _objetivos_de_escritura(cmd: str) -> List[str]:
+    """Rutas que el comando va a escribir, no todas las que menciona.
+
+    Antes se miraba el comando entero: `ls -ld /home/mariano` en la misma línea
+    que un `>` disparaba el pedido de permiso sin que nadie fuera a escribir ahí.
+    """
+    objetivos: List[str] = []
+    for segmento in _SEPARADORES.split(cmd):
+        if not segmento.strip():
+            continue
+        toks = _tokens(segmento)
+        if not toks:
+            continue
+        # redirecciones: `> ruta`, `>> ruta`, `>ruta`, `2> ruta`
+        for i, tok in enumerate(toks):
+            if _es_operador(tok):
+                if i + 1 < len(toks):
+                    objetivos.append(_limpio(toks[i + 1]))
+                continue
+            pegado = re.fullmatch(r"\d?>>?(\S+)", tok)
+            if pegado and not _es_operador(tok):
+                objetivos.append(_limpio(pegado.group(1)))
+        # el comando en sí (salteando `VAR=x` y `sudo`)
+        palabras = [_limpio(t) for t in toks if not _es_operador(t)]
+        palabras = [t for t in palabras if "=" not in t.split("/")[0]]
+        if not palabras:
+            continue
+        base = os.path.basename(palabras[0])
+        args = [t for t in palabras[1:] if not t.startswith("-")]
+        if base in _COMANDOS_DESTINO_FINAL and args:
+            objetivos.append(args[-1])
+        elif base in _COMANDOS_SOBRE_ARCHIVOS:
+            objetivos.extend(args)
+        elif base == "sed" and any(t.startswith("-i") for t in palabras[1:]):
+            objetivos.extend(args)
+    if _PY_ESCRITURA.search(cmd):
+        objetivos.extend(_rutas_mencionadas(cmd))
+    return objetivos
+
+
 def _revisar(cmd: str) -> None:
     bajo = cmd.lower()
     for patron in _NEGADOS:
@@ -132,10 +208,18 @@ def _revisar(cmd: str) -> None:
         for secreto in _SECRETOS:
             if _dentro(real, secreto):
                 raise Denegado(f"{mencionada} tiene credenciales o estado privado: no lo toco")
-        if escribe and not (_dentro(real, RAIZ) or _dentro(real, "/tmp")
-                            or _dentro(real, "/var/tmp")):
-            raise Denegado(f"no puedo escribir en {mencionada}: está fuera de tu carpeta "
-                           f"({RAIZ}). Ahí sólo leo.")
+
+    for objetivo in _objetivos_de_escritura(cmd):
+        real = _absoluta(objetivo)
+        for secreto in _SECRETOS:
+            if _dentro(real, secreto):
+                raise Denegado(f"{objetivo} tiene credenciales o estado privado: no lo toco")
+        if _dentro(real, RAIZ) or _dentro(real, "/tmp") or _dentro(real, "/var/tmp"):
+            continue
+        raise Pendiente(
+            f"escribir en {objetivo} está fuera de tu carpeta ({RAIZ}) y necesita "
+            f"la aprobación de Mariano", cmd=cmd,
+            motivo=f"escritura fuera de la carpeta del agente: {objetivo}")
 
 
 def _entorno() -> Dict[str, str]:
@@ -165,6 +249,30 @@ def correr(cmd: str, timeout: int = TIMEOUT_DEFECTO) -> Dict[str, Any]:
     """Ejecuta un comando de shell dentro de la carpeta del agente."""
     asegurar()
     _revisar(cmd)
+    t0 = time.time()
+    try:
+        proc = subprocess.run(["/bin/bash", "-lc", cmd], cwd=TRABAJO, env=_entorno(),
+                              capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "salida": f"corté el comando a los {timeout}s",
+                "ms": int((time.time() - t0) * 1000), "rc": None}
+    salida = (proc.stdout or "") + (("\n[stderr]\n" + proc.stderr) if proc.stderr.strip() else "")
+    return {"ok": proc.returncode == 0, "rc": proc.returncode,
+            "salida": _recortar(salida.strip() or "(sin salida)"),
+            "ms": int((time.time() - t0) * 1000)}
+
+
+def correr_aprobado(cmd: str, timeout: int = TIMEOUT_DEFECTO) -> Dict[str, Any]:
+    """Igual que `correr`, pero salteando el chequeo de rutas.
+
+    Lo llama sólo `aprobaciones.resolver` cuando Mariano apretó "aprobar". Los
+    vetos duros (sudo, mkfs, apagado, borrado de la raíz) se siguen aplicando.
+    """
+    asegurar()
+    bajo = cmd.lower()
+    for patron in _NEGADOS:
+        if re.search(patron, bajo):
+            raise Denegado("ese comando está vetado por política y no se aprueba desde la app")
     t0 = time.time()
     try:
         proc = subprocess.run(["/bin/bash", "-lc", cmd], cwd=TRABAJO, env=_entorno(),

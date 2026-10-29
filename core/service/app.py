@@ -634,6 +634,22 @@ def create_app(data_dir: Optional[str] = None,
         salida["sesion"] = [s for s in charlas.listar(data_dir) if s["id"] == sid][:1]
         return salida
 
+    # ------------------------------------------------------- aprobaciones
+    @app.get("/aprobaciones")
+    def get_aprobaciones(estado: str = "pendiente") -> dict:
+        from . import aprobaciones
+        return {"items": aprobaciones.listar(data_dir, estado)}
+
+    @app.post("/aprobaciones/{aid}")
+    def post_aprobacion(aid: str, body: dict) -> dict:
+        from . import aprobaciones
+        aprobado = bool(body.get("aprobar"))
+        try:
+            item = aprobaciones.resolver(data_dir, aid, aprobado, body.get("nota") or "")
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return item
+
     # ------------------------------------------------------------------- UI
     def _ui_index() -> Optional[HTMLResponse]:
         index = os.path.join(ui_dir, "index.html") if ui_dir else ""

@@ -55,7 +55,64 @@ export function initChat() {
   $("#chat-nueva").addEventListener("click", () => nuevaSesion());
   $("#chat-borrar").addEventListener("click", () => borrarSesion());
 
+  $("#aprob-lista").addEventListener("click", (ev) => {
+    const btn = ev.target.closest("button[data-aprob]");
+    if (btn) resolverAprobacion(btn.dataset.id, btn.dataset.aprob === "1", btn);
+  });
+  cargarAprobaciones();
+  // El agente puede encolar un pedido en cualquier momento (también desde otra
+  // ventana), así que se refresca solo mientras la app está abierta.
+  setInterval(() => { if (!document.hidden) cargarAprobaciones(); }, 20000);
+
   cargarSesiones().then(() => (sesionActual ? abrirSesion(sesionActual) : saludar()));
+}
+
+// Pedidos que quedaron esperando permiso: escribir fuera de la carpeta del agente.
+// Antes se contestaban "no puedo" y quedaban muertos; ahora se aprueban con un botón.
+async function cargarAprobaciones() {
+  const caja = $("#aprobaciones");
+  if (!caja) return;
+  let items = [];
+  try {
+    const data = await api.aprobaciones();
+    items = data.items || [];
+  } catch {
+    caja.classList.add("hidden");
+    return;
+  }
+  const lista = $("#aprob-lista");
+  if (!items.length) {
+    caja.classList.add("hidden");
+    lista.innerHTML = "";
+    return;
+  }
+  caja.classList.remove("hidden");
+  $("#aprob-titulo").textContent = items.length === 1
+    ? "El agente pide permiso para 1 cosa"
+    : `El agente pide permiso para ${items.length} cosas`;
+  lista.innerHTML = items.map((it) => `
+    <li class="aprob-item" data-id="${esc(it.id)}">
+      <code class="aprob-cmd">${esc(it.cmd)}</code>
+      <p class="aprob-motivo">${esc(it.motivo || "")}</p>
+      <div class="aprob-botones">
+        <button type="button" class="btn small primary" data-aprob="1" data-id="${esc(it.id)}">Aprobar</button>
+        <button type="button" class="btn small ghost" data-aprob="0" data-id="${esc(it.id)}">Rechazar</button>
+      </div>
+    </li>`).join("");
+}
+
+async function resolverAprobacion(id, aprobar, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = aprobar ? "Ejecutando…" : "Rechazando…"; }
+  try {
+    const res = await api.resolverAprobacion(id, aprobar);
+    const salida = (res.resultado && res.resultado.salida) || "";
+    if (aprobar && salida) {
+      burbuja("agent", `Ejecutado: ${salida}`);
+    }
+  } catch (err) {
+    burbuja("agent", `No pude resolver el pedido: ${err.message || err}`);
+  }
+  cargarAprobaciones();
 }
 
 function saludar() {
