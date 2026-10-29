@@ -292,6 +292,28 @@ def salt_correction(Na=0, K=0, Tris=0, Mg=0, dNTPs=0, method=1, seq=None):
 # se cuentan en _faltantes para poder auditar cuántas veces se aproximó.
 _faltantes = []
 _aproximados = []
+# Pasos que se resolvieron por orientación (p. ej. 'AG/CT' → 'CT/GA'): no son
+# aproximaciones, son el mismo parámetro leído del otro lado; se anotan igual
+# para poder auditar qué pasos no venían en la forma canónica.
+_equivalentes_usadas = []
+
+
+def _equivalentes(paso):
+    """Claves alternativas del mismo paso de dinucleótido (lectura del otro lado).
+
+    La tabla es simétrica: el paso 5'-AG-3'/3'-TC-5' es el mismo que 5'-CT-3'/3'-GA-5',
+    o sea 'AG/CT' ≡ 'CT/GA'. El original sólo probaba `paso[::-1]` ('TC/GA'), que no
+    existe, y abortaba la corrida con ValueError.
+    """
+    if len(paso) < 5 or paso[2] != '/':
+        return []
+    arriba, abajo = paso.split('/', 1)
+    candidatos = [
+        abajo + '/' + arriba[::-1],          # AG/CT -> CT/GA
+        arriba[::-1] + '/' + abajo,          # por si viene al revés
+        abajo[::-1] + '/' + arriba,          # hebra de abajo como referencia
+    ]
+    return [c for c in dict.fromkeys(candidatos) if c != paso]
 
 
 def _dangling(tabla, clave):
@@ -441,21 +463,31 @@ def calculate_free_energy(seq, check=True, strict=True, c_seq=None, shift=0, nn_
             deltaH += nn_table[neighbors[::-1]][dH]
             deltaS += nn_table[neighbors[::-1]][dS]
         else:
-            # Falta la clave: el dúplex no es perfectamente complementario en ese paso
-            # (pasa cuando las secuencias vienen de dos siRNAs distintos). El original
-            # tiraba ValueError y abortaba la corrida entera. Se aproxima con el par
-            # Watson-Crick equivalente de la hebra de arriba y se anota el caso.
-            aprox = neighbors[:2] + '/' + str(Seq(neighbors[:2]).complement())
-            if aprox in nn_table:
-                _aproximados.append(neighbors)
-                deltaH += nn_table[aprox][dH]
-                deltaS += nn_table[aprox][dS]
-            elif strict:
-                raise ValueError('no data for neighbors \'' + neighbors + '\'')
+            # Falta la clave. Dos causas distintas, y conviene tratarlas distinto:
+            # (a) el paso es Watson-Crick pero está escrito en la otra orientación
+            #     (p. ej. 'AG/CT', que es el mismo paso que 'CT/GA'); el original sólo
+            #     probaba el string invertido entero ('TC/GA'), que no es una clave.
+            # (b) el dúplex no es complementario (dos siRNAs distintos) o hay bases
+            #     no-ACGT: se aproxima con el par WC de la hebra de arriba.
+            alt = _equivalentes(neighbors)
+            usada = next((c for c in alt if c in imm_table or c in nn_table), None)
+            if usada is not None:
+                tabla = imm_table if usada in imm_table else nn_table
+                _equivalentes_usadas.append((neighbors, usada))
+                deltaH += tabla[usada][dH]
+                deltaS += tabla[usada][dS]
             else:
-                warnings.warn('no data for neighbors \'' + neighbors +
-                              '\'. Calculation will be wrong',
-                              BiopythonWarning)
+                aprox = neighbors[:2] + '/' + str(Seq(neighbors[:2]).complement())
+                if aprox in nn_table:
+                    _aproximados.append(neighbors)
+                    deltaH += nn_table[aprox][dH]
+                    deltaS += nn_table[aprox][dS]
+                elif strict:
+                    raise ValueError('no data for neighbors \'' + neighbors + '\'')
+                else:
+                    warnings.warn('no data for neighbors \'' + neighbors +
+                                  '\'. Calculation will be wrong',
+                                  BiopythonWarning)
 
     k = (dnac1 - (dnac2 / 2.0)) * 1e-9
     if selfcomp:

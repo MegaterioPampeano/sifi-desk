@@ -37,14 +37,29 @@ DATOS = [os.environ.get("SIFI_DATOS_ROOT", "/mnt/datos/biotech")]
 TIMEOUT_DEFECTO = 180
 MAX_SALIDA = 8000
 
-# Rutas del programa instalado: se pueden leer, nunca modificar.
-_PROTEGIDAS = [
-    "/mnt/datos/biotech",
-    "/opt/sifi-desk",
-    "/mnt/datos/proyectos/sifi-desk",
+# Credenciales y estado privado: ni se leen. (El programa y los datos del
+# laboratorio sí se leen; lo que no se puede es escribir fuera de su carpeta,
+# y de eso se encarga `_revisar` mirando las rutas reales del comando.)
+_SECRETOS = [
     os.path.expanduser("~/.openclaw"),
-    "/usr/lib", "/usr/bin", "/etc", "/boot", "/var/lib", "/home",
+    os.path.expanduser("~/.ssh"),
+    os.path.expanduser("~/.aws"),
+    os.path.expanduser("~/.sifidesk/agent.env"),
+    os.path.expanduser("~/.sifidesk/token"),
+    os.path.expanduser("~/.sifidesk/sifid"),
+    "/etc/shadow", "/etc/sudoers",
 ]
+
+# Operadores que escriben. Se buscan sobre el comando sin comillas: así
+# `grep -c '>' archivo` (un `>` citado) no se confunde con una redirección.
+_ESCRITURA = re.compile(
+    r"(>>?\s*\S|\btee\b|\bcp\b|\bmv\b|\brm\b|\bmkdir\b|\btouch\b|\bln\b|"
+    r"\bchmod\b|\bsed\s+-i\b|\btruncate\b)")
+# Python puede escribir sin pasar por el shell: se detecta el patrón.
+_PY_ESCRITURA = re.compile(
+    r"open\s*\([^)]*['\"][wax+]|os\.(remove|unlink|rename|replace|rmdir)|"
+    r"shutil\.(rmtree|move|copy)|write_text|write_bytes|\.unlink\s*\(")
+_RUTA = re.compile(r"""(?:^|[\s'"=(])(~?/[^\s'";|&)]*|\./[^\s'";|&)]*)""")
 
 _NEGADOS = [
     r"\bsudo\b", r"\bsu\s+-", r"\bpkexec\b", r"\bpasswd\b", r"\bchown\b", r"\bchattr\b",
@@ -85,18 +100,42 @@ def resolver(ruta: str, para_escritura: bool = False) -> str:
     return absoluta
 
 
+def _sin_comillas(cmd: str) -> str:
+    """Saca los tramos entrecomillados, para no leer un `>` citado como redirección."""
+    return re.sub(r"'[^']*'|\"[^\"]*\"", "''", cmd)
+
+
+def _rutas_mencionadas(cmd: str) -> List[str]:
+    """Rutas absolutas o `./` que aparecen en el comando (aunque estén entre comillas)."""
+    return [m.group(1) for m in _RUTA.finditer(cmd)]
+
+
+def _absoluta(ruta: str) -> str:
+    ruta = os.path.expanduser(ruta)
+    if not os.path.isabs(ruta):
+        ruta = os.path.join(TRABAJO, ruta)
+    return os.path.realpath(ruta)
+
+
 def _revisar(cmd: str) -> None:
     bajo = cmd.lower()
     for patron in _NEGADOS:
         if re.search(patron, bajo):
             raise Denegado("ese comando está bloqueado por política "
                            "(privilegios, instalación del sistema o borrado masivo)")
-    # escrituras a rutas protegidas: "> /opt/...", "tee /opt/...", "cp x /opt/..."
-    for prot in _PROTEGIDAS:
-        if prot in cmd and re.search(r"(>|>>|\btee\b|\bcp\b|\bmv\b|\brm\b|\bsed\s+-i\b|"
-                                     r"\bpython3?\b.*open\()", cmd):
-            raise Denegado(f"no puedo modificar {prot}: es parte del programa o del sistema. "
-                           "Si hace falta un cambio ahí, lo hace Mariano o se pide por código.")
+
+    rutas = _rutas_mencionadas(cmd)
+    escribe = bool(_ESCRITURA.search(_sin_comillas(cmd))) or bool(_PY_ESCRITURA.search(cmd))
+
+    for mencionada in rutas:
+        real = _absoluta(mencionada)
+        for secreto in _SECRETOS:
+            if _dentro(real, secreto):
+                raise Denegado(f"{mencionada} tiene credenciales o estado privado: no lo toco")
+        if escribe and not (_dentro(real, RAIZ) or _dentro(real, "/tmp")
+                            or _dentro(real, "/var/tmp")):
+            raise Denegado(f"no puedo escribir en {mencionada}: está fuera de tu carpeta "
+                           f"({RAIZ}). Ahí sólo leo.")
 
 
 def _entorno() -> Dict[str, str]:

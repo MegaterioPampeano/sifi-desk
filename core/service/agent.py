@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Optional
 from . import sandbox, settings
 
 MAX_CANDIDATOS = 15
-MAX_RONDAS = 16
+MAX_RONDAS = 10
 # Ventana de contexto: el historial se recorta por presupuesto de tokens, no por
 # cantidad de turnos. deepseek-flash tiene 1.048.576 de contexto (y 393k de salida);
 # dejamos ~40% para el prompt, las herramientas y las respuestas.
@@ -451,7 +451,7 @@ def _ejecutar(nombre: str, args: dict, ent: _Entorno) -> Dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # LLM
 # --------------------------------------------------------------------------- #
-def _post_llm(mensajes: List[dict], *, tools: bool, max_tokens: int = 2000,
+def _post_llm(mensajes: List[dict], *, tools: bool, max_tokens: int = 16384,
               timeout: int = 120) -> dict:
     clave = settings.clave_actual()
     if not clave:
@@ -564,7 +564,7 @@ def chat(store, mensaje: str, run_id: Optional[str] = None,
         # se quedó sin rondas: pedir un cierre sin herramientas
         mensajes.append({"role": "user", "content": "Cerrá con lo que tengas, sin usar más "
                                                     "herramientas, en 5 líneas."})
-        data = _post_llm(mensajes, tools=False, max_tokens=400)
+        data = _post_llm(mensajes, tools=False, max_tokens=2000)
         texto = (data["choices"][0]["message"].get("content") or "").strip()
         return {"respuesta": texto or "No llegué a una conclusión.", "tools": tarjetas,
                 "modelo": settings.estado()["modelo"], "ms": int((time.time() - t0) * 1000)}
