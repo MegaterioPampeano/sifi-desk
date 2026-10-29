@@ -117,8 +117,9 @@ class SifiPipeline:
         results: List[PipelineResult] = []
         for i, seq_record in enumerate(records):
             name = str(seq_record.id)
+            desc = str(seq_record.description or "")
             self._progress(i, total, name)
-            results.append(self._run_one(name, str(seq_record.seq)))
+            results.append(self._run_one(name, str(seq_record.seq), desc))
             self._progress(i + 1, total, name)
         if not results:
             results.append(PipelineResult(
@@ -134,9 +135,14 @@ class SifiPipeline:
         except Exception:  # noqa: BLE001 - el progreso nunca es motivo de falla
             log.debug("el callback de progreso falló en %r", name, exc_info=True)
 
-    def _run_one(self, query_name: str, query_sequence: str) -> PipelineResult:
+    def _run_one(self, query_name: str, query_sequence: str,
+                 query_desc: str = "") -> PipelineResult:
         logger = logging.LoggerAdapter(log, {"query": query_name})
         self.len_seq = len(query_sequence)
+        # El encabezado completo del FASTA trae el accession del transcripto
+        # ("ATPPase_Dm GITV01001458.1 ..."). Sin eso, un blanco explícito dado como
+        # nombre de gen no se puede mapear al id del panel y TODO queda off-target.
+        self._query_desc = query_desc
         res = PipelineResult(query_name=query_name, query_sequence=query_sequence)
 
         if not query_sequence:
@@ -219,14 +225,39 @@ class SifiPipeline:
         "explicit": usa la lista recibida (si está vacía -> None).
         "auto": el/los hit(s) que coinciden con el id de la query (exacto, o prefijo
                 '<query>_' / '<query>|'); si no hay coincidencia, None (todo es off-target).
-        """
-        if self.main_target_mode == "explicit":
-            self._main_panel = self._panel_of(self.main_targets or ())
-            return self.main_targets
 
+        En los dos modos se completa con los accessions del encabezado del FASTA: pedir
+        el blanco por nombre de gen ("ATPPase_Dm") cuando el panel lo conoce por
+        accession ("GITV01001458.1") dejaba todos los hits como off-target, incluido el
+        propio gen, y hundía el score ~12 puntos.
+        """
         all_targets = Counter(player[2] for player in self.bowtie_data_l)
+        desc_tokens = [t.strip(",;()[]") for t in (getattr(self, "_query_desc", "") or "").split()]
+        desc_hits = [t for t in desc_tokens if t in all_targets]
+
+        if self.main_target_mode == "explicit":
+            pedidos = list(self.main_targets or ())
+            resueltos = [t for t in pedidos if t in all_targets]
+            faltantes = [t for t in pedidos if t not in all_targets]
+            if faltantes:
+                extra = [t for t in desc_hits if t not in resueltos]
+                if extra:
+                    log.warning("main target %r no está en el panel; uso %r del encabezado",
+                                faltantes, extra)
+                    resueltos.extend(extra)
+                else:
+                    log.warning("main target %r no está en el panel y el encabezado no "
+                                "trae un accession conocido: todo cuenta como off-target",
+                                faltantes)
+            self._main_panel = self._panel_of(resueltos)
+            return resueltos or None
+
         if query_name in all_targets:
             chosen = [query_name]
+        elif desc_hits:
+            chosen = desc_hits[:1]
+            log.info("main target auto: %r -> %r (accession del encabezado)",
+                     query_name, chosen)
         else:
             pref = [t for t in all_targets
                     if t.startswith(query_name + "_") or t.startswith(query_name + "|")]
