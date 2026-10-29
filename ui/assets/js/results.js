@@ -48,6 +48,7 @@ export function initResults({ onNewRun }) {
     state.geneFilter = b.dataset.gene;
     renderTabs();
     renderMap();
+    renderPerfil();
     renderTable();
   });
 
@@ -116,6 +117,7 @@ export function renderAll() {
   renderTiles();
   renderTabs();
   renderMap();
+  renderPerfil();
   renderTable();
   $("#btn-export").title = "Descargar el informe PDF generado por el servicio";
   $("#btn-export").disabled = !(res.run_id && res.source !== "mock");
@@ -182,6 +184,86 @@ function renderMap() {
     ? "posición de cada candidato sobre el transcrito"
     : `posición de cada candidato sobre ${state.geneFilter}`;
   $("#map-note").textContent = "hacé clic en una marca para abrir el detalle";
+}
+
+
+// Perfil por posición: score de cada candidato contra su posición en el transcrito, con
+// una media móvil para ver dónde conviene cortar. El mapa de arriba dice *dónde* están;
+// esto dice *qué tan buenos* son en cada zona, que es lo que decide la ventana.
+function renderPerfil() {
+  const cont = $("#gene-perfil");
+  if (!cont) return;
+  const recs = recordsVisibles();
+  const nota = $("#perfil-note");
+  if (!recs.length) {
+    cont.innerHTML = `<div class="d-empty">Sin gen seleccionado.</div>`;
+    if (nota) nota.textContent = "";
+    return;
+  }
+
+  const ANCHO = 720, ALTO = 220, M = { top: 12, right: 12, bottom: 26, left: 34 };
+  const iw = ANCHO - M.left - M.right, ih = ALTO - M.top - M.bottom;
+
+  cont.innerHTML = recs.map((rec) => {
+    const cands = rec.candidates.slice().sort((a, b) => a.pos - b.pos);
+    if (!cands.length) return `<div class="d-empty">Sin candidatos.</div>`;
+    const L = (rec.gene && rec.gene.longitud) || cands[cands.length - 1].pos || 1;
+    const x = (pos) => M.left + (iw * (pos - 1)) / Math.max(1, L - 1);
+    const y = (v) => M.top + ih * (1 - Math.max(0, Math.min(100, v)) / 100);
+
+    const puntos = cands.map((c) => {
+      const clase = c.banda === "recomendado" ? "ok" : c.banda === "revisar" ? "mid" : "low";
+      return `<circle class="pf ${clase}" cx="${x(c.pos).toFixed(1)}" cy="${y(c.total).toFixed(1)}" `
+        + `r="2.2" data-id="${esc(c.id)}" data-query="${esc(rec.query_name)}">`
+        + `<title>${esc(c.id)} · pos ${c.pos} · ${num(c.total, 1)} · ${bandLabel(c.banda)}</title></circle>`;
+    }).join("");
+
+    // media móvil de 50 candidatos: suaviza el ruido de la secuencia sin esconder la forma
+    const VENTANA = 50;
+    const media = [];
+    for (let i = 0; i < cands.length; i += 1) {
+      const desde = Math.max(0, i - VENTANA + 1);
+      const trozo = cands.slice(desde, i + 1);
+      media.push([cands[i].pos, trozo.reduce((a, c) => a + c.total, 0) / trozo.length]);
+    }
+    const linea = media.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+
+    const grilla = [0, 25, 50, 75, 100].map((v) =>
+      `<line class="pf-grid" x1="${M.left}" x2="${M.left + iw}" y1="${y(v)}" y2="${y(v)}"/>`
+      + `<text class="pf-tick" x="${M.left - 6}" y="${y(v) + 3}" text-anchor="end">${v}</text>`).join("");
+    const marcasX = [0, 0.25, 0.5, 0.75, 1].map((f) => {
+      const pos = Math.round(1 + f * (L - 1));
+      return `<text class="pf-tick" x="${x(pos)}" y="${ALTO - 8}" text-anchor="middle">${entero(pos)}</text>`;
+    }).join("");
+
+    const mejor = cands.slice().sort((a, b) => b.total - a.total)[0];
+    return `<figure class="perfil-fig">
+      <svg viewBox="0 0 ${ANCHO} ${ALTO}" role="img"
+           aria-label="Perfil de score por posición en ${esc(rec.query_name)}">
+        ${grilla}${marcasX}
+        <path class="pf-media" d="${linea}"/>
+        ${puntos}
+        <line class="pf-mejor" x1="${x(mejor.pos)}" x2="${x(mejor.pos)}"
+              y1="${M.top}" y2="${M.top + ih}"/>
+        <text class="pf-tag" x="${Math.min(x(mejor.pos) + 4, ANCHO - 90)}" y="${M.top + 10}">
+          mejor ${num(mejor.total, 1)}
+        </text>
+      </svg>
+      <figcaption>${esc(rec.query_name)} · ${entero(cands.length)} candidatos en ${entero(L)} nt ·
+        mejor en ${entero(mejor.pos)} (${esc(mejor.id)})</figcaption>
+    </figure>`;
+  }).join("");
+
+  cont.querySelectorAll("circle.pf").forEach((c) => {
+    c.addEventListener("click", () => {
+      const rec = state.results.records.find((r) => r.query_name === c.dataset.query);
+      const cand = rec && rec.candidates.find((x) => x.id === c.dataset.id);
+      if (cand) openCandidate(rec, cand);
+    });
+  });
+  const cap = $("#perfil-caption");
+  if (cap) cap.textContent = "score de cada candidato a lo largo del transcrito";
+  if (nota) nota.textContent = "clic en un punto para abrir el candidato";
 }
 
 function flat() {

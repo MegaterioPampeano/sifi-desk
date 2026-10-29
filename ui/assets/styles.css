@@ -704,3 +704,21 @@ select.input.sm { padding: 5px 8px; font-size: 12px; }
 .msg .tools[open] > summary::before { content: "▾ "; }
 .msg .tools > summary:hover { color: var(--ink-2); }
 .msg .tools .tool { margin-top: 6px; }
+
+/* Perfil por posición (score vs posición) */
+.perfil-card { margin-top: 4px; }
+.perfil { overflow-x: auto; }
+.perfil-fig { margin: 0; }
+.perfil svg { width: 100%; height: auto; display: block; }
+.pf-grid { stroke: var(--line); stroke-width: 1; opacity: .55; }
+.pf-tick { fill: var(--faint); font-size: 9px; }
+.pf { cursor: pointer; }
+.pf.ok { fill: var(--ok, #2f9e5a); }
+.pf.mid { fill: var(--warn, #c98a15); }
+.pf.low { fill: var(--faint, #8a8f98); opacity: .7; }
+.pf:hover { stroke: var(--ink); stroke-width: .8; }
+.pf-media { fill: none; stroke: var(--ink-2, #3b3f46); stroke-width: 1.8; opacity: .85; }
+.pf-mejor { stroke: var(--accent, #2f6df6); stroke-width: 1; stroke-dasharray: 3 3; }
+.pf-tag { fill: var(--accent, #2f6df6); font-size: 9px; }
+.perfil figcaption { font-size: 10.5px; color: var(--faint); padding: 2px 2px 6px; }
+.tick.media { background: var(--ink-2, #3b3f46); height: 2px; }
