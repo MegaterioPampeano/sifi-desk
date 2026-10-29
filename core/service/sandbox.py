@@ -224,16 +224,30 @@ def _revisar(cmd: str) -> None:
             motivo=f"escritura fuera de la carpeta del agente: {objetivo}")
 
 
+def _site_usuario() -> str:
+    """site-packages de usuario (+ el PYTHONPATH heredado, si hay)."""
+    usuario = os.path.expanduser("~/.local/lib/python%d.%d/site-packages"
+                                 % sys.version_info[:2])
+    partes = [usuario] if os.path.isdir(usuario) else []
+    if os.environ.get("PYTHONPATH"):
+        partes.append(os.environ["PYTHONPATH"])
+    return ":".join(partes)
+
+
 def _entorno() -> Dict[str, str]:
     base = {
+        # HOME apunta a la carpeta del agente, y eso deja afuera el site-packages de
+        # usuario (~/.local/...): biopython y matplotlib viven ahí. Se agrega al path
+        # de Python para que `python3` y el CLI `sifi` importen lo mismo que el servicio.
         "PATH": "/usr/local/bin:/usr/bin:/bin",
         "HOME": RAIZ,
+        "PYTHONPATH": _site_usuario(),
         "LANG": "C.UTF-8",
         "LC_ALL": "C.UTF-8",
         "PYTHONUNBUFFERED": "1",
         "SIFI_AGENT_WORKSPACE": RAIZ,
     }
-    for k in ("SIFI_BOWTIE", "SIFI_RNAPLFOLD", "SIFI_PANELS_ROOT", "PYTHONPATH",
+    for k in ("SIFI_BOWTIE", "SIFI_RNAPLFOLD", "SIFI_PANELS_ROOT",
               "DISPLAY", "XDG_RUNTIME_DIR"):
         if os.environ.get(k):
             base[k] = os.environ[k]
