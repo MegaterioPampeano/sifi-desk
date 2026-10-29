@@ -115,6 +115,14 @@ for cand in "$REPO/dist/ui" "$REPO/ui/dist" "$REPO/agent/dist"; do
   fi
 done
 
+# UI estática (ui/index.html + assets): es la misma que sirve --ui-dir; el build de Tauri
+# produce lo mismo pero compilado. Sin esto el bundle queda API-only y no hay ventana.
+if [ ! -e "$BUNDLE/ui" ] && [ -f "$REPO/ui/index.html" ]; then
+  mkdir -p "$BUNDLE/ui"
+  tar -C "$REPO/ui" --exclude=tauri -cf - . | tar -C "$BUNDLE/ui" -xf -
+  echo "ui ← ui/ (estática, sin tauri)"
+fi
+
 # Los binarios de vendor ya vienen copiados por el .spec (misma ruta relativa);
 # esto completa el caso "no estaban cuando corrió PyInstaller".
 venv_src="$REPO/packaging/vendor/$PLAT"

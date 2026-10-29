@@ -60,8 +60,35 @@ esac
 case "${1:-}" in
   sifi)  shift; exec "$here/usr/bin/sifi-desk/sifi" "$@" ;;
   --cli) shift; exec "$here/usr/bin/sifi-desk/sifi" "$@" ;;
+  --server) shift; exec "$here/usr/bin/sifi-desk/sifid" "$@" ;;
 esac
-exec "$here/usr/bin/sifi-desk/sifid" "$@"
+# Sin argumentos: modo ventana. Servicio en localhost con la UI estática y el navegador
+# apuntando ahí. --no-auth sólo porque el socket bindea 127.0.0.1 (nadie más lo alcanza).
+BUNDLE="$here/usr/bin/sifi-desk"
+PORT="${SIFI_PORT:-8790}"
+"$BUNDLE/sifid" --port "$PORT" --host 127.0.0.1 --no-auth \
+    --ui-dir "$BUNDLE/ui" \
+    --data-dir "${SIFI_DATA:-$HOME/.sifidesk/sifid}" \
+    --panels-root "${SIFI_PANELS:-$HOME/.sifidesk/panels}" >"${SIFI_LOG:-/tmp/sifid-app.log}" 2>&1 &
+srv=$!
+trap 'kill $srv 2>/dev/null' INT TERM EXIT
+for i in $(seq 1 60); do
+  curl -sf -o /dev/null "http://127.0.0.1:$PORT/" && break
+  sleep 0.5
+done
+URL="http://127.0.0.1:$PORT/"
+# Ventana propia sin barra de direcciones ni pestañas si hay un navegador que lo permita.
+abrir() {
+  for b in chromium chromium-browser google-chrome brave-browser microsoft-edge; do
+    command -v "$b" >/dev/null && { "$b" --app="$URL" --window-size=1280,880 >/dev/null 2>&1 & return 0; }
+  done
+  command -v firefox >/dev/null && { firefox --new-window "$URL" >/dev/null 2>&1 & return 0; }
+  command -v xdg-open >/dev/null && { xdg-open "$URL" >/dev/null 2>&1 & return 0; }
+  echo "abrí a mano: $URL"
+}
+abrir
+echo "siFi-Desk: $URL   (log: ${SIFI_LOG:-/tmp/sifid-app.log}; Ctrl-C para cerrar)"
+wait $srv
 EOF
 chmod +x "$APPIDIR/AppRun"
 
