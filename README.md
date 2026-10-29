@@ -25,7 +25,7 @@ Organización: **Omnivac Science** · Documento de diseño: [`docs/ROADMAP.md`](
 
 ## Instalación
 
-En otra máquina: ver [](INSTALL.md). El atajo es
+En otra máquina: ver [`INSTALL.md`](INSTALL.md). El atajo es
 
 ```bash
 bash scripts/instalar.sh --paneles
