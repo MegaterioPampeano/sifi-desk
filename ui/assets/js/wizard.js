@@ -2,6 +2,7 @@
 import { state, saveDraft, selectedPanels, parseFasta, queryPath } from "./state.js";
 import { DEMO_FASTA } from "./demo.js";
 import { esc, num, roleLabel, gc } from "./format.js";
+import { api } from "./api.js";
 
 let onRun = null;
 let maxStep = 1;
@@ -13,9 +14,22 @@ export function initWizard({ onRun: cb }) {
   onRun = cb;
 
   $("#panel-grid").addEventListener("click", (ev) => {
+    if (ev.target.closest(".panel-rol")) return;   // el select no marca el panel
     const card = ev.target.closest(".panel-card");
     if (!card) return;
     togglePanel(card.dataset.id);
+  });
+  $("#panel-grid").addEventListener("change", async (ev) => {
+    const sel = ev.target.closest(".panel-rol");
+    if (!sel) return;
+    ev.preventDefault();
+    try {
+      await api.cambiarRolPanel(sel.dataset.id, sel.value);
+      toast(`Rol de ${sel.dataset.id}: ${roleLabel(sel.value)}`);
+      await cargarPaneles();
+    } catch (err) {
+      toast(err.message, true);
+    }
   });
   $("#panel-grid").addEventListener("change", (ev) => {
     const card = ev.target.closest(".panel-card");
@@ -197,6 +211,14 @@ function renderPanels() {
           </span>
           <span class="panel-sub">${esc(p.titulo)}</span>
           <span class="panel-desc">${esc(p.descripcion)}</span>
+          <span class="panel-rol-row">
+            <label>rol
+              <select class="panel-rol" data-id="${esc(p.id)}" aria-label="Rol de ${esc(p.nombre)}">
+                ${["blanco", "no_blanco", "patogeno", "simbionte", "control", "universal"].map((r) =>
+                  `<option value="${r}" ${r === p.rol ? "selected" : ""}>${roleLabel(r)}</option>`).join("")}
+              </select>
+            </label>
+          </span>
           <span class="panel-meta"><span>${Number(p.n_seqs).toLocaleString("es-AR")} secuencias</span><span>${esc(p.tamano)}</span><span>${esc(p.sha256.slice(0, 10))}</span></span>
         </span>
       </label>`;

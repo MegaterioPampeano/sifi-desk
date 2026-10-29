@@ -204,7 +204,7 @@ def inventario() -> Dict[str, Any]:
     asegurar()
     def listar(d: str) -> List[str]:
         try:
-            return sorted(os.listdir(d))[:50]
+            return sorted(os.listdir(d))[:8]
         except OSError:
             return []
     total = 0

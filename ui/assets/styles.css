@@ -676,3 +676,31 @@ select.input.sm { padding: 5px 8px; font-size: 12px; }
   border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2);
 }
 .chat-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* sugerencias del chat: se pueden plegar */
+.chat-suggest.oculto { display: none; }
+.chat-suggest-toggle {
+  align-self: flex-start; margin: -2px 14px 6px; padding: 2px 8px; font-size: 10.5px;
+  color: var(--faint); background: none; border: 1px solid var(--line);
+  border-radius: 999px; cursor: pointer;
+}
+.chat-suggest-toggle:hover { color: var(--ink-2); border-color: var(--line-strong); }
+
+/* selector de rol en la tarjeta de panel */
+.panel-rol-row { display: block; margin-top: 6px; }
+.panel-rol-row label { font-size: 10.5px; color: var(--faint); display: flex; gap: 6px; align-items: center; }
+.panel-rol {
+  font-size: 11px; padding: 2px 4px; border-radius: var(--radius-sm); border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--ink-2); cursor: pointer;
+}
+
+/* pasos del agente plegados */
+.msg .tools { margin-top: 6px; border-left: 2px solid var(--line); padding-left: 8px; }
+.msg .tools > summary {
+  cursor: pointer; font-size: 11px; color: var(--faint); list-style: none;
+}
+.msg .tools > summary::-webkit-details-marker { display: none; }
+.msg .tools > summary::before { content: "▸ "; }
+.msg .tools[open] > summary::before { content: "▾ "; }
+.msg .tools > summary:hover { color: var(--ink-2); }
+.msg .tools .tool { margin-top: 6px; }

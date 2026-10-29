@@ -182,6 +182,8 @@ export const api = {
   },
   panels: async (signal) =>
     normalizePanels(await request("GET", "/panels", undefined, signal)),
+  cambiarRolPanel: (id, rol, signal) =>
+    request("PATCH", `/panels/${id}`, { rol }, signal),
   runs: async (signal) =>
     normalizeRuns(await request("GET", "/runs", undefined, signal)),
   run: async (id, signal) =>

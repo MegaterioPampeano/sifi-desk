@@ -310,6 +310,38 @@ def create_app(data_dir: Optional[str] = None,
             })
         return {"panels_root": panels_root, "count": len(out), "panels": out}
 
+    @app.patch("/panels/{pid}")
+    def panel_rol(pid: str, body: dict) -> dict:
+        """Cambia el rol de un panel (blanco / no_blanco / patogeno / simbionte...).
+
+        El rol es lo que decide cómo pesa un hit: contra el blanco es el objetivo,
+        contra un no_blanco es riesgo. Se escribe en el meta.yaml de la versión vigente.
+        """
+        from sifi.panels import PanelsRegistry, ROLES
+        import yaml as _yaml
+
+        rol = (body or {}).get("rol")
+        if rol not in ROLES:
+            raise HTTPException(status_code=400,
+                                detail=f"rol inválido: {rol!r} (usar {', '.join(ROLES)})")
+        for spec in PanelsRegistry(root=panels_root).list():
+            if spec.id != pid:
+                continue
+            meta_path = os.path.join(spec.path, "meta.yaml")
+            if not os.path.isfile(meta_path):
+                raise HTTPException(status_code=409,
+                                    detail=f"el panel {pid} no tiene meta.yaml editable")
+            with open(meta_path, encoding="utf-8") as fh:
+                meta = _yaml.safe_load(fh) or {}
+            anterior = meta.get("rol")
+            meta["rol"] = rol
+            tmp = meta_path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as fh:
+                _yaml.safe_dump(meta, fh, allow_unicode=True, sort_keys=True)
+            os.replace(tmp, meta_path)
+            return {"id": pid, "rol": rol, "anterior": anterior, "version": spec.version}
+        raise HTTPException(status_code=404, detail=f"no existe el panel {pid}")
+
     # ----------------------------------------------------------------- runs
     @app.post("/runs", status_code=201)
     def create_run(req: RunRequest) -> dict:
@@ -594,7 +626,8 @@ def create_app(data_dir: Optional[str] = None,
         historial = charlas.historial_para_llm(sesion) or body.get("historial")
         charlas.agregar(data_dir, sid, "user", mensaje, run_id=run_id)
         salida = _agent.chat(store, mensaje, run_id, historial,
-                             base_url=str(request.base_url).rstrip("/"), token=token)
+                             base_url=str(request.base_url).rstrip("/"), token=token,
+                           data_dir=data_dir)
         charlas.agregar(data_dir, sid, "assistant", salida.get("respuesta") or "",
                         herramientas=salida.get("tools") or None, run_id=run_id)
         salida["sesion_id"] = sid

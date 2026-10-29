@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Optional
 from . import sandbox, settings
 
 MAX_CANDIDATOS = 15
-MAX_RONDAS = 10
+MAX_RONDAS = 16
 MAX_HISTORIAL = 8
 
 CORE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -50,6 +50,15 @@ Tratá cada pedido como un problema a resolver, no como una charla. El ciclo es:
    igual. Citá la evidencia concreta (ID de transcrito, e-value, DOI, archivo:línea).
 4. **Actuá.** Si el paso siguiente es un comando, un script o una descarga, hacelo vos.
 5. **Reportá.** Qué encontraste, qué hiciste, qué quedó pendiente. Sin relleno.
+
+## Cuando algo falla
+
+No te rindas ni pidas ayuda en el primer error. Ciclo: leer el error → entender la causa →
+cambiar el enfoque → reintentar. Tenés hasta 16 pasos y podés usar todas las herramientas.
+Si el servicio rechaza una corrida o falla, mirá el log con `ver_error_corrida` y corregí
+el pedido. Antes de decir "no se puede", probá al menos dos caminos distintos (otra
+herramienta, otra fuente, otro formato). Recién si los dos fallan, contá qué probaste y
+qué haría falta.
 
 ## Autonomía
 
@@ -91,7 +100,10 @@ Nunca pegues código en el chat para que lo ejecute Mariano. Si hace falta códi
 No podés modificar el programa instalado (bundle, repo, `agent/`), usar sudo ni tocar el
 sistema. Si un cambio de código hace falta, lo pedís: lo revisa Mariano.
 
-Formato: 10 líneas o menos salvo que pidan detalle; texto plano, listas con guiones,
+Formato: 10 líneas o menos salvo que pidan detalle. No vuelques rutas absolutas largas,
+listados de archivos, JSON ni dumps: las tarjetas de abajo ya muestran el comando y su
+salida. Contá el resultado en una o dos frases y el paso siguiente. Nunca repitas
+información que ya está en pantalla. texto plano, listas con guiones,
 números exactos. Si una tarea es larga, hacé los pasos y contá el avance."""
 
 TOOLS: List[dict] = [
@@ -189,6 +201,21 @@ TOOLS: List[dict] = [
             "main_target": {"type": "string"},
         }}}},
     {"type": "function", "function": {
+        "name": "resultados_corrida",
+        "description": "Devuelve los mejores candidatos de una corrida terminada: id, posición, "
+                       "score, banda y cantidad de hits. Es la forma correcta de leer la tabla "
+                       "de resultados, en vez de buscar archivos.",
+        "parameters": {"type": "object", "properties": {
+            "run_id": {"type": "string"}, "top": {"type": "integer"},
+            "gen": {"type": "string", "description": "opcional: filtrar por registro del FASTA"}},
+            "required": ["run_id"]}}},
+    {"type": "function", "function": {
+        "name": "ver_error_corrida",
+        "description": "Lee el stderr.log de una corrida del servicio para entender por qué falló.",
+        "parameters": {"type": "object", "properties": {
+            "run_id": {"type": "string"}, "lineas": {"type": "integer"}},
+            "required": ["run_id"]}}},
+    {"type": "function", "function": {
         "name": "estado_corrida",
         "description": "Estado, progreso y resultado de una corrida del servicio.",
         "parameters": {"type": "object", "properties": {
@@ -248,8 +275,9 @@ def _contexto(store, run_id: Optional[str]) -> Dict[str, Any]:
 # herramientas
 # --------------------------------------------------------------------------- #
 class _Entorno:
-    def __init__(self, store, base_url: str, token: Optional[str]):
+    def __init__(self, store, base_url: str, token: Optional[str], data_dir: str = ""):
         self.store = store
+        self.data_dir = data_dir or os.path.expanduser("~/.sifidesk/sifid")
         self.base_url = base_url.rstrip("/")
         self.token = token
 
@@ -326,12 +354,52 @@ def _ejecutar(nombre: str, args: dict, ent: _Entorno) -> Dict[str, Any]:
                                            f"{exc.code} {exc.read().decode('utf-8', 'replace')[:300]}"}
         run = data.get("run", data)
         return {"ok": True, "salida": f"corrida {run.get('run_id')} en estado {run.get('status')}"}
+    if nombre == "resultados_corrida":
+        rid = args.get("run_id") or ""
+        ruta = os.path.join(ent.data_dir, "runs", rid, "out", "results.json")
+        if not os.path.isfile(ruta):
+            return {"ok": False, "salida": f"la corrida {rid} no tiene resultados todavía "
+                                          f"(busqué {ruta}); revisá estado_corrida"}
+        with open(ruta, encoding="utf-8") as fh:
+            data = json.load(fh)
+        top = max(1, min(int(args.get("top") or 10), 50))
+        filtro = (args.get("gen") or "").strip().lower()
+        filas = []
+        for rec in data.get("records", []):
+            nombre = str(rec.get("name") or rec.get("query_name") or "")
+            if filtro and filtro not in nombre.lower():
+                continue
+            cands = sorted(rec.get("candidates") or [], key=lambda c: c.get("total") or 0,
+                           reverse=True)[:top]
+            for c in cands:
+                filas.append({"gen": nombre, "id": c.get("id"), "pos": c.get("pos"),
+                              "seq": c.get("seq"), "score": c.get("total"),
+                              "banda": c.get("banda"), "hits": c.get("n_hits")})
+        if not filas:
+            return {"ok": True, "salida": "la corrida no tiene candidatos"}
+        lineas = [f"{len(filas)} candidatos (ordenados por score):"]
+        for f in filas:
+            lineas.append(f"- {f['id']} pos {f['pos']} score {f['score']:.2f} "
+                          f"banda {f['banda']} hits {f['hits']} seq {f['seq']}")
+        return {"ok": True, "salida": "\n".join(lineas)}
+    if nombre == "ver_error_corrida":
+        rid = args.get("run_id") or ""
+        ruta = os.path.join(ent.data_dir, "runs", rid, "stderr.log")
+        if not os.path.isfile(ruta):
+            return {"ok": False, "salida": f"no hay log para {rid} en {ruta}"}
+        n = int(args.get("lineas") or 40)
+        with open(ruta, encoding="utf-8", errors="replace") as fh:
+            lineas = fh.readlines()[-n:]
+        return {"ok": True, "salida": "".join(lineas)[-6000:]}
     if nombre == "estado_corrida":
         try:
             run = ent.http("GET", f"/runs/{args.get('run_id')}")
         except urllib.error.HTTPError as exc:
             return {"ok": False, "salida": f"HTTP {exc.code}"}
         resumen = {k: run.get(k) for k in ("run_id", "status", "progress", "error")}
+        resumen["tiene_resultados"] = os.path.isfile(
+            os.path.join(ent.data_dir, "runs", rid if (rid := args.get("run_id")) else "",
+                         "out", "results.json"))
         return {"ok": True, "salida": json.dumps(resumen, ensure_ascii=False)}
     return {"ok": False, "salida": f"herramienta desconocida: {nombre}"}
 
@@ -374,7 +442,7 @@ def _tarjeta(nombre: str, args: dict, res: dict) -> dict:
 
 def chat(store, mensaje: str, run_id: Optional[str] = None,
          historial: Optional[List[dict]] = None, *, base_url: str = "",
-         token: Optional[str] = None) -> Dict[str, Any]:
+         token: Optional[str] = None, data_dir: str = "") -> Dict[str, Any]:
     mensaje = (mensaje or "").strip()
     if not mensaje:
         return {"respuesta": "Escribí una pregunta.", "configurar": False}
@@ -384,7 +452,7 @@ def chat(store, mensaje: str, run_id: Optional[str] = None,
                               "Pegala en Ajustes → Clave del modelo y volvé a preguntar."),
                 "configurar": True}
 
-    ent = _Entorno(store, base_url or "http://127.0.0.1:8765", token)
+    ent = _Entorno(store, base_url or "http://127.0.0.1:8765", token, data_dir)
     ctx = _contexto(store, run_id)
     mensajes: List[dict] = [{"role": "system", "content": SYSTEM}]
     for m in (historial or [])[-MAX_HISTORIAL:]:

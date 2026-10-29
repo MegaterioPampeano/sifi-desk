@@ -41,6 +41,7 @@ export function initChat() {
       enviar($("#chat-input").value);
     }
   });
+  $("#chat-suggest-toggle").addEventListener("click", () => alternarSugerencias());
   $("#chat-suggest").addEventListener("click", (ev) => {
     const chip = ev.target.closest("button[data-q]");
     if (chip) enviar(chip.dataset.q);
@@ -97,8 +98,7 @@ async function abrirSesion(id) {
       burbuja(m.role === "user" ? "user" : "agent", m.texto || "");
       conversacion.push({ role: m.role, content: m.texto || "" });
       if (Array.isArray(m.herramientas) && m.herramientas.length) {
-        const ultima = log.lastElementChild;
-        for (const t of m.herramientas) ultima.appendChild(tarjetaTool(t));
+        log.lastElementChild.appendChild(bloqueTools(m.herramientas));
       }
     }
     $("#chat-sesiones").value = s.id;
@@ -170,7 +170,7 @@ async function enviar(texto) {
     }
     if (Array.isArray(res.tools) && res.tools.length) {
       const ultima = $("#chat-log").lastElementChild;
-      for (const t of res.tools) ultima.appendChild(tarjetaTool(t));
+      ultima.appendChild(bloqueTools(res.tools));
       $("#chat-log").scrollTop = $("#chat-log").scrollHeight;
     }
     if (res.sesion_id && res.sesion_id !== sesionActual) {
@@ -211,6 +211,20 @@ function burbuja(quien, texto, escribiendo = false) {
   return div;
 }
 
+// Los pasos del agente van plegados: se ve cuántos fueron y se abren si interesan.
+// Antes cada llamada se apilaba como tarjeta y tapaba la respuesta.
+function bloqueTools(tools) {
+  const fallos = tools.filter((t) => t.ok === false).length;
+  const det = document.createElement("details");
+  det.className = "tools";
+  const resumen = document.createElement("summary");
+  resumen.textContent = `${tools.length} paso${tools.length === 1 ? "" : "s"}`
+    + (fallos ? ` · ${fallos} con error` : "");
+  det.appendChild(resumen);
+  for (const t of tools) det.appendChild(tarjetaTool(t));
+  return det;
+}
+
 // Cada herramienta que usa el agente vuelve como tarjeta: se ve el comando exacto
 // y su salida. Las salidas largas quedan plegadas para no tapar la conversación.
 function tarjetaTool(t) {
@@ -238,6 +252,26 @@ function tarjetaTool(t) {
   return div;
 }
 
+// Las sugerencias se pueden apagar: a veces estorban abajo del chat. Queda en
+// localStorage para que no vuelvan a aparecer en cada arranque.
+const CLAVE_SUGERENCIAS = "sifi.sugerencias";
+
+function sugerenciasVisibles() {
+  return localStorage.getItem(CLAVE_SUGERENCIAS) !== "0";
+}
+
+function alternarSugerencias(forzar) {
+  const cont = $("#chat-suggest");
+  const boton = $("#chat-suggest-toggle");
+  const visible = typeof forzar === "boolean" ? forzar : !sugerenciasVisibles();
+  localStorage.setItem(CLAVE_SUGERENCIAS, visible ? "1" : "0");
+  cont.classList.toggle("oculto", !visible);
+  if (boton) {
+    boton.setAttribute("aria-pressed", String(visible));
+    boton.title = visible ? "Ocultar sugerencias" : "Mostrar sugerencias";
+  }
+}
+
 function sugerencias(lista) {
   const cont = $("#chat-suggest");
   cont.innerHTML = "";
@@ -249,4 +283,5 @@ function sugerencias(lista) {
     b.textContent = q;
     cont.appendChild(b);
   }
+  alternarSugerencias(sugerenciasVisibles());
 }
