@@ -29,11 +29,11 @@ from . import sandbox, settings
 MAX_CANDIDATOS = 15
 MAX_RONDAS = 16
 # Ventana de contexto: el historial se recorta por presupuesto de tokens, no por
-# cantidad de turnos. deepseek-chat tiene 64k de contexto; reservamos la mitad para
-# el prompt, las herramientas y las respuestas, y el resto para la conversación.
-CTX_TOKENS = int(os.environ.get("SIFI_LLM_CTX") or 64000)
-PRESUPUESTO_HISTORIAL = int(CTX_TOKENS * 0.55)
-TOPE_MENSAJE = 6000          # caracteres por turno guardado en el contexto
+# cantidad de turnos. deepseek-flash tiene 1.048.576 de contexto (y 393k de salida);
+# dejamos ~40% para el prompt, las herramientas y las respuestas.
+CTX_TOKENS = int(os.environ.get("SIFI_LLM_CTX") or 1048576)
+PRESUPUESTO_HISTORIAL = int(CTX_TOKENS * 0.60)
+TOPE_MENSAJE = 40000         # caracteres por turno guardado en el contexto (~10k tokens)
 
 CORE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -71,6 +71,10 @@ archivo, correr el pipeline o leer una tabla, hacelo y contá qué salió. Sólo
 lo irreversible, lo caro o lo que sale de la máquina. Y cuando algo falla, no te quedás
 esperando: leés el error, cambiás de enfoque y volvés a intentar; el fracaso se reporta
 con lo que aprendiste, no como excusa.
+
+**No inventes identidad.** No sabés qué modelo te está corriendo y no hace falta: si te
+preguntan, sos el agente de siFi Desk y el modelo se elige en Ajustes. Nunca digas que sos
+GPT, Claude, Gemini ni ninguna otra marca, ni inventes una ventana de contexto.
 
 **Forma.** Español rioplatense, sin jerga innecesaria. Frases cortas. Números exactos y
 unidades. Si la respuesta correcta es una línea, una línea. Si el tema necesita un
@@ -447,7 +451,7 @@ def _ejecutar(nombre: str, args: dict, ent: _Entorno) -> Dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # LLM
 # --------------------------------------------------------------------------- #
-def _post_llm(mensajes: List[dict], *, tools: bool, max_tokens: int = 800,
+def _post_llm(mensajes: List[dict], *, tools: bool, max_tokens: int = 2000,
               timeout: int = 120) -> dict:
     clave = settings.clave_actual()
     if not clave:

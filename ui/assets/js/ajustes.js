@@ -54,7 +54,7 @@ async function refrescar() {
 
 function pintar(st) {
   $("#llm-key").value = "";
-  $("#llm-modelo").value = st.modelo || "deepseek-chat";
+  $("#llm-modelo").value = st.modelo || "deepseek-flash";
   $("#llm-base").value = st.base_url || "";
   const chip = $("#llm-chip");
   if (st.configurada) {
@@ -73,7 +73,7 @@ function pintar(st) {
 async function guardar() {
   const api_key = $("#llm-key").value.trim();
   if (!api_key) { estado("Pegá la clave primero.", true); return; }
-  const body = { api_key, modelo: $("#llm-modelo").value.trim() || "deepseek-chat" };
+  const body = { api_key, modelo: $("#llm-modelo").value.trim() || "deepseek-flash" };
   const base = $("#llm-base").value.trim();
   if (base) body.base_url = base;
   estado("Guardando…");

@@ -21,7 +21,7 @@ ENV_PATH = os.environ.get("SIFI_AGENT_ENV",
 
 # DeepSeek y compatibles (openrouter, together, vLLM local) usan el mismo dialecto.
 DEFAULT_BASE_URL = "https://api.deepseek.com"
-DEFAULT_MODEL = "deepseek-chat"
+DEFAULT_MODEL = "deepseek-flash"
 VAR_CLAVE = "SIFI_LLM_API_KEY"
 VAR_ALTERNATIVA = "DEEPSEEK_API_KEY"
 VAR_MODELO = "SIFI_LLM_MODEL"
