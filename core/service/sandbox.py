@@ -331,18 +331,49 @@ def shlex_quote(texto: str) -> str:
     return shlex.quote(texto)
 
 
-def leer(ruta: str, lineas: int = 200) -> str:
+def leer(ruta: str, lineas: int = 200, desde: int = 1) -> str:
+    """Lee un archivo de la carpeta (o de las raíces RO) con números de línea."""
     absoluta = resolver(ruta)
     if not os.path.isfile(absoluta):
         raise Denegado(f"no existe {absoluta}")
+    desde = max(1, int(desde or 1))
     with open(absoluta, encoding="utf-8", errors="replace") as fh:
         out: List[str] = []
-        for i, linea in enumerate(fh):
-            if i >= lineas:
-                out.append(f"… (cortado a {lineas} líneas)")
+        total = 0
+        for i, linea in enumerate(fh, 1):
+            total = i
+            if i < desde:
+                continue
+            if len(out) >= lineas:
                 break
-            out.append(linea.rstrip("\n"))
-    return _recortar("\n".join(out))
+            out.append(f"{i:6d}  {linea.rstrip(chr(10))}")
+    if not out:
+        return f"(el archivo tiene {total} líneas; pediste desde {desde})"
+    cola = f"\n… (cortado a {lineas} líneas; el archivo sigue)" if total > desde + len(out) - 1 else ""
+    return _recortar("\n".join(out) + cola)
+
+
+def editar(ruta: str, viejo: str, nuevo: str, todas: bool = False) -> str:
+    """Reemplazo exacto de texto en un archivo (como el edit del asistente)."""
+    absoluta = resolver(ruta, para_escritura=True)
+    if not os.path.isfile(absoluta):
+        raise Denegado(f"no existe {absoluta}")
+    with open(absoluta, encoding="utf-8") as fh:
+        original = fh.read()
+    if viejo == "":
+        raise Denegado("el texto a reemplazar no puede estar vacío")
+    apariciones = original.count(viejo)
+    if apariciones == 0:
+        raise Denegado("no encontré ese texto exacto en el archivo: revisá espacios, "
+                       "tabulaciones y acentos (leé la zona con `leer`)")
+    if apariciones > 1 and not todas:
+        raise Denegado(f"ese texto aparece {apariciones} veces: pasá más contexto para que "
+                       f"sea único, o usá `todas: true`")
+    actualizado = original.replace(viejo, nuevo) if todas else original.replace(viejo, nuevo, 1)
+    with open(absoluta, "w", encoding="utf-8") as fh:
+        fh.write(actualizado)
+    return (f"editado {absoluta}: {apariciones if todas else 1} reemplazo(s), "
+            f"{len(original)} → {len(actualizado)} caracteres")
 
 
 def escribir(ruta: str, contenido: str) -> str:

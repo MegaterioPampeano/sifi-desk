@@ -631,6 +631,15 @@ def create_app(data_dir: Optional[str] = None,
         charlas.agregar(data_dir, sid, "assistant", salida.get("respuesta") or "",
                         herramientas=salida.get("tools") or None, run_id=run_id)
         salida["sesion_id"] = sid
+        # Compactación: si la charla creció por encima del umbral, se resumen los turnos
+        # viejos con el mismo modelo y el resumen queda guardado en la sesión. Si falla,
+        # no pasa nada: la charla sigue como estaba.
+        from . import contexto as _ctx
+        sesion_actual = charlas.obtener(data_dir, sid)
+        if _ctx.necesita_compactar(sesion_actual):
+            info = charlas.compactar(data_dir, sid, _agent.resumir)
+            if info:
+                salida["compactado"] = info
         salida["sesion"] = [s for s in charlas.listar(data_dir) if s["id"] == sid][:1]
         return salida
 

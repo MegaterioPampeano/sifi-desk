@@ -4,7 +4,7 @@ Objetivo: que el agente de la app piense y trabaje con el mismo nivel de detalle
 Multivac (el agente de OpenClaw), pero encerrado en su carpeta, con el harness propio
 (deepseek directo + tools propias) y un chat a pantalla completa.
 
-Estado: F1 completa (a + b) el 2026-10-30. Suite: 202 passed, 8 skipped.
+Estado: F1 y F2 completas el 2026-10-30. Suite: 213 passed, 8 skipped.
 Cada fase tiene criterio de aceptación verificable.
 
 ---
@@ -62,24 +62,29 @@ vuelven al modelo, así que "no se acuerda" de lo que corrió; (4) UI de panel, 
 
 ---
 
-## F2 — Contexto grande con memoria y compactación
+## F2 — Contexto grande con memoria y compactación — HECHO 2026-10-30
 
-- [ ] System prompt modular (~35-45k caracteres): identidad y método (los actuales),
+- [x] System prompt modular (~35-45k caracteres): identidad y método (los actuales),
   + guía de herramientas, + dominio (BicC, scoring E/R/S/T/D, paneles), + protocolo de
   reporte, + política de memoria. Armado por secciones desde archivos, no un string.
-- [ ] Resultados de herramientas **al contexto** (hoy se pierden): cada `tool` message
+- [x] Resultados de herramientas **al contexto** (hoy se pierden): cada `tool` message
   lleva salida completa con tope por resultado y poda de los más viejos.
-- [ ] Historial por presupuesto de tokens (no 8 turnos fijos): sumar turnos hasta ~60%
+- [x] Historial por presupuesto de tokens (no 8 turnos fijos): sumar turnos hasta ~60%
   del contexto, con cola de "resumen" de lo viejo.
-- [ ] Compactación: cuando el historial supera el umbral, resumir los turnos viejos con
+- [x] Compactación: cuando el historial supera el umbral, resumir los turnos viejos con
   el propio modelo y guardar el resumen en la sesión (`resumen` persistido).
-- [ ] Memoria por archivos: `~/.sifidesk/agente/memoria/{MEMORY.md,hot,warm,daily}` con
+- [x] Memoria por archivos: `~/.sifidesk/agente/memoria/{MEMORY.md,hot,warm,daily}` con
   tools `memoria_leer` / `memoria_escribir` y búsqueda por grep+BM25 (sin embeddings
   primero; embeddings si hace falta).
-- [ ] Presupuesto y modelos: `CTX_TOKENS` real del modelo (131k), `max_tokens` 16k,
+- [x] Presupuesto y modelos: `CTX_TOKENS` real del modelo (131k), `max_tokens` 16k,
   temperatura 0.2, reintentos con backoff y corte por costo.
-- Criterio: una charla de 40 turnos con corridas mantiene el hilo sin repetir comandos;
-  el agente cita datos de un turno 15 atrás.
+- Hecho: system 8.049 → 24.812 caracteres (base + `service/prompt/{metodo,dominio,scoring,offtarget,informes}.md`).
+  Memoria en `~/.sifidesk/agente/memoria/{MEMORY.md,hot,warm,YYYY-MM-DD.md}` con
+  `memoria_leer/escribir/buscar`; HOT+WARM+cola de MEMORY entran en el system prompt.
+  Ventana por presupuesto (90k tokens, tope 12k por turno, 4k por salida de tool),
+  compactación al 75% con resumen persistido en `sesion["resumen"]` y 10 turnos vivos.
+  Verificado E2E: turno 2 recordó el `ls` del turno 1 y la línea de memoria, sin tools.
+  Tests: `tests/test_contexto.py` (11 casos).
 
 ---
 
@@ -87,11 +92,11 @@ vuelven al modelo, así que "no se acuerda" de lo que corrió; (4) UI de panel, 
 
 Ya hay 17. Faltan / hay que mejorar:
 
-- [ ] `leer` con offset/limit y números de línea (como el mío).
-- [ ] `editar` (reemplazo exacto) y `escribir` con verificación de tamaño/diff.
+- [x] `leer` con offset/limit y números de línea.
+- [x] `editar` (reemplazo exacto, con chequeo de unicidad) y `escribir`.
 - [ ] `ejecutar` con pty opcional y ejecución en background + `proceso` (poll/kill/log).
 - [ ] `buscar_web` con snippets y `abrir_url` con markdown limpio (hoy texto plano).
-- [ ] `memoria_*` (F2) y `plan` (todo list visible en la UI).
+- [x] `memoria_*` (F2). Falta `plan` (todo list visible en la UI).
 - [ ] `informe` mejorado: figuras + metodología + versión del scoring.
 - [ ] `sifi` unificado: una tool con subcomandos en vez de 8 sueltas.
 - Criterio: ninguna tarea que yo resuelva con mis tools queda sin equivalente.

@@ -136,11 +136,51 @@ def borrar(data_dir: str, sid: str) -> Dict[str, Any]:
     return {"borrada": sid}
 
 
-def historial_para_llm(sesion: Dict[str, Any], turnos: int = 8) -> List[dict]:
-    """Lo que se le pasa al modelo: sólo texto, sin tarjetas de herramientas."""
-    out = []
-    for m in (sesion.get("mensajes") or [])[-turnos * 2:]:
-        rol = m.get("role")
-        if rol in ("user", "assistant") and m.get("texto"):
-            out.append({"role": rol, "content": m["texto"]})
-    return out
+def historial_para_llm(sesion: Dict[str, Any], turnos: Optional[int] = None) -> List[dict]:
+    """Ventana de contexto: turnos con sus herramientas y el resumen, si hay.
+
+    Antes se mandaban sólo los últimos 8 turnos y **sólo texto**: los resultados de las
+    herramientas no volvían al modelo y por eso "se olvidaba" de lo que había corrido.
+    Ahora la selección es por presupuesto de tokens (`contexto.turnos_para_llm`), cada
+    turno trae sus tarjetas recortadas y, si la sesión se compactó, primero va el resumen.
+    """
+    from . import contexto as _ctx
+    if turnos:
+        return _ctx.turnos_para_llm(sesion, presupuesto=turnos * 2000)
+    return _ctx.turnos_para_llm(sesion)
+
+
+def compactar(data_dir: str, sid: str, resumidor, vivos: int = 0) -> Optional[Dict[str, Any]]:
+    """Resume los turnos viejos y deja los últimos `vivos` textuales.
+
+    `resumidor(texto) -> str` la provee el agente (usa el mismo modelo). Si falla, se
+    devuelve None y la sesión queda como estaba: compactar es una optimización, no puede
+    romper la charla.
+    """
+    from . import contexto as _ctx
+    sesion = _leer(data_dir, sid)
+    if not sesion:
+        return None
+    vivos = vivos or _ctx.TURNOS_VIVOS
+    viejos = _ctx.mensajes_a_resumir(sesion, vivos)
+    if len(viejos) < 4:
+        return None
+    previo = (sesion.get("resumen") or "").strip()
+    material = _ctx.texto_para_resumen(viejos)
+    if previo:
+        material = f"RESUMEN PREVIO:\n{previo}\n\nTURNOS NUEVOS A INCORPORAR:\n{material}"
+    try:
+        resumen = resumidor(material)
+    except Exception:  # noqa: BLE001
+        return None
+    if not resumen:
+        return None
+    todos = [m for m in (sesion.get("mensajes") or [])
+             if m.get("role") in ("user", "assistant")]
+    restantes = todos[-vivos:] if vivos else []
+    sesion["resumen"] = resumen.strip()
+    sesion["mensajes"] = restantes
+    sesion["compactado"] = time.time()
+    _escribir(data_dir, sesion)
+    return {"resumen_chars": len(sesion["resumen"]), "turnos_resumidos": len(viejos),
+            "turnos_vivos": len(restantes)}

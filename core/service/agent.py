@@ -24,7 +24,7 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
 
-from . import sandbox, settings
+from . import contexto, memoria, sandbox, settings
 
 MAX_CANDIDATOS = 15
 MAX_RONDAS = 10
@@ -197,10 +197,49 @@ TOOLS: List[dict] = [
         }, "required": ["url"]}}},
     {"type": "function", "function": {
         "name": "leer",
-        "description": "Lee un archivo de tu carpeta (texto, hasta 200 líneas).",
+        "description": "Lee un archivo (texto) con números de línea. Sirve para tu carpeta y "
+                       "para el programa y los datos (sólo lectura).",
         "parameters": {"type": "object", "properties": {
-            "ruta": {"type": "string"}, "lineas": {"type": "integer"}},
+            "ruta": {"type": "string"},
+            "lineas": {"type": "integer", "description": "cuántas líneas (máx 2000)"},
+            "desde": {"type": "integer", "description": "línea inicial (1 por defecto)"}},
             "required": ["ruta"]}}},
+    {"type": "function", "function": {
+        "name": "editar",
+        "description": "Reemplaza un texto exacto por otro dentro de un archivo de tu carpeta. "
+                       "El texto 'viejo' tiene que ser único (o pasar 'todas': true). Es la "
+                       "forma correcta de corregir un script sin reescribirlo entero.",
+        "parameters": {"type": "object", "properties": {
+            "ruta": {"type": "string"},
+            "viejo": {"type": "string", "description": "texto exacto a buscar"},
+            "nuevo": {"type": "string", "description": "texto de reemplazo"},
+            "todas": {"type": "boolean"}},
+            "required": ["ruta", "viejo", "nuevo"]}}},
+    {"type": "function", "function": {
+        "name": "memoria_leer",
+        "description": "Lee tu memoria persistente. Claves: 'hot' (en qué estás ahora), 'warm' "
+                       "(preferencias y config), 'largo' (MEMORY.md), o un archivo del diario "
+                       "('2026-10-30.md'). La memoria sobrevive a las charlas.",
+        "parameters": {"type": "object", "properties": {
+            "cual": {"type": "string", "description": "hot | warm | largo | YYYY-MM-DD.md"},
+            "limite": {"type": "integer"}}, "required": ["cual"]}}},
+    {"type": "function", "function": {
+        "name": "memoria_escribir",
+        "description": "Escribe en tu memoria persistente. Usalo cuando aprendas algo que "
+                       "conviene recordar entre charlas: una decisión, un ID, una preferencia "
+                       "de Mariano, un resultado que va a hacer falta. 'hot' se pisa (es tu "
+                       "pizarra del ahora), 'largo' y 'warm' se agregan.",
+        "parameters": {"type": "object", "properties": {
+            "cual": {"type": "string", "description": "hot | warm | largo | YYYY-MM-DD.md"},
+            "texto": {"type": "string"},
+            "reemplazar": {"type": "boolean", "description": "si true, pisa el archivo"}},
+            "required": ["cual", "texto"]}}},
+    {"type": "function", "function": {
+        "name": "memoria_buscar",
+        "description": "Busca un término en todos tus archivos de memoria (case-insensitive).",
+        "parameters": {"type": "object", "properties": {
+            "termino": {"type": "string"}, "maximo": {"type": "integer"}},
+            "required": ["termino"]}}},
     {"type": "function", "function": {
         "name": "escribir",
         "description": "Escribe un archivo en tu carpeta (texto).",
@@ -382,10 +421,31 @@ def _ejecutar(nombre: str, args: dict, ent: _Entorno) -> Dict[str, Any]:
                                  int(args.get("limite_mb") or 800))
     if nombre == "leer":
         return {"ok": True, "salida": sandbox.leer(args.get("ruta") or "",
-                                                   int(args.get("lineas") or 200))}
+                                                   int(args.get("lineas") or 200),
+                                                   int(args.get("desde") or 1))}
+    if nombre == "editar":
+        return {"ok": True, "salida": sandbox.editar(
+            args.get("ruta") or "", args.get("viejo") or "", args.get("nuevo") or "",
+            bool(args.get("todas")))}
     if nombre == "escribir":
         return {"ok": True, "salida": sandbox.escribir(args.get("ruta") or "",
                                                       args.get("contenido") or "")}
+    if nombre == "memoria_leer":
+        cual = args.get("cual") or "largo"
+        texto = memoria.leer(cual, int(args.get("limite") or 20000))
+        return {"ok": True, "salida": texto.strip() or f"(memoria '{cual}' vacía)"}
+    if nombre == "memoria_escribir":
+        cual = args.get("cual") or "largo"
+        info = memoria.escribir(cual, args.get("texto") or "",
+                                agregar=not bool(args.get("reemplazar")))
+        return {"ok": True, "salida": f"guardado en {info['archivo']} "
+                                      f"({info['bytes']} bytes)"}
+    if nombre == "memoria_buscar":
+        filas = memoria.buscar(args.get("termino") or "", int(args.get("maximo") or 20))
+        if not filas:
+            return {"ok": True, "salida": "sin resultados en la memoria"}
+        return {"ok": True, "salida": "\n".join(
+            f"{f['archivo']}:{f['linea']}: {f['texto']}" for f in filas)}
     if nombre == "listar_archivos":
         return {"ok": True, "salida": json.dumps(sandbox.inventario(), ensure_ascii=False)}
     if nombre == "sifi":
@@ -530,6 +590,68 @@ def _ejecutar(nombre: str, args: dict, ent: _Entorno) -> Dict[str, Any]:
 
 
 # --------------------------------------------------------------------------- #
+# system prompt y resumen
+# --------------------------------------------------------------------------- #
+#: referencia técnica del laboratorio, en archivos (se puede editar sin tocar el código)
+PROMPT_DIR = os.path.join(CORE_DIR, "service", "prompt")
+_REF: Dict[str, Any] = {"texto": None, "mtime": 0.0}
+
+
+def _referencia() -> str:
+    """Concatena prompt/*.md en orden alfabético. Se recarga si cambia un archivo."""
+    try:
+        archivos = sorted(f for f in os.listdir(PROMPT_DIR) if f.endswith(".md"))
+    except OSError:
+        return ""
+    mtime = max((os.path.getmtime(os.path.join(PROMPT_DIR, f)) for f in archivos),
+                default=0.0)
+    if _REF["texto"] is not None and _REF["mtime"] == mtime:
+        return _REF["texto"]
+    partes = []
+    for f in archivos:
+        try:
+            with open(os.path.join(PROMPT_DIR, f), encoding="utf-8") as fh:
+                partes.append(fh.read().strip())
+        except OSError:
+            continue
+    _REF["texto"] = "\n\n".join(p for p in partes if p)
+    _REF["mtime"] = mtime
+    return _REF["texto"]
+
+
+def _sistema() -> str:
+    """System prompt = base + referencia técnica + memoria viva + fecha y carpeta."""
+    ref = _referencia()
+    partes = [SYSTEM, ""]
+    if ref:
+        partes += ["## Referencia del laboratorio", ref, ""]
+    bloque = memoria.bloque_sistema()
+    if bloque:
+        partes += ["## Tu memoria (persistente, entre charlas)", bloque, ""]
+    partes += [f"## Ahora\nHoy es {time.strftime('%A %d/%m/%Y %H:%M')} (UTC). "
+               f"Tu carpeta es {sandbox.RAIZ}; ahí vivís y ahí escribís.",
+               "Cuando aprendas algo que va a hacer falta más adelante (una decisión, un ID, "
+               "una preferencia de Mariano, por qué un intento falló), guardalo con "
+               "`memoria_escribir` en 'hot' o en el diario. No esperes a que te lo pidan."]
+    return "\n".join(partes)
+
+
+def resumir(material: str, maximo: int = 1500) -> str:
+    """Resume turnos viejos para la compactación (mismo modelo, sin herramientas)."""
+    pedido = ("Resumí la conversación siguiente para que otro turno del mismo agente pueda "
+              "seguir sin leerla entera. Conservá: pedidos de Mariano y sus decisiones, "
+              "corridas y run_id, ventanas y secuencias elegidas, números y resultados "
+              "concretos, archivos creados, qué falló y por qué, y lo que quedó pendiente. "
+              f"Máximo {maximo} caracteres, en viñetas, sin relleno ni saludos.\n\n"
+              + material)
+    data = _post_llm([{"role": "system", "content": "Sos un compresor de contexto técnico. "
+                        "No inventás nada: sólo condensás lo que está en el texto."},
+                      {"role": "user", "content": pedido}],
+                     tools=False, max_tokens=2000, timeout=120)
+    return (data["choices"][0]["message"].get("content") or "").strip()
+
+
+# --------------------------------------------------------------------------- #
 # LLM
 # --------------------------------------------------------------------------- #
 def _post_llm(mensajes: List[dict], *, tools: bool, max_tokens: int = 16384,
@@ -579,26 +701,10 @@ def chat(store, mensaje: str, run_id: Optional[str] = None,
 
     ent = _Entorno(store, base_url or "http://127.0.0.1:8765", token, data_dir)
     ctx = _contexto(store, run_id)
-    mensajes: List[dict] = [{"role": "system", "content": SYSTEM}]
-    # Se van tomando turnos del más nuevo al más viejo hasta llenar el presupuesto.
-    # Así una charla de 40 turnos cortos entra igual que una de 4 largos, y no se
-    # pierde el hilo por un número fijo de mensajes.
-    usados, recortados, atras = 0, [], 0
-    for m in reversed(historial or []):
-        rol, txt = m.get("role"), (m.get("content") or "").strip()
-        if rol not in ("user", "assistant") or not txt:
-            continue
-        txt = txt[:TOPE_MENSAJE]
-        costo = len(txt) // 4 + 4
-        if usados + costo > PRESUPUESTO_HISTORIAL:
-            atras += 1
-            continue
-        usados += costo
-        recortados.append({"role": rol, "content": txt})
-    recortados.reverse()
-    if atras:
-        mensajes.append({"role": "user",
-                         "content": f"(se omitieron {atras} turnos anteriores por espacio)"})
+    mensajes: List[dict] = [{"role": "system", "content": _sistema()}]
+    # El historial viene ya armado por `contexto.turnos_para_llm`: presupuesto en tokens,
+    # tarjetas de herramientas incluidas y resumen de lo compactado al principio.
+    recortados = [m for m in (historial or []) if m.get("role") in ("user", "assistant")]
     mensajes.extend(recortados)
     mensajes.append({
         "role": "user",
