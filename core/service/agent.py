@@ -769,6 +769,68 @@ def _post_llm(mensajes: List[dict], *, tools: bool, max_tokens: int = 16384,
         return json.loads(res.read().decode("utf-8"))
 
 
+def _stream_llm(mensajes: List[dict], *, tools: bool, max_tokens: int = 16384,
+                timeout: int = 240):
+    """Pide la respuesta en streaming y va devolviendo eventos.
+
+    Emite {"tipo": "delta", "texto": ...} por cada trozo de texto y, al final,
+    {"tipo": "mensaje", "mensaje": {...}} con el mensaje completo ya ensamblado (incluidos
+    los tool_calls partidos en fragmentos, que es como los manda la API).
+    """
+    clave = settings.clave_actual()
+    if not clave:
+        raise RuntimeError("sin clave")
+    est = settings.estado()
+    cuerpo: Dict[str, Any] = {
+        "model": est["modelo"], "messages": mensajes, "temperature": 0.2,
+        "max_tokens": max_tokens, "stream": True,
+    }
+    if tools:
+        cuerpo["tools"] = TOOLS
+        cuerpo["tool_choice"] = "auto"
+    req = urllib.request.Request(
+        est["base_url"].rstrip("/") + "/chat/completions",
+        data=json.dumps(cuerpo).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {clave}"},
+        method="POST")
+    armado: Dict[str, Any] = {"content": "", "tool_calls": []}
+    with urllib.request.urlopen(req, timeout=timeout) as res:
+        for cruda in res:
+            linea = cruda.decode("utf-8", "replace").strip()
+            if not linea or not linea.startswith("data:"):
+                continue
+            carga = linea[5:].strip()
+            if carga == "[DONE]":
+                break
+            try:
+                trozo = json.loads(carga)
+            except ValueError:
+                continue
+            if trozo.get("error"):
+                raise RuntimeError(str(trozo["error"])[:300])
+            for ch in trozo.get("choices") or []:
+                delta = ch.get("delta") or {}
+                if delta.get("content"):
+                    armado["content"] += delta["content"]
+                    yield {"tipo": "delta", "texto": delta["content"]}
+                for tc in delta.get("tool_calls") or []:
+                    i = int(tc.get("index") or 0)
+                    while len(armado["tool_calls"]) <= i:
+                        armado["tool_calls"].append({"id": "", "type": "function",
+                                                     "function": {"name": "", "arguments": ""}})
+                    destino = armado["tool_calls"][i]
+                    if tc.get("id"):
+                        destino["id"] = tc["id"]
+                    fn = tc.get("function") or {}
+                    if fn.get("name"):
+                        destino["function"]["name"] += fn["name"]
+                    if fn.get("arguments"):
+                        destino["function"]["arguments"] += fn["arguments"]
+    if not armado["tool_calls"]:
+        armado.pop("tool_calls")
+    yield {"tipo": "mensaje", "mensaje": armado}
+
+
 def _tarjeta(nombre: str, args: dict, res: dict) -> dict:
     salida = str(res.get("salida") or "")
     if res.get("ruta"):
@@ -777,18 +839,27 @@ def _tarjeta(nombre: str, args: dict, res: dict) -> dict:
             "ok": bool(res.get("ok")), "ms": res.get("ms")}
 
 
-def chat(store, mensaje: str, run_id: Optional[str] = None,
-         historial: Optional[List[dict]] = None, *, base_url: str = "",
-         token: Optional[str] = None, data_dir: str = "",
-         sesion_id: str = "") -> Dict[str, Any]:
+def chat_eventos(store, mensaje: str, run_id: Optional[str] = None,
+                 historial: Optional[List[dict]] = None, *, base_url: str = "",
+                 token: Optional[str] = None, data_dir: str = "",
+                 sesion_id: str = ""):
+    """El turno como flujo de eventos, para que la UI escriba mientras el modelo piensa.
+
+    Eventos: {"tipo": "delta", "texto"}, {"tipo": "tool", "tarjeta"}, {"tipo": "fin", ...}.
+    `chat()` consume este mismo generador: una sola lógica, dos formas de entregarla.
+    """
     mensaje = (mensaje or "").strip()
     if not mensaje:
-        return {"respuesta": "Escribí una pregunta.", "configurar": False}
+        yield {"tipo": "fin", "respuesta": "Escribí una pregunta.", "tools": [],
+               "configurar": False}
+        return
 
     if not settings.clave_actual():
-        return {"respuesta": ("Todavía no tengo clave del modelo, así que no puedo responder. "
-                              "Pegala en Ajustes → Clave del modelo y volvé a preguntar."),
-                "configurar": True}
+        yield {"tipo": "fin", "configurar": True,
+               "respuesta": ("Todavía no tengo clave del modelo, así que no puedo responder. "
+                             "Pegala en Ajustes → Clave del modelo y volvé a preguntar."),
+               "tools": []}
+        return
 
     ent = _Entorno(store, base_url or "http://127.0.0.1:8765", token, data_dir,
                    sesion_id=sesion_id)
@@ -808,19 +879,28 @@ def chat(store, mensaje: str, run_id: Optional[str] = None,
 
     tarjetas: List[dict] = []
     t0 = time.time()
+    streaming = settings.stream_activo()
     try:
         for _ronda in range(MAX_RONDAS):
-            data = _post_llm(mensajes, tools=True)
-            msg = data["choices"][0]["message"]
+            if streaming:
+                armado: Dict[str, Any] = {}
+                for ev in _stream_llm(mensajes, tools=True):
+                    if ev["tipo"] == "delta":
+                        yield ev
+                    else:
+                        armado = ev["mensaje"]
+                msg = armado
+            else:
+                msg = _post_llm(mensajes, tools=True)["choices"][0]["message"]
             llamadas = msg.get("tool_calls") or []
             if not llamadas:
                 texto = (msg.get("content") or "").strip()
-                return {"respuesta": texto or "(el modelo no devolvió texto)",
-                        "tools": tarjetas, "modelo": settings.estado()["modelo"],
-                        "plan": ent.plan_actual(),
-                        "ms": int((time.time() - t0) * 1000)}
+                yield {"tipo": "fin", "respuesta": texto or "(el modelo no devolvió texto)",
+                       "tools": tarjetas, "modelo": settings.estado()["modelo"],
+                       "plan": ent.plan_actual(), "ms": int((time.time() - t0) * 1000)}
+                return
 
-            mensajes.append({"role": "assistant", "content": msg.get("content"), 
+            mensajes.append({"role": "assistant", "content": msg.get("content") or "",
                              "tool_calls": llamadas})
             for ll in llamadas:
                 fn = ll.get("function") or {}
@@ -829,6 +909,7 @@ def chat(store, mensaje: str, run_id: Optional[str] = None,
                     args = json.loads(fn.get("arguments") or "{}")
                 except ValueError:
                     args = {}
+                yield {"tipo": "tool", "nombre": nombre, "args": args}
                 try:
                     res = _ejecutar(nombre, args, ent)
                 except sandbox.Pendiente as exc:
@@ -844,7 +925,9 @@ def chat(store, mensaje: str, run_id: Optional[str] = None,
                     res = {"ok": False, "salida": f"bloqueado: {exc}"}
                 except Exception as exc:  # noqa: BLE001 - el agente tiene que ver el motivo
                     res = {"ok": False, "salida": f"error: {type(exc).__name__}: {exc}"}
-                tarjetas.append(_tarjeta(nombre, args, res))
+                tarjeta = _tarjeta(nombre, args, res)
+                tarjetas.append(tarjeta)
+                yield {"tipo": "tool", "tarjeta": tarjeta}
                 mensajes.append({"role": "tool", "tool_call_id": ll.get("id"),
                                  "content": json.dumps(
                                      {"ok": res.get("ok"), "salida": res.get("salida")},
@@ -853,10 +936,10 @@ def chat(store, mensaje: str, run_id: Optional[str] = None,
         # se quedó sin rondas: pedir un cierre sin herramientas
         mensajes.append({"role": "user", "content": "Cerrá con lo que tengas, sin usar más "
                                                     "herramientas, en 5 líneas."})
-        data = _post_llm(mensajes, tools=False, max_tokens=2000)
-        texto = (data["choices"][0]["message"].get("content") or "").strip()
-        return {"respuesta": texto or "No llegué a una conclusión.", "tools": tarjetas,
-                "modelo": settings.estado()["modelo"], "ms": int((time.time() - t0) * 1000)}
+        texto = _cierre(mensajes, streaming)
+        yield {"tipo": "fin", "respuesta": texto or "No llegué a una conclusión.",
+               "tools": tarjetas, "modelo": settings.estado()["modelo"],
+               "plan": ent.plan_actual(), "ms": int((time.time() - t0) * 1000)}
     except urllib.error.HTTPError as exc:
         detalle = ""
         try:
@@ -864,17 +947,54 @@ def chat(store, mensaje: str, run_id: Optional[str] = None,
         except Exception:
             pass
         if exc.code in (401, 403):
-            return {"respuesta": "La clave fue rechazada por el proveedor (401/403). "
-                                 "Revisala en Ajustes.", "configurar": True}
+            yield {"tipo": "fin", "configurar": True, "tools": tarjetas,
+                   "respuesta": "La clave fue rechazada por el proveedor (401/403). "
+                                "Revisala en Ajustes."}
+            return
         if exc.code == 402:
-            return {"respuesta": "El proveedor dice que la cuenta no tiene saldo (402)."}
-        return {"respuesta": f"El proveedor devolvió {exc.code}. {detalle}".strip(),
-                "tools": tarjetas}
+            yield {"tipo": "fin", "tools": tarjetas,
+                   "respuesta": "El proveedor dice que la cuenta no tiene saldo (402)."}
+            return
+        yield {"tipo": "fin", "tools": tarjetas,
+               "respuesta": f"El proveedor devolvió {exc.code}. {detalle}".strip()}
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        return {"respuesta": f"No pude llegar al proveedor del modelo: {exc}.",
-                "tools": tarjetas}
+        yield {"tipo": "fin", "tools": tarjetas,
+               "respuesta": f"No pude llegar al proveedor del modelo: {exc}."}
     except (KeyError, ValueError) as exc:
-        return {"respuesta": f"Respuesta inesperada del proveedor: {exc}.", "tools": tarjetas}
+        yield {"tipo": "fin", "tools": tarjetas,
+               "respuesta": f"Respuesta inesperada del proveedor: {exc}."}
+
+
+def _cierre(mensajes: List[dict], streaming: bool) -> str:
+    """Última pasada sin herramientas, cuando se acabaron las rondas."""
+    if not streaming:
+        data = _post_llm(mensajes, tools=False, max_tokens=2000)
+        return (data["choices"][0]["message"].get("content") or "").strip()
+    armado: Dict[str, Any] = {}
+    for ev in _stream_llm(mensajes, tools=False, max_tokens=2000):
+        if ev["tipo"] == "mensaje":
+            armado = ev["mensaje"]
+    return (armado.get("content") or "").strip()
+
+
+def chat(store, mensaje: str, run_id: Optional[str] = None,
+         historial: Optional[List[dict]] = None, *, base_url: str = "",
+         token: Optional[str] = None, data_dir: str = "",
+         sesion_id: str = "") -> Dict[str, Any]:
+    """Versión sin streaming: junta los eventos y devuelve el mismo JSON de siempre."""
+    partes: List[str] = []
+    fin: Dict[str, Any] = {}
+    for ev in chat_eventos(store, mensaje, run_id, historial, base_url=base_url, token=token,
+                           data_dir=data_dir, sesion_id=sesion_id):
+        if ev["tipo"] == "delta":
+            partes.append(ev["texto"])
+        elif ev["tipo"] == "fin":
+            fin = {k: v for k, v in ev.items() if k != "tipo"}
+    salida = dict(fin)
+    if not salida.get("respuesta"):
+        salida["respuesta"] = "".join(partes).strip() or "(sin respuesta)"
+    salida.setdefault("tools", [])
+    return salida
 
 
 def probar() -> Dict[str, Any]:

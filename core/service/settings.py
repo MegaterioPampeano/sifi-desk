@@ -72,6 +72,11 @@ def _escribir_archivo(clave: Optional[str], modelo: Optional[str],
             os.unlink(tmp)
 
 
+def stream_activo() -> bool:
+    """Streaming token por token. SIFI_STREAM=0 lo apaga (queda el modo clásico)."""
+    return os.environ.get("SIFI_STREAM", "1") != "0"
+
+
 def estado() -> Dict[str, Any]:
     """Lo que la UI puede mostrar: nunca la clave."""
     archivo = _leer_archivo()

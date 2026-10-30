@@ -862,3 +862,12 @@ select.input.sm { padding: 5px 8px; font-size: 12px; }
 .plan-lista li.p-en_curso .p-ico { color: var(--accent); }
 .plan-lista li.p-fallo .p-ico { color: #dc2626; }
 .chat-plan.plegado .plan-lista, .chat-plan.plegado .plan-nota { display: none; }
+
+/* cursor de escritura mientras llega el stream */
+.cursor {
+  display: inline-block; width: 7px; height: 1em; margin-left: 2px;
+  vertical-align: text-bottom; background: var(--accent);
+  animation: parpadeo 1s steps(2, start) infinite;
+}
+@keyframes parpadeo { to { visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }

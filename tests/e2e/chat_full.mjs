@@ -74,6 +74,21 @@ await p.waitForTimeout(300);
 check(await p.evaluate(() => !document.querySelector(".app").classList.contains("modo-chat")),
   "Esc vuelve al panel");
 
+// Streaming: el endpoint tiene que mandar varios deltas y cerrar con "fin".
+const stream = await p.evaluate(async () => {
+  // Se usa el cliente de la app: ya sabe la URL y el token.
+  const { api } = await import("/assets/js/api.js");
+  let deltas = 0;
+  let primeros = "";
+  const fin = await api.chatStream("Contestá sólo: ok, streaming andando.", null, [], null, {
+    onEvento: (e) => { if (e.tipo === "delta") { deltas += 1; primeros += e.texto; } },
+  });
+  return { deltas, primeros, respuesta: fin.respuesta || "", sesion: fin.sesion_id || "" };
+});
+check(stream.deltas >= 3, `streaming: ${stream.deltas} deltas en vivo`);
+check(stream.respuesta.length > 0, `streaming: cierra con respuesta ("${stream.respuesta.slice(0, 40)}")`);
+check(Boolean(stream.sesion), "streaming: guarda la sesión");
+
 check(errores.length === 0, `sin errores de consola${errores.length ? ": " + errores.join(" | ") : ""}`);
 
 await b.close();

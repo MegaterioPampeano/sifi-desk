@@ -117,6 +117,39 @@ async function request(method, path, body, signal) {
   return payload;
 }
 
+// Chat por streaming: el servicio manda NDJSON (una línea JSON por evento) y acá se
+// entrega cada evento a medida que llega. Devuelve el evento "fin".
+async function chatStream(mensaje, runId, historial, sesionId, { onEvento, signal } = {}) {
+  const res = await fetch(API_BASE + "/agent/chat/stream", {
+    method: "POST", signal,
+    headers: { ...headers(), "Content-Type": "application/json" },
+    body: JSON.stringify({ mensaje, run_id: runId || null,
+                           historial: historial || [], sesion_id: sesionId || null }),
+  });
+  if (!res.ok || !res.body) throw new ApiError(res.status, mensajeDeError(res.status, null));
+  const lector = res.body.getReader();
+  const dec = new TextDecoder();
+  let resto = "";
+  let fin = null;
+  for (;;) {
+    const { value, done } = await lector.read();
+    if (done) break;
+    resto += dec.decode(value, { stream: true });
+    let corte;
+    while ((corte = resto.indexOf("\n")) >= 0) {
+      const linea = resto.slice(0, corte).trim();
+      resto = resto.slice(corte + 1);
+      if (!linea) continue;
+      let ev;
+      try { ev = JSON.parse(linea); } catch { continue; }
+      if (ev.tipo === "fin") fin = ev;
+      if (onEvento) onEvento(ev);
+    }
+  }
+  if (!fin) throw new ApiError(0, "el agente cerró la conexión sin respuesta");
+  return fin;
+}
+
 async function requestBlob(path, signal) {
   let res;
   try {
@@ -206,6 +239,7 @@ export const api = {
     return request("GET", `/news?${q.toString()}`, undefined, signal)
       .then(normalizeNews);
   },
+  chatStream,
   chat: (mensaje, runId, signal, historial, sesionId) =>
     request("POST", "/agent/chat", { mensaje, run_id: runId || null, historial: historial || [], sesion_id: sesionId || null }, signal),
   aprobaciones: (signal) => request("GET", "/aprobaciones?estado=pendiente", undefined, signal),

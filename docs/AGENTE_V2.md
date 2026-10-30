@@ -34,6 +34,16 @@ Multivac, pero encerrado en su carpeta y comunicándose por la app.
    del presupuesto, `charlas.compactar` resume los turnos viejos con el mismo modelo.
 7. La respuesta incluye `plan` (si el agente lo fijó) y `compactado` (si hubo).
 
+## Streaming
+
+El turno se pide con `stream: true` y se entrega por `POST /agent/chat/stream` como NDJSON:
+una línea por evento (`delta`, `tool`, `fin`). La UI escribe sobre la burbuja a medida que
+llega el texto y muestra un cursor; las tarjetas de herramientas aparecen en vivo.
+
+La lógica es una sola: `agent.chat_eventos()` es un generador y `agent.chat()` lo consume
+para devolver el JSON clásico. El endpoint sin streaming sigue existiendo (clientes viejos,
+pruebas, `curl`). `SIFI_STREAM=0` apaga el streaming y todo vuelve al modo bloqueante.
+
 ## Presupuesto de contexto
 
 | constante | valor | dónde |
@@ -104,7 +114,7 @@ y se saltean si el host no permite namespaces sin privilegios.
 
 ## Lo que falta (F5 y deuda conocida)
 
-- Streaming token por token (SSE) y adjuntar archivos al chat.
+- Adjuntar archivos al chat y renombrar conversaciones.
 - Renombrar conversaciones y scroll infinito en la lista.
 - `informe` con figuras propias y versión del scoring en portada.
 - Benchmark de contexto con guiones largos (diseño, off-target, informe).

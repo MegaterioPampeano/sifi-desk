@@ -28,7 +28,8 @@ from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+                               StreamingResponse)
 from fastapi.staticfiles import StaticFiles
 
 from . import SERVICE_NAME, __version__
@@ -644,6 +645,67 @@ def create_app(data_dir: Optional[str] = None,
         salida["sesion"] = [s for s in charlas.listar(data_dir) if s["id"] == sid][:1]
         return salida
 
+    @app.post("/agent/chat/stream")
+    def agent_chat_stream(request: Request, body: dict):
+        """El mismo turno que /agent/chat, pero contado a medida que pasa (NDJSON).
+
+        Cada línea es un JSON: {"tipo":"delta"} para el texto, {"tipo":"tool"} para cada
+        herramienta, {"tipo":"fin"} con lo mismo que devuelve /agent/chat. La sesión se
+        guarda recién al final, cuando ya está la respuesta completa.
+        """
+        from . import agent as _agent, charlas, contexto as _ctx
+        mensaje = body.get("mensaje") or body.get("message") or ""
+        run_id = body.get("run_id")
+        sesion = charlas.asegurar(data_dir, body.get("sesion_id"))
+        sid = sesion["id"]
+        historial = charlas.historial_para_llm(sesion) or body.get("historial")
+        charlas.agregar(data_dir, sid, "user", mensaje, run_id=run_id)
+
+        def linea(obj) -> str:
+            return json.dumps(obj, ensure_ascii=False) + "\n"
+
+        def generar():
+            partes, tarjetas, fin = [], [], {}
+            try:
+                for ev in _agent.chat_eventos(
+                        store, mensaje, run_id, historial,
+                        base_url=str(request.base_url).rstrip("/"), token=token,
+                        data_dir=data_dir, sesion_id=sid):
+                    tipo = ev.get("tipo")
+                    if tipo == "delta":
+                        partes.append(ev["texto"])
+                        yield linea({"tipo": "delta", "texto": ev["texto"]})
+                    elif tipo == "tool":
+                        if "tarjeta" in ev:
+                            tarjetas.append(ev["tarjeta"])
+                        yield linea({"tipo": "tool", "nombre": ev.get("nombre"),
+                                     "tarjeta": ev.get("tarjeta")})
+                    elif tipo == "fin":
+                        fin = ev
+            except Exception as exc:  # noqa: BLE001 - el cliente tiene que ver algo
+                fin = {"respuesta": f"error: {type(exc).__name__}: {exc}", "tools": tarjetas}
+
+            salida = {k: v for k, v in fin.items() if k != "tipo"}
+            if not salida.get("respuesta"):
+                salida["respuesta"] = "".join(partes).strip()
+            salida["tools"] = tarjetas or salida.get("tools") or []
+            try:
+                charlas.agregar(data_dir, sid, "assistant", salida.get("respuesta") or "",
+                                herramientas=salida.get("tools") or None, run_id=run_id)
+                if _ctx.necesita_compactar(charlas.obtener(data_dir, sid)):
+                    info = charlas.compactar(data_dir, sid, _agent.resumir)
+                    if info:
+                        salida["compactado"] = info
+                salida["sesion_id"] = sid
+                salida["sesion"] = [s for s in charlas.listar(data_dir) if s["id"] == sid][:1]
+            except Exception as exc:  # noqa: BLE001
+                salida["aviso"] = f"no pude guardar la sesión: {exc}"
+            yield linea({"tipo": "fin", **salida})
+
+        return StreamingResponse(generar(), media_type="application/x-ndjson",
+                                 headers={"Cache-Control": "no-cache",
+                                          "X-Accel-Buffering": "no"})
+
     @app.get("/agent/estado")
     def agent_estado(sesion_id: str = "") -> dict:
         from . import contexto, memoria, charlas
@@ -660,6 +722,7 @@ def create_app(data_dir: Optional[str] = None,
             "compactado": (ses or {}).get("compactado"),
             "memoria": memoria.resumen_para_ui(),
             "carpeta": sandbox.RAIZ,
+            "stream": _settings.stream_activo(),
         }
 
     @app.post("/agent/sesiones/{sid}/compactar")

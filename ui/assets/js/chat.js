@@ -244,18 +244,33 @@ async function enviar(texto) {
   ocupado = true;
   $("#chat-send").disabled = true;
   const espera = burbuja("agent", "…", true);
-  // Un cronómetro honesto: el modelo no streamea (todavía), así que al menos se ve que
-  // está trabajando y cuánto lleva. Sin esto, 40 segundos de espera parecen un cuelgue.
+  // Cronómetro mientras no llega el primer token; después el texto habla solo.
   const t0 = Date.now();
   const cron = setInterval(() => {
     const b = espera.querySelector(".bubble");
-    if (!b) return;
+    if (!b || b.dataset.streaming) return;
     const seg = Math.round((Date.now() - t0) / 1000);
     b.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`
       + `<span class="espera-s">${seg}s</span>`;
   }, 1000);
+  let vivo = "";
+  let tarjetasVivas = 0;
   try {
-    const res = await api.chat(msg, state.runId, undefined, historial(), sesionActual);
+    const res = await api.chatStream(msg, state.runId, historial(), sesionActual, {
+      onEvento: (ev) => {
+        const cuerpo = espera.querySelector(".bubble");
+        if (ev.tipo === "delta" && cuerpo) {
+          vivo += ev.texto;
+          cuerpo.dataset.streaming = "1";
+          cuerpo.innerHTML = renderMd(vivo) + `<span class="cursor" aria-hidden="true"></span>`;
+          $("#chat-log").scrollTop = $("#chat-log").scrollHeight;
+        } else if (ev.tipo === "tool" && ev.tarjeta) {
+          tarjetasVivas += 1;
+          espera.appendChild(bloqueTools([ev.tarjeta]));
+          $("#chat-log").scrollTop = $("#chat-log").scrollHeight;
+        }
+      },
+    });
     espera.remove();
     const b = burbuja("agent", res.respuesta || "(sin respuesta)");
     conversacion.push({ role: "assistant", content: res.respuesta || "" });
@@ -267,7 +282,9 @@ async function enviar(texto) {
       btn.addEventListener("click", abrirAjustes);
       b.lastElementChild.appendChild(btn);
     }
-    if (Array.isArray(res.tools) && res.tools.length) {
+    // Si las tarjetas ya se mostraron en vivo no se repiten; si no hubo streaming,
+    // van acá como siempre.
+    if (!tarjetasVivas && Array.isArray(res.tools) && res.tools.length) {
       const ultima = $("#chat-log").lastElementChild;
       ultima.appendChild(bloqueTools(res.tools));
       $("#chat-log").scrollTop = $("#chat-log").scrollHeight;

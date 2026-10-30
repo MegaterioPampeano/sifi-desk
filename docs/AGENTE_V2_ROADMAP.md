@@ -103,7 +103,6 @@ Ya hay 17. Faltan / hay que mejorar:
   kill por grupo; `plan` persistido en la sesión y renderizado arriba del chat; `corrida`
   con subcomandos. Verificado E2E por API: plan 3/3, paneles (6, todos con index_ok),
   trabajo lanzado y log leído.
-- Sin streaming SSE: queda como deuda de F4/F5 (el cronómetro cubre la espera).
 - Tests: `tests/test_tools_v2.py` (7 casos). Suite: 220 passed, 8 skipped.
 
 ---
@@ -135,8 +134,7 @@ Ya hay 17. Faltan / hay que mejorar:
   → 65 mensajes, 90.188 tokens, armado en 0,8 ms; turno gigante se recorta).
 - [x] E2E Playwright del chat full-screen: `tests/e2e/chat_full.mjs` (11 chequeos, todos ok).
 - [x] `docs/AGENTE_V2.md`: arquitectura, mapa de archivos, presupuesto, permisos, memoria, tools.
-- Hecho: `tests/run_all.sh` (backend 223 casos + E2E 11 chequeos). Deuda declarada:
-  streaming SSE, adjuntar archivos, renombrar charlas y figuras propias en `informe`.
+- Hecho: `tests/run_all.sh` (backend 223 casos + E2E 11 chequeos). Deuda declarada: adjuntar archivos, renombrar charlas y figuras propias en `informe`.
 
 ---
 
