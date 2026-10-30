@@ -387,11 +387,16 @@
         </span>
       </div>
       <div class="chat-acciones">
+        <input type="search" id="chat-buscar" class="chat-buscar" placeholder="buscar charla…"
+               aria-label="Buscar conversación" autocomplete="off">
         <select id="chat-sesiones" class="chat-select" aria-label="Conversaciones guardadas">
           <option value="">Charla nueva</option>
         </select>
         <button type="button" class="iconbtn" id="chat-nueva" title="Nueva conversación" aria-label="Nueva conversación">
           <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button type="button" class="iconbtn" id="chat-expandir" title="Pantalla completa (Ctrl+Mayús+F)" aria-label="Pantalla completa" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M9 4H4v5M15 4h5v5M15 20h5v-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
         <button type="button" class="iconbtn" id="chat-borrar" title="Borrar esta conversación" aria-label="Borrar conversación">
           <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
@@ -404,6 +409,13 @@
         <span id="aprob-titulo">Pedidos para aprobar</span>
       </div>
       <ul class="aprob-lista" id="aprob-lista"></ul>
+    </div>
+    <div class="chat-barra hidden" id="chat-barra">
+      <span class="cb-item" id="cb-modelo">—</span>
+      <span class="cb-item" id="cb-tokens" title="tokens estimados del historial / presupuesto">contexto —</span>
+      <span class="cb-barra"><i id="cb-fill"></i></span>
+      <button type="button" class="btn small ghost" id="cb-compactar" title="Resumir los turnos viejos para liberar contexto">compactar</button>
+      <span class="cb-item cb-mem" id="cb-memoria" title="memoria persistente"></span>
     </div>
     <div class="chat-log" id="chat-log" aria-live="polite"></div>
     <div class="chat-suggest" id="chat-suggest"></div>

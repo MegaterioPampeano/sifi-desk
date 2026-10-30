@@ -214,6 +214,10 @@ export const api = {
   sesiones: (signal) => request("GET", "/agent/sesiones", undefined, signal),
   sesion: (id, signal) => request("GET", `/agent/sesiones/${id}`, undefined, signal),
   nuevaSesion: (signal) => request("POST", "/agent/sesiones", {}, signal),
+  estadoAgente: (sesionId, signal) =>
+    request("GET", `/agent/estado${sesionId ? `?sesion_id=${encodeURIComponent(sesionId)}` : ""}`, undefined, signal),
+  compactar: (id, signal) =>
+    request("POST", `/agent/sesiones/${id}/compactar`, { vivos: 10 }, signal),
   borrarSesion: (id, signal) => request("DELETE", `/agent/sesiones/${id}`, undefined, signal),
   ajustes: (signal) => request("GET", "/settings/llm", undefined, signal),
   guardarAjustes: (body, signal) => request("PUT", "/settings/llm", body, signal),

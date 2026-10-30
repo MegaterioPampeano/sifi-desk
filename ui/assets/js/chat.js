@@ -3,6 +3,7 @@
 import { api } from "./api.js";
 import { state } from "./state.js";
 import { esc } from "./format.js";
+import { renderMd } from "./md.js";
 import { abrir as abrirAjustes } from "./ajustes.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -42,6 +43,21 @@ export function initChat() {
     }
   });
   $("#chat-suggest-toggle").addEventListener("click", () => alternarSugerencias());
+  $("#chat-expandir").addEventListener("click", () => alternarModoChat());
+  $("#chat-buscar").addEventListener("input", (ev) => filtrarSesiones(ev.target.value));
+  $("#cb-compactar").addEventListener("click", () => compactarSesion());
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && document.querySelector(".app.modo-chat")) {
+      alternarModoChat(false);
+    } else if (ev.key.toLowerCase() === "f" && ev.ctrlKey && ev.shiftKey) {
+      ev.preventDefault();
+      alternarModoChat();
+    } else if (ev.key.toLowerCase() === "k" && ev.ctrlKey && !ev.shiftKey) {
+      ev.preventDefault();
+      alternarModoChat(true);
+      $("#chat-input").focus();
+    }
+  });
   $("#chat-suggest").addEventListener("click", (ev) => {
     const chip = ev.target.closest("button[data-q]");
     if (chip) enviar(chip.dataset.q);
@@ -160,6 +176,15 @@ async function abrirSesion(id) {
     }
     $("#chat-sesiones").value = s.id;
     log.scrollTop = log.scrollHeight;
+    if (s.resumen) {
+      const aviso = document.createElement("div");
+      aviso.className = "msg agent";
+      aviso.innerHTML = '<div class="who">resumen de lo anterior</div>'
+        + `<details class="tools"><summary>compactado · ${s.resumen.length} caracteres</summary>`
+        + `<div class="tool-body">${esc(s.resumen)}</div></details>`;
+      log.insertBefore(aviso, log.firstChild);
+    }
+    actualizarBarra();
   } catch {
     sesionActual = null;
     localStorage.removeItem("sifi.sesion");
@@ -212,6 +237,16 @@ async function enviar(texto) {
   ocupado = true;
   $("#chat-send").disabled = true;
   const espera = burbuja("agent", "…", true);
+  // Un cronómetro honesto: el modelo no streamea (todavía), así que al menos se ve que
+  // está trabajando y cuánto lleva. Sin esto, 40 segundos de espera parecen un cuelgue.
+  const t0 = Date.now();
+  const cron = setInterval(() => {
+    const b = espera.querySelector(".bubble");
+    if (!b) return;
+    const seg = Math.round((Date.now() - t0) / 1000);
+    b.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`
+      + `<span class="espera-s">${seg}s</span>`;
+  }, 1000);
   try {
     const res = await api.chat(msg, state.runId, undefined, historial(), sesionActual);
     espera.remove();
@@ -236,11 +271,18 @@ async function enviar(texto) {
       cargarSesiones();
     }
     if (Array.isArray(res.sugerencias) && res.sugerencias.length) sugerencias(res.sugerencias);
+    if (res.compactado) {
+      const b2 = burbuja("agent", `Contexto compactado: resumí ${res.compactado.turnos_resumidos} `
+        + `turnos viejos y quedaron ${res.compactado.turnos_vivos} textuales.`);
+      b2.classList.add("aviso");
+    }
+    actualizarBarra();
     $("#chat-status").textContent = "local";
   } catch (err) {
     espera.remove();
     burbuja("agent", `No pude consultar al agente: ${err.message}`);
   } finally {
+    clearInterval(cron);
     ocupado = false;
     $("#chat-send").disabled = false;
     $("#chat-log").scrollTop = $("#chat-log").scrollHeight;
@@ -259,7 +301,8 @@ function burbuja(quien, texto, escribiendo = false) {
     bubble.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`;
     bubble.setAttribute("aria-label", "escribiendo");
   } else {
-    bubble.textContent = texto;
+    bubble.classList.add("md");
+    bubble.innerHTML = renderMd(texto);
   }
   div.append(who, bubble);
   const log = $("#chat-log");
@@ -341,4 +384,117 @@ function sugerencias(lista) {
     cont.appendChild(b);
   }
   alternarSugerencias(sugerenciasVisibles());
+}
+
+// ---------------------------------------------------------------------------
+// Modo pantalla completa (F4)
+//
+// El panel lateral queda para "consultar de reojo". Cuando hay que leer un informe,
+// comparar ventanas o seguir una corrida larga, se pasa a pantalla completa: una sola
+// columna centrada de 1040px, tipografía más grande, bloques de código y barra de
+// contexto. La preferencia queda en localStorage.
+const CLAVE_MODO = "sifi.chatmodo";
+
+function alternarModoChat(forzar) {
+  const app = document.querySelector(".app");
+  if (!app) return;
+  const activo = typeof forzar === "boolean" ? forzar : !app.classList.contains("modo-chat");
+  app.classList.toggle("modo-chat", activo);
+  localStorage.setItem(CLAVE_MODO, activo ? "1" : "0");
+  const btn = $("#chat-expandir");
+  if (btn) {
+    btn.setAttribute("aria-pressed", String(activo));
+    btn.title = activo ? "Volver al panel (Esc)" : "Pantalla completa (Ctrl+Mayús+F)";
+  }
+  if (activo) {
+    $("#chat-barra").classList.remove("hidden");
+    actualizarBarra();
+    setTimeout(() => $("#chat-input").focus(), 60);
+  } else {
+    $("#chat-barra").classList.add("hidden");
+  }
+}
+
+export function restaurarModoChat() {
+  if (localStorage.getItem(CLAVE_MODO) === "1") alternarModoChat(true);
+}
+
+// ---------------------------------------------------------------------------
+// Barra de contexto: modelo, tokens usados y memoria.
+// Los tokens son una estimación (caracteres / 3,4) porque el proveedor no siempre
+// devuelve usage en modo herramientas; sirve para ver la tendencia, no para auditar.
+function acortar(n) {
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
+  return String(n);
+}
+
+async function actualizarBarra() {
+  const barra = $("#chat-barra");
+  if (!barra || barra.classList.contains("hidden")) return;
+  let est = null;
+  try {
+    est = await api.estadoAgente(sesionActual);
+  } catch {
+    est = null;
+  }
+  if (!est) {
+    $("#cb-modelo").textContent = "sin datos";
+    return;
+  }
+  $("#cb-modelo").textContent = est.modelo || "—";
+  const usados = est.tokens_sesion || 0;
+  const tope = est.presupuesto_tokens || 1;
+  const pct = Math.min(100, Math.round((usados / tope) * 100));
+  $("#cb-tokens").textContent = `contexto ${acortar(usados)} / ${acortar(tope)} (${pct}%)`;
+  const fill = $("#cb-fill");
+  fill.style.width = `${pct}%`;
+  fill.classList.toggle("alerta", pct >= 75);
+  const partes = [];
+  if (est.turnos) partes.push(`${est.turnos} turnos`);
+  if (est.resumen_chars) partes.push(`resumen ${acortar(est.resumen_chars)}`);
+  const mem = est.memoria || {};
+  const bytes = (mem.hot?.bytes || 0) + (mem.warm?.bytes || 0) + (mem.largo?.bytes || 0);
+  if (bytes) partes.push(`memoria ${acortar(bytes)}B`);
+  $("#cb-memoria").textContent = partes.join(" · ");
+}
+
+async function compactarSesion() {
+  if (!sesionActual) {
+    burbuja("agent", "Todavía no hay historial en esta charla: no hay nada que compactar.");
+    return;
+  }
+  const btn = $("#cb-compactar");
+  const previo = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "compactando…";
+  try {
+    const info = await api.compactar(sesionActual);
+    if (info.ok) {
+      burbuja("agent", `Listo: resumí ${info.turnos_resumidos} turnos y quedaron `
+        + `${info.turnos_vivos} textuales (resumen de ${info.resumen_chars} caracteres).`);
+      await abrirSesion(sesionActual);
+    } else {
+      burbuja("agent", info.detalle || "no se pudo compactar");
+    }
+  } catch (err) {
+    burbuja("agent", `No pude compactar: ${err.message || err}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = previo;
+    actualizarBarra();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Buscar dentro de las conversaciones guardadas: filtra las opciones del selector
+// por título. Barato y suficiente para decenas de charlas.
+function filtrarSesiones(termino) {
+  const sel = $("#chat-sesiones");
+  const t = String(termino || "").toLowerCase().trim();
+  for (const opt of sel.options) {
+    if (!opt.value) continue;
+    opt.hidden = Boolean(t) && !opt.textContent.toLowerCase().includes(t);
+  }
+  const primera = Array.from(sel.options).find((o) => o.value && !o.hidden);
+  if (primera && t) sel.value = primera.value;
 }

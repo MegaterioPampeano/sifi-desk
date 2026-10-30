@@ -32,6 +32,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import SERVICE_NAME, __version__
+from . import sandbox  # noqa: E402  (carpeta del agente para /agent/estado)
 from .models import CancelResponse, RunRequest
 from .queue import STATUSES, Store, new_run_id, utcnow
 from .worker import CORE_DIR, Worker, recover_interrupted
@@ -642,6 +643,34 @@ def create_app(data_dir: Optional[str] = None,
                 salida["compactado"] = info
         salida["sesion"] = [s for s in charlas.listar(data_dir) if s["id"] == sid][:1]
         return salida
+
+    @app.get("/agent/estado")
+    def agent_estado(sesion_id: str = "") -> dict:
+        from . import contexto, memoria, charlas
+        from . import settings as _settings
+        ses = charlas.obtener(data_dir, sesion_id) if sesion_id else None
+        turnos = contexto.turnos_para_llm(ses) if ses else []
+        return {
+            "modelo": _settings.estado()["modelo"],
+            "presupuesto_tokens": contexto.PRESUPUESTO_TOKENS,
+            "tokens_sesion": contexto.tokens_de(turnos),
+            "turnos": len([m for m in (ses or {}).get("mensajes", [])
+                           if m.get("role") in ("user", "assistant")]),
+            "resumen_chars": len((ses or {}).get("resumen") or ""),
+            "compactado": (ses or {}).get("compactado"),
+            "memoria": memoria.resumen_para_ui(),
+            "carpeta": sandbox.RAIZ,
+        }
+
+    @app.post("/agent/sesiones/{sid}/compactar")
+    def agent_compactar(sid: str, body: dict | None = None) -> dict:
+        from . import charlas
+        from . import agent as _agent
+        vivos = int((body or {}).get("vivos") or 0)
+        info = charlas.compactar(data_dir, sid, _agent.resumir, vivos=vivos)
+        if not info:
+            return {"ok": False, "detalle": "no había suficientes turnos para compactar"}
+        return {"ok": True, **info}
 
     # ------------------------------------------------------- aprobaciones
     @app.get("/aprobaciones")

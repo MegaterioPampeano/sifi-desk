@@ -6,7 +6,7 @@ import { initWizard, setPanels, goStep } from "./wizard.js";
 import { initProgress, followRun, stop as stopProgress } from "./progress.js";
 import { initResults, showResults } from "./results.js";
 import { initDetail } from "./detail.js";
-import { initChat, actualizarContexto } from "./chat.js";
+import { initChat, actualizarContexto, restaurarModoChat } from "./chat.js";
 import { initNews, cargarNews } from "./news.js";
 import { initAjustes } from "./ajustes.js";
 import { esc, fechaCorta, entero, num, ESTADOS } from "./format.js";
@@ -240,6 +240,7 @@ async function main() {
   if (chatPref === "closed" || (!chatPref && window.innerWidth < 980)) {
     $(".app").classList.add("chat-closed");
   }
+  restaurarModoChat();
 
   loadDraft();
   await cargarSalud();

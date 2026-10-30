@@ -4,7 +4,7 @@ Objetivo: que el agente de la app piense y trabaje con el mismo nivel de detalle
 Multivac (el agente de OpenClaw), pero encerrado en su carpeta, con el harness propio
 (deepseek directo + tools propias) y un chat a pantalla completa.
 
-Estado: F1 y F2 completas el 2026-10-30. Suite: 213 passed, 8 skipped.
+Estado: F1, F2 y F4 completas el 2026-10-30. Suite: 213 passed, 8 skipped.
 Cada fase tiene criterio de aceptación verificable.
 
 ---
@@ -103,20 +103,23 @@ Ya hay 17. Faltan / hay que mejorar:
 
 ---
 
-## F4 — Chat a pantalla completa, nivel Multivac
+## F4 — Chat a pantalla completa, nivel Multivac — HECHO 2026-10-30
 
-- [ ] Vista `#/chat` full-screen (no panel lateral): historial a ancho completo,
+- [x] Vista full-screen (`.app.modo-chat`, Ctrl+Mayús+F, Esc, preferencia en localStorage) (no panel lateral): historial a ancho completo,
   burbujas por rol, bloques de código con copiar, tablas markdown, colapsables para
   salidas largas de tools.
 - [ ] Streaming token por token (SSE) con indicador de pasos ("pensando", "ejecutando
   comando", "leyendo archivo").
-- [ ] Barra de contexto: tokens usados / presupuesto, modelo activo, botón de compactar.
-- [ ] Lista de conversaciones con búsqueda y renombrado; scroll infinito.
-- [ ] Atajos: Enter envía, Shift+Enter nueva línea, Ctrl+K comandos, Esc corta.
-- [ ] Adjuntar archivos al chat (drag & drop) que caen en `descargas/` del agente.
-- [ ] Estado de aprobaciones inline (aprobar/rechazar sin salir del chat).
-- Criterio: se puede tener una conversación técnica larga sin abrir otra pestaña, y
-  desde la tele/monitor se lee cómodo a 1920x1080.
+- [x] Barra de contexto (modelo, tokens usados/presupuesto, memoria, botón compactar): tokens usados / presupuesto, modelo activo, botón de compactar.
+- [x] Lista de conversaciones con búsqueda (filtro por título). Falta renombrar y scroll infinito.
+- [x] Atajos: Enter envía, Shift+Enter nueva línea, Ctrl+K chat full, Esc vuelve al panel.
+- [ ] Adjuntar archivos al chat (drag & drop) — falta endpoint de subida.
+- [x] Estado de aprobaciones inline (ya estaba; se mantiene en full-screen).
+- Hecho: columna centrada de 1040px, tipografía 14,5px/1,65, markdown propio y seguro
+  (`ui/assets/js/md.js`: listas, negritas, código en línea y en bloque, títulos, links,
+  todo escapado), tarjetas de herramientas plegables, cronómetro de espera, resumen de
+  compactación visible al abrir la sesión. Verificado con Playwright: `.main` oculto,
+  1440px → 200px de margen, barra de contexto con tokens en vivo, cero errores de consola.
 
 ---
 
@@ -136,4 +139,4 @@ Ya hay 17. Faltan / hay que mejorar:
 1. ~~F1.a~~ → 2. F2 (contexto/memoria) → 3. F3 (tools) → 4. ~~F1.b~~ → 5. F4 (UI) → 6. F5 (verificación).
 
 Nota: F4 se puede adelantar si Mariano quiere ver el chat grande ya, pero sin F2 el chat
-grande se queda sin memoria y decepciona. Orden recomendado: F1.a → F2 → F4 → F3 → F1.b.
+grande se queda sin memoria y decepciona. Orden ejecutado: F1 → F2 → F4. Sigue F3 (tools/streaming) → F5.
