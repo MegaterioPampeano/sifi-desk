@@ -197,6 +197,23 @@ class SifiPipeline:
             return res
 
         if not input_data:
+            if self.p.mode_code != 0:
+                # Modo off-target: cero hits NO es un error, es el mejor resultado posible
+                # (ningún siRNA se aparea con la base consultada). Se devuelve una corrida
+                # válida con 0 filas para no asustar al usuario con "No targets found".
+                res.warnings.append(
+                    "Sin off-targets: ninguno de los siRNAs dio hits en la base consultada "
+                    "con mismatches=%d. Es el resultado esperado/buscado, no un error. "
+                    "Si esperabas encontrar alguno, subí 'mismatches'." % self.p.mismatches)
+                res.sirnas = []
+                res.summary = self.summarize([])
+                res.artifacts = {
+                    "sirna_fasta": sirna_file,
+                    "sirna_tsv": tab_file_name,
+                    "query_fasta": query_seq_temp_file,
+                }
+                res.artifacts["no_offtargets"] = True
+                return res
             res.error = ("No targets found. Please make sure that the query and/or "
                          "database sequences are in correct orientation")
             return res
