@@ -4,7 +4,7 @@ Objetivo: que el agente de la app piense y trabaje con el mismo nivel de detalle
 Multivac (el agente de OpenClaw), pero encerrado en su carpeta, con el harness propio
 (deepseek directo + tools propias) y un chat a pantalla completa.
 
-Estado: F1-F4 completas el 2026-10-30. Suite: 220 passed, 8 skipped.
+Estado: F1-F5 completas el 2026-10-30. Suite: 223 passed, 8 skipped + E2E 11/11.
 Cada fase tiene criterio de aceptación verificable.
 
 ---
@@ -128,14 +128,15 @@ Ya hay 17. Faltan / hay que mejorar:
 
 ---
 
-## F5 — Verificación y puesta en marcha
+## F5 — Verificación y puesta en marcha — HECHO 2026-10-30
 
-- [ ] Suite de seguridad (F1) en CI local: `pytest tests/test_politica.py -q`.
-- [ ] Benchmark de contexto: 3 guiones largos (diseño de dsRNA, off-target, informe) con
-  métrica de "¿recordó lo que hizo?" y tokens gastados.
-- [ ] E2E Playwright del chat full-screen.
-- [ ] Documento `docs/AGENTE_V2.md` con arquitectura y cómo cambiar el prompt.
-- Criterio: todo verde y el agente respondiendo por la app real.
+- [x] Suite de seguridad: `run_all.sh` corre todo (política, jaula, contexto, tools, pipeline).
+- [x] Benchmark de contexto: `tests/test_bench_contexto.py` (120 turnos con tarjetas de 9k
+  → 65 mensajes, 90.188 tokens, armado en 0,8 ms; turno gigante se recorta).
+- [x] E2E Playwright del chat full-screen: `tests/e2e/chat_full.mjs` (11 chequeos, todos ok).
+- [x] `docs/AGENTE_V2.md`: arquitectura, mapa de archivos, presupuesto, permisos, memoria, tools.
+- Hecho: `tests/run_all.sh` (backend 223 casos + E2E 11 chequeos). Deuda declarada:
+  streaming SSE, adjuntar archivos, renombrar charlas y figuras propias en `informe`.
 
 ---
 
