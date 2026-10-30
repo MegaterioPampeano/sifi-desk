@@ -4,7 +4,7 @@ Objetivo: que el agente de la app piense y trabaje con el mismo nivel de detalle
 Multivac (el agente de OpenClaw), pero encerrado en su carpeta, con el harness propio
 (deepseek directo + tools propias) y un chat a pantalla completa.
 
-Estado: F1.a terminada (2026-10-30). Suite completa: 196 passed, 8 skipped.
+Estado: F1 completa (a + b) el 2026-10-30. Suite: 202 passed, 8 skipped.
 Cada fase tiene criterio de aceptación verificable.
 
 ---
@@ -48,16 +48,17 @@ vuelven al modelo, así que "no se acuerda" de lo que corrió; (4) UI de panel, 
   `ls ~/.openclaw`, `python -c open(...)`, symlinks, `..`, `/proc/self/environ`, etc.).
 - Criterio: los 15 casos fallan con mensaje claro y el agente sigue funcionando normal.
 
-### F1.b Aislamiento real con bwrap (requiere 1 comando con sudo de Mariano)
-- [ ] Perfil bwrap: `/usr`, `/lib`, `/bin`, `/etc` RO mínimos; tmpfs `/tmp`; `/proc`,
+### F1.b Aislamiento real con bwrap — HECHO 2026-10-30 (Mariano corrió el sysctl)
+- [x] Perfil bwrap (`core/service/jaula.py`): `/usr`, `/lib`, `/bin`, `/etc` RO mínimos; tmpfs `/tmp`; `/proc`,
   `/dev`; RW sólo la carpeta del agente; RO programa y datos; sin red propia del host
   más allá de lo necesario (más adelante, allowlist de dominios por proxy).
-- [ ] Auto-detección: si `bwrap` no funciona, cae a F1.a sin romper nada.
-- Bloqueante: `kernel.apparmor_restrict_unprivileged_userns=1` en Ubuntu 24.04.
-  Comando único: `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`
-  (+ `/etc/sysctl.d/99-bwrap.conf` para que persista).
-- Criterio: dentro del sandbox, `ls /home/mariano` no muestra nada y `cat ~/.ssh/id_rsa`
-  da "No such file"; `python`, `bowtie`, `curl` siguen andando.
+- [x] Auto-detección (probe cacheado + `SIFI_BWRAP=0/1`): si `bwrap` no funciona, cae a F1.a sin romper nada.
+- Requirió: `kernel.apparmor_restrict_unprivileged_userns=0` (Ubuntu 24.04). Mariano
+  lo aplicó el 2026-10-30 00:50. Persistencia: `/etc/sysctl.d/99-bwrap.conf`.
+- Hecho: dentro de la jaula `/` son 12 carpetas, `/home/mariano` sólo tiene la cáscara
+  `.local/lib` (padre de site-packages), `cat /etc/shadow` da Permission denied por uid,
+  `/root` no existe; `python`, `biopython`, `curl` con HTTPS y escritura en su carpeta andan.
+  Tests: `tests/test_jaula.py` (6 casos). Suite: 202 passed, 8 skipped.
 
 ---
 
@@ -127,8 +128,7 @@ Ya hay 17. Faltan / hay que mejorar:
 
 ## Orden de ejecución
 
-1. F1.a (hoy) → 2. F2 (contexto/memoria) → 3. F3 (tools) → 4. F1.b (bwrap, cuando
-Mariano corra el sudo) → 5. F4 (UI) → 6. F5 (verificación).
+1. ~~F1.a~~ → 2. F2 (contexto/memoria) → 3. F3 (tools) → 4. ~~F1.b~~ → 5. F4 (UI) → 6. F5 (verificación).
 
 Nota: F4 se puede adelantar si Mariano quiere ver el chat grande ya, pero sin F2 el chat
 grande se queda sin memoria y decepciona. Orden recomendado: F1.a → F2 → F4 → F3 → F1.b.

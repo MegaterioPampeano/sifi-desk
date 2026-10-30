@@ -126,6 +126,9 @@ def verificar(ruta: str, modo: str = "leer", base: str = "") -> str:
     if modo not in ("leer", "escribir", "existe"):
         raise ValueError(f"modo inválido: {modo}")
 
+    if modo != "escribir" and real == "/":
+        return real  # listar la raíz está bien: adentro de la jaula son cuatro carpetas
+
     for d in DENEGADO:
         if _dentro(real, _real(d)):
             raise Prohibido(

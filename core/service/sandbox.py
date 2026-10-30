@@ -15,9 +15,12 @@ Los tres caminos pasan por la misma política:
   que corta cualquier `open`, `listdir` o `subprocess` fuera de las raíces;
 - archivos (`leer`, `escribir`, `listar_archivos`): validación directa de la ruta.
 
-Es una barrera de política, no un sandbox de kernel: un binario ya lanzado puede hacer
-syscalls que la política no ve. Ese salto es la fase F1.b del roadmap (bwrap), que hoy
-está bloqueada por `kernel.apparmor_restrict_unprivileged_userns=1`.
+Y además, desde F1.b, los comandos corren dentro de una jaula de kernel (`jaula.py`,
+bubblewrap): namespace de montaje con un rootfs mínimo donde sólo están las raíces
+permitidas. Ahí `ls /home/mariano` no da "permiso denegado": el home no está montado.
+La política sigue actuando primero, para dar errores claros; la jaula es la barrera
+real. Si bwrap no está disponible (`SIFI_BWRAP=0`, host sin userns), la app sigue
+funcionando con la política sola y `correr()` devuelve `jaula: false`.
 """
 from __future__ import annotations
 
@@ -30,9 +33,11 @@ import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from . import politica
+from . import jaula, politica
 
-RAIZ = os.path.expanduser(os.environ.get("SIFI_AGENT_WORKSPACE", "~/.sifidesk/agente"))
+# RAIZ se toma ya resuelta (realpath) porque ~/.sifidesk es un symlink a /mnt/datos:
+# la jaula monta rutas reales y un chdir a la ruta con symlink no existiría adentro.
+RAIZ = politica.RAIZ
 TRABAJO = os.path.join(RAIZ, "trabajo")
 DESCARGAS = os.path.join(RAIZ, "descargas")
 
@@ -225,6 +230,9 @@ def _entorno() -> Dict[str, str]:
         "PYTHONUNBUFFERED": "1",
         "SIFI_AGENT_WORKSPACE": RAIZ,
         "TMPDIR": politica.TMP_RW[0],
+        "XDG_CACHE_HOME": os.path.join(politica.TMP_RW[0], "cache"),
+        "MPLCONFIGDIR": os.path.join(politica.TMP_RW[0], "mpl"),
+        "XDG_CONFIG_HOME": os.path.join(RAIZ, ".config"),
     }
     for k in ("SIFI_BOWTIE", "SIFI_RNAPLFOLD", "SIFI_PANELS_ROOT",
               "DISPLAY", "XDG_RUNTIME_DIR"):
@@ -241,36 +249,37 @@ def _recortar(texto: str, limite: int = MAX_SALIDA) -> str:
 
 
 def correr(cmd: str, timeout: int = TIMEOUT_DEFECTO) -> Dict[str, Any]:
-    """Ejecuta un comando de shell dentro de la carpeta del agente."""
+    """Ejecuta un comando de shell dentro de la carpeta del agente.
+
+    Pasa por la política (rutas permitidas) y por la jaula de kernel (esas rutas son
+    las únicas que existen dentro del comando).
+    """
     asegurar()
     _revisar(cmd)
-    t0 = time.time()
-    try:
-        proc = subprocess.run(["/bin/bash", "-lc", cmd], cwd=TRABAJO, env=_entorno(),
-                              capture_output=True, text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        return {"ok": False, "salida": f"corté el comando a los {timeout}s",
-                "ms": int((time.time() - t0) * 1000), "rc": None}
-    salida = (proc.stdout or "") + (("\n[stderr]\n" + proc.stderr) if proc.stderr.strip() else "")
-    return {"ok": proc.returncode == 0, "rc": proc.returncode,
-            "salida": _recortar(salida.strip() or "(sin salida)"),
-            "ms": int((time.time() - t0) * 1000)}
+    return _ejecutar(cmd, timeout)
 
 
 def correr_aprobado(cmd: str, timeout: int = TIMEOUT_DEFECTO) -> Dict[str, Any]:
     """Igual que `correr`, pero salteando el chequeo de rutas.
 
-    Lo llama sólo `aprobaciones.resolver` cuando Mariano apretó "aprobar". Los
-    vetos duros (sudo, mkfs, apagado, borrado de la raíz) se siguen aplicando.
+    Lo llama sólo `aprobaciones.resolver` cuando Mariano apretó "aprobar". Los vetos
+    duros y la jaula de kernel se siguen aplicando: aprobar no abre la máquina.
     """
     asegurar()
     bajo = cmd.lower()
     for patron in _NEGADOS:
         if re.search(patron, bajo):
             raise Denegado("ese comando está vetado por política y no se aprueba desde la app")
+    return _ejecutar(cmd, timeout)
+
+
+def _ejecutar(cmd: str, timeout: int) -> Dict[str, Any]:
+    entorno = _entorno()
+    argv = jaula.envolver(["/bin/bash", "-lc", cmd], TRABAJO, entorno)
+    enjaulado = argv[0] != "/bin/bash"
     t0 = time.time()
     try:
-        proc = subprocess.run(["/bin/bash", "-lc", cmd], cwd=TRABAJO, env=_entorno(),
+        proc = subprocess.run(argv, cwd=None if enjaulado else TRABAJO, env=entorno,
                               capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         return {"ok": False, "salida": f"corté el comando a los {timeout}s",
@@ -278,7 +287,7 @@ def correr_aprobado(cmd: str, timeout: int = TIMEOUT_DEFECTO) -> Dict[str, Any]:
     salida = (proc.stdout or "") + (("\n[stderr]\n" + proc.stderr) if proc.stderr.strip() else "")
     return {"ok": proc.returncode == 0, "rc": proc.returncode,
             "salida": _recortar(salida.strip() or "(sin salida)"),
-            "ms": int((time.time() - t0) * 1000)}
+            "ms": int((time.time() - t0) * 1000), "jaula": enjaulado}
 
 
 def python(codigo: str, timeout: int = TIMEOUT_DEFECTO) -> Dict[str, Any]:
@@ -359,7 +368,7 @@ def inventario() -> Dict[str, Any]:
             except OSError:
                 pass
     return {"raiz": RAIZ, "trabajo": listar(TRABAJO), "descargas": listar(DESCARGAS),
-            "mb": round(total / 1e6, 1)}
+            "mb": round(total / 1e6, 1), "jaula": jaula.estado()}
 
 
 # --------------------------------------------------------------------------- #
