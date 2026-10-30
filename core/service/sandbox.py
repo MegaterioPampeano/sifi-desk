@@ -1,20 +1,23 @@
-"""Caja de arena del agente: dónde puede trabajar y qué no puede tocar.
+"""Caja de arena del agente: dónde puede trabajar y qué puede ver.
 
-El agente corre como el usuario del escritorio, sin privilegios extra. Todo lo que
-ejecuta pasa por acá:
+Desde v2 la política vive en `politica.py` y es **deny-by-default**: el agente sólo
+accede a su carpeta (`~/.sifidesk/agente`, lectura y escritura), al programa
+(`/mnt/datos/proyectos/sifi-desk`, sólo lectura), a los datos del laboratorio
+(`/mnt/datos/biotech`, `/mnt/datos/sifidesk`, sólo lectura), a su tmp
+(`/tmp/sifi_agent`) y a binarios/librerías del sistema. Todo el resto de la máquina
+—el resto de `$HOME`, `~/.ssh`, `~/.openclaw`, `~/.config`, `/etc` sensible, `/root`,
+`/var`— no existe para él, ni para leer.
 
-- Su carpeta es `~/.sifidesk/agente/` (trabajo, descargas, scripts). Cualquier ruta
-  relativa se resuelve ahí y las rutas absolutas fuera de esa carpeta se rechazan
-  para escritura.
-- Lo que **no** puede: tocar el programa instalado (el bundle, el repo, `agent/`),
-  usar sudo, ni borrar árboles del sistema. La lista de vetos es explícita y se
-  aplica sobre el texto del comando y sobre las rutas que se detectan en él.
-- Los comandos tienen tope de tiempo y la salida se recorta: el chat no es una
-  terminal, es un registro de lo que hizo.
+Los tres caminos pasan por la misma política:
 
-Esto es una barrera de contención razonable para un asistente de escritorio, no un
-sandbox de seguridad fuerte: si el agente necesita más aislamiento, el paso siguiente
-es un contenedor o `bwrap`, no más reglas acá.
+- shell (`correr`): se valida el texto del comando y cada ruta que menciona;
+- python (`python`): el script corre bajo `guardia.py`, con un `sys.addaudithook`
+  que corta cualquier `open`, `listdir` o `subprocess` fuera de las raíces;
+- archivos (`leer`, `escribir`, `listar_archivos`): validación directa de la ruta.
+
+Es una barrera de política, no un sandbox de kernel: un binario ya lanzado puede hacer
+syscalls que la política no ve. Ese salto es la fase F1.b del roadmap (bwrap), que hoy
+está bloqueada por `kernel.apparmor_restrict_unprivileged_userns=1`.
 """
 from __future__ import annotations
 
@@ -26,6 +29,8 @@ import subprocess
 import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple
+
+from . import politica
 
 RAIZ = os.path.expanduser(os.environ.get("SIFI_AGENT_WORKSPACE", "~/.sifidesk/agente"))
 TRABAJO = os.path.join(RAIZ, "trabajo")
@@ -92,22 +97,18 @@ def _dentro(ruta: str, base: str) -> bool:
 
 
 def asegurar() -> None:
-    for d in (RAIZ, TRABAJO, DESCARGAS):
+    for d in (RAIZ, TRABAJO, DESCARGAS, *politica.TMP_RW):
         os.makedirs(d, exist_ok=True)
 
 
 def resolver(ruta: str, para_escritura: bool = False) -> str:
-    """Convierte una ruta del agente en absoluta y verifica que sea suya."""
+    """Convierte una ruta del agente en absoluta y la valida contra la política."""
     asegurar()
-    if not ruta:
-        return TRABAJO
-    ruta = os.path.expanduser(ruta)
-    absoluta = ruta if os.path.isabs(ruta) else os.path.join(TRABAJO, ruta)
-    absoluta = os.path.normpath(absoluta)
-    if para_escritura and not _dentro(absoluta, RAIZ):
-        raise Denegado(f"no puedo escribir fuera de tu carpeta ({RAIZ}); "
-                       f"para eso está el botón de la interfaz")
-    return absoluta
+    try:
+        return politica.verificar(ruta, "escribir" if para_escritura else "leer",
+                                  base=TRABAJO)
+    except politica.Prohibido as exc:
+        raise Denegado(str(exc)) from None
 
 
 def _sin_comillas(cmd: str) -> str:
@@ -194,34 +195,11 @@ def _objetivos_de_escritura(cmd: str) -> List[str]:
 
 
 def _revisar(cmd: str) -> None:
-    bajo = cmd.lower()
-    for patron in _NEGADOS:
-        if re.search(patron, bajo):
-            raise Denegado("ese comando está bloqueado por política "
-                           "(privilegios, instalación del sistema o borrado masivo)")
-
-    rutas = _rutas_mencionadas(cmd)
-    escribe = bool(_ESCRITURA.search(_sin_comillas(cmd))) or bool(_PY_ESCRITURA.search(cmd))
-
-    for mencionada in rutas:
-        real = _absoluta(mencionada)
-        for secreto in _SECRETOS:
-            if _dentro(real, secreto):
-                raise Denegado(f"{mencionada} tiene credenciales o estado privado: no lo toco")
-
-    for objetivo in _objetivos_de_escritura(cmd):
-        real = _absoluta(objetivo)
-        for secreto in _SECRETOS:
-            if _dentro(real, secreto):
-                raise Denegado(f"{objetivo} tiene credenciales o estado privado: no lo toco")
-        if (real in ("/dev/null", "/dev/stdout", "/dev/stderr")
-                or _dentro(real, RAIZ) or _dentro(real, "/tmp")
-                or _dentro(real, "/var/tmp")):
-            continue
-        raise Pendiente(
-            f"escribir en {objetivo} está fuera de tu carpeta ({RAIZ}) y necesita "
-            f"la aprobación de Mariano", cmd=cmd,
-            motivo=f"escritura fuera de la carpeta del agente: {objetivo}")
+    """Política deny-by-default: el comando no puede salir de las raíces permitidas."""
+    try:
+        politica.verificar_comando(cmd)
+    except politica.Prohibido as exc:
+        raise Denegado(str(exc)) from None
 
 
 def _site_usuario() -> str:
@@ -246,6 +224,7 @@ def _entorno() -> Dict[str, str]:
         "LC_ALL": "C.UTF-8",
         "PYTHONUNBUFFERED": "1",
         "SIFI_AGENT_WORKSPACE": RAIZ,
+        "TMPDIR": politica.TMP_RW[0],
     }
     for k in ("SIFI_BOWTIE", "SIFI_RNAPLFOLD", "SIFI_PANELS_ROOT",
               "DISPLAY", "XDG_RUNTIME_DIR"):
@@ -303,13 +282,15 @@ def correr_aprobado(cmd: str, timeout: int = TIMEOUT_DEFECTO) -> Dict[str, Any]:
 
 
 def python(codigo: str, timeout: int = TIMEOUT_DEFECTO) -> Dict[str, Any]:
-    """Corre un script suelto en la carpeta de trabajo."""
+    """Corre un script suelto en la carpeta de trabajo, con el guardia de política."""
     asegurar()
     destino = os.path.join(TRABAJO, f".agent_{int(time.time() * 1000)}.py")
     with open(destino, "w", encoding="utf-8") as fh:
         fh.write(codigo)
+    guardia = os.path.join(os.path.dirname(os.path.abspath(__file__)), "guardia.py")
     try:
-        return correr(f"{sys.executable} {os.path.basename(destino)}", timeout=timeout)
+        return correr(f"{shlex_quote(sys.executable)} {shlex_quote(guardia)} "
+                      f"{shlex_quote(os.path.basename(destino))}", timeout=timeout)
     finally:
         try:
             os.unlink(destino)
