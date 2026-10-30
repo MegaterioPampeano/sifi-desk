@@ -4,7 +4,7 @@ Objetivo: que el agente de la app piense y trabaje con el mismo nivel de detalle
 Multivac (el agente de OpenClaw), pero encerrado en su carpeta, con el harness propio
 (deepseek directo + tools propias) y un chat a pantalla completa.
 
-Estado: F1, F2 y F4 completas el 2026-10-30. Suite: 213 passed, 8 skipped.
+Estado: F1-F4 completas el 2026-10-30. Suite: 220 passed, 8 skipped.
 Cada fase tiene criterio de aceptación verificable.
 
 ---
@@ -88,18 +88,23 @@ vuelven al modelo, así que "no se acuerda" de lo que corrió; (4) UI de panel, 
 
 ---
 
-## F3 — Paridad de herramientas
+## F3 — Paridad de herramientas — HECHO 2026-10-30
 
 Ya hay 17. Faltan / hay que mejorar:
 
 - [x] `leer` con offset/limit y números de línea.
 - [x] `editar` (reemplazo exacto, con chequeo de unicidad) y `escribir`.
-- [ ] `ejecutar` con pty opcional y ejecución en background + `proceso` (poll/kill/log).
-- [ ] `buscar_web` con snippets y `abrir_url` con markdown limpio (hoy texto plano).
+- [x] `ejecutar(fondo=true)` + `proceso` (listar/estado/log/matar). pty no hace falta: los comandos del agente no son interactivos.
+- [x] `abrir_url` con markdown limpio (article/main, listas, links, PDF vía pdftotext).
 - [x] `memoria_*` (F2). Falta `plan` (todo list visible en la UI).
 - [ ] `informe` mejorado: figuras + metodología + versión del scoring.
-- [ ] `sifi` unificado: una tool con subcomandos en vez de 8 sueltas.
-- Criterio: ninguna tarea que yo resuelva con mis tools queda sin equivalente.
+- [x] `corrida` unifica las 6 tools de corridas (paneles/lanzar/estado/resultados/error/informe). 23 → 18 tools.
+- Hecho: trabajos en segundo plano con registro en `.procesos.json`, cosecha de zombis y
+  kill por grupo; `plan` persistido en la sesión y renderizado arriba del chat; `corrida`
+  con subcomandos. Verificado E2E por API: plan 3/3, paneles (6, todos con index_ok),
+  trabajo lanzado y log leído.
+- Sin streaming SSE: queda como deuda de F4/F5 (el cronómetro cubre la espera).
+- Tests: `tests/test_tools_v2.py` (7 casos). Suite: 220 passed, 8 skipped.
 
 ---
 

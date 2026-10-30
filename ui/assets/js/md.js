@@ -14,7 +14,7 @@ function inline(texto) {
   // código primero, para que los * y _ de adentro no se toquen
   const partes = texto.split(/(`[^`]+`)/g).map((trozo) => {
     if (trozo.startsWith("`") && trozo.endsWith("`") && trozo.length > 2) {
-      return `<code>${trozo.slice(1, -1)}</code>`;
+      return `<code>${escapar(trozo.slice(1, -1))}</code>`;
     }
     let html = escapar(trozo);
     html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");

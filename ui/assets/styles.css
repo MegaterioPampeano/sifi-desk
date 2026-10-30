@@ -840,3 +840,25 @@ select.input.sm { padding: 5px 8px; font-size: 12px; }
 .app.modo-chat .tools { margin-top: 6px; }
 .app.modo-chat .tool-body { font-size: 12.5px; }
 .espera-s { font-size: 11px; color: var(--faint); margin-left: 6px; vertical-align: middle; }
+
+/* plan de trabajo */
+.chat-plan {
+  margin: 10px 14px 0; padding: 9px 11px; border: 1px solid var(--line);
+  border-radius: 9px; background: var(--surface-2); font-size: 12px;
+}
+.app.modo-chat .chat-plan { margin: 12px max(22px, calc((100% - 1040px) / 2)) 0; font-size: 13px; }
+.chat-plan.hidden { display: none; }
+.plan-head { display: flex; align-items: center; gap: 9px; cursor: pointer; user-select: none; }
+.plan-head strong { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.plan-progreso { color: var(--muted); font-variant-numeric: tabular-nums; }
+.plan-mas { margin-left: auto; color: var(--faint); }
+.plan-nota { margin: 6px 0 0; color: var(--muted); font-style: italic; }
+.plan-lista { margin: 7px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.plan-lista li { display: flex; gap: 7px; align-items: baseline; color: var(--muted); }
+.plan-lista .p-ico { width: 12px; text-align: center; color: var(--faint); }
+.plan-lista li.p-hecho { color: var(--faint); text-decoration: line-through; }
+.plan-lista li.p-hecho .p-ico { color: #16a34a; }
+.plan-lista li.p-en_curso { color: inherit; font-weight: 600; }
+.plan-lista li.p-en_curso .p-ico { color: var(--accent); }
+.plan-lista li.p-fallo .p-ico { color: #dc2626; }
+.chat-plan.plegado .plan-lista, .chat-plan.plegado .plan-nota { display: none; }

@@ -628,7 +628,7 @@ def create_app(data_dir: Optional[str] = None,
         charlas.agregar(data_dir, sid, "user", mensaje, run_id=run_id)
         salida = _agent.chat(store, mensaje, run_id, historial,
                              base_url=str(request.base_url).rstrip("/"), token=token,
-                           data_dir=data_dir)
+                             data_dir=data_dir, sesion_id=sid)
         charlas.agregar(data_dir, sid, "assistant", salida.get("respuesta") or "",
                         herramientas=salida.get("tools") or None, run_id=run_id)
         salida["sesion_id"] = sid

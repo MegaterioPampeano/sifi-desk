@@ -24,8 +24,11 @@ funcionando con la política sola y `correr()` devuelve `jaula: false`.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
+import secrets
+import signal
 import shlex
 import shutil
 import subprocess
@@ -290,6 +293,133 @@ def _ejecutar(cmd: str, timeout: int) -> Dict[str, Any]:
             "ms": int((time.time() - t0) * 1000), "jaula": enjaulado}
 
 
+# --------------------------------------------------------------------------- #
+# trabajos en segundo plano
+# --------------------------------------------------------------------------- #
+_PROCESOS = os.path.join(politica.RAIZ, ".procesos.json")
+_LOGS = os.path.join(politica.TMP_RW[0], "procesos")
+
+
+def _leer_procesos() -> Dict[str, Any]:
+    try:
+        with open(_PROCESOS, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return {}
+
+
+def _guardar_procesos(datos: Dict[str, Any]) -> None:
+    try:
+        os.makedirs(os.path.dirname(_PROCESOS), exist_ok=True)
+        with open(_PROCESOS, "w", encoding="utf-8") as fh:
+            json.dump(datos, fh, ensure_ascii=False, indent=1)
+    except OSError:
+        pass
+
+
+def _pid_vivo(pid: int) -> bool:
+    """Vivo de verdad: si es hijo nuestro y terminó, se cosecha (si no queda zombi)."""
+    if not pid:
+        return False
+    try:
+        cosechado, _ = os.waitpid(int(pid), os.WNOHANG)
+        if cosechado == int(pid):
+            return False
+    except ChildProcessError:
+        pass
+    except (OSError, TypeError, ValueError):
+        return False
+    try:
+        os.kill(int(pid), 0)
+        return True
+    except (OSError, TypeError):
+        return False
+
+
+def lanzar(cmd: str, nombre: str = "") -> Dict[str, Any]:
+    """Arranca un comando y vuelve enseguida: sirve para corridas largas.
+
+    El proceso queda en su propia sesión (sobrevive al request), con stdout y stderr a un
+    archivo que después se lee con `proceso(accion='log')`. Pasa por la misma política y
+    la misma jaula que `correr`.
+    """
+    asegurar()
+    _revisar(cmd)
+    os.makedirs(_LOGS, exist_ok=True)
+    ident = (nombre or time.strftime("%H%M%S")) + "-" + secrets.token_hex(3)
+    log = os.path.join(_LOGS, ident + ".log")
+    argv = jaula.envolver(["/bin/bash", "-lc", cmd], TRABAJO, _entorno())
+    with open(log, "wb") as fh:
+        fh.write(f"# {time.strftime('%Y-%m-%d %H:%M:%S')} · {cmd}\n".encode())
+        fh.flush()
+        proc = subprocess.Popen(argv, cwd=None if len(argv) > 2 else TRABAJO,
+                                env=_entorno(), stdout=fh, stderr=subprocess.STDOUT,
+                                stdin=subprocess.DEVNULL, start_new_session=True)
+    datos = _leer_procesos()
+    datos[ident] = {"pid": proc.pid, "cmd": cmd, "log": log,
+                    "inicio": time.time()}
+    _guardar_procesos(datos)
+    return {"ok": True, "salida": f"lanzado en segundo plano: id {ident} · pid {proc.pid}\n"
+                                  f"log: {log}\n"
+                                  f"Consultá con proceso(accion='estado', id='{ident}')",
+            "id": ident, "pid": proc.pid, "log": log}
+
+
+def proceso(accion: str = "listar", ident: str = "", lineas: int = 80) -> Dict[str, Any]:
+    datos = _leer_procesos()
+    if accion == "listar":
+        if not datos:
+            return {"ok": True, "salida": "no hay trabajos en segundo plano"}
+        filas = []
+        for k, v in sorted(datos.items(), key=lambda kv: kv[1].get("inicio") or 0,
+                           reverse=True)[:20]:
+            vivo = _pid_vivo(v.get("pid"))
+            filas.append(f"{k} · {'corriendo' if vivo else 'terminado'} · "
+                         f"{time.strftime('%H:%M:%S', time.localtime(v.get('inicio') or 0))} · "
+                         f"{v.get('cmd','')[:70]}")
+        return {"ok": True, "salida": "\n".join(filas)}
+
+    item = datos.get(ident)
+    if not item:
+        return {"ok": False, "salida": f"no existe el trabajo {ident}"}
+
+    if accion == "estado":
+        vivo = _pid_vivo(item.get("pid"))
+        try:
+            tam = os.path.getsize(item.get("log"))
+        except OSError:
+            tam = 0
+        return {"ok": True, "salida": json.dumps(
+            {"id": ident, "pid": item.get("pid"), "estado": "corriendo" if vivo else "terminado",
+             "log": item.get("log"), "log_bytes": tam}, ensure_ascii=False)}
+
+    if accion == "log":
+        try:
+            with open(item.get("log"), encoding="utf-8", errors="replace") as fh:
+                todo = fh.readlines()
+        except OSError:
+            return {"ok": False, "salida": "no pude leer el log"}
+        cola = "".join(todo[-max(1, int(lineas)):])
+        vivo = _pid_vivo(item.get("pid"))
+        return {"ok": True, "salida": f"[{'corriendo' if vivo else 'terminado'}] "
+                                      f"{len(todo)} líneas\n" + _recortar(cola)}
+
+    if accion == "matar":
+        pid = item.get("pid")
+        if not _pid_vivo(pid):
+            return {"ok": True, "salida": f"el trabajo {ident} ya había terminado"}
+        try:
+            os.killpg(os.getpgid(pid), signal.SIGTERM)
+            time.sleep(1)
+            if _pid_vivo(pid):
+                os.killpg(os.getpgid(pid), signal.SIGKILL)
+        except OSError as exc:
+            return {"ok": False, "salida": f"no pude matarlo: {exc}"}
+        return {"ok": True, "salida": f"trabajo {ident} (pid {pid}) terminado"}
+
+    return {"ok": False, "salida": f"acción desconocida: {accion}"}
+
+
 def python(codigo: str, timeout: int = TIMEOUT_DEFECTO) -> Dict[str, Any]:
     """Corre un script suelto en la carpeta de trabajo, con el guardia de política."""
     asegurar()
@@ -515,17 +645,66 @@ def buscar_web(consulta: str, maximo: int = 6) -> str:
     return "\n".join(filas) or "sin resultados"
 
 
-def abrir_url(url: str, maximo: int = 6000) -> str:
-    """Trae una página y la devuelve como texto plano acotado."""
+def abrir_url(url: str, maximo: int = 12000) -> str:
+    """Trae una página o un PDF y la devuelve en un markdown mínimo, acotada.
+
+    No es un navegador: alcanza para leer un paper, una ficha de NCBI o una doc. Se tiran
+    scripts, estilos, nav y footer, y se conservan títulos, listas, párrafos y links.
+    """
     if not re.match(r"^https?://", url or ""):
         raise Denegado("sólo http(s)")
+    if re.search(r"\.pdf($|\?)", url, re.I):
+        try:
+            destino = os.path.join(DESCARGAS, "pdf_" + str(abs(hash(url)) % 10**8) + ".pdf")
+            descargar(url, destino, 120)
+            return _pdf_texto(destino, maximo)
+        except Exception as exc:  # noqa: BLE001
+            return f"(no pude leer el PDF: {type(exc).__name__}: {exc})"
     html = _http_texto(url)
-    texto = re.sub(r"(?is)<(script|style|nav|footer|header)[^>]*>.*?</\1>", " ", html)
-    texto = re.sub(r"(?s)<[^>]+>", " ", texto)
-    texto = html_unescape(texto)
-    texto = re.sub(r"[ \t\r\f\v]+", " ", texto)
-    texto = re.sub(r"\n\s*\n+", "\n", texto)
-    return _recortar(texto.strip()[:maximo])
+    if not re.search(r"(?i)<html|<body|<p|<div", html or ""):
+        return _recortar((html or "").strip()[:maximo])
+
+    # si hay <article> o <main>, quedarse con el más largo: menos menú, más contenido
+    candidatos = re.findall(r"(?is)<(article|main)[^>]*>(.*?)</\1>", html)
+    if candidatos:
+        html = max(candidatos, key=lambda c: len(c[1]))[1]
+    crudo = re.sub(r"(?is)<(script|style|noscript|svg|iframe|form)[^>]*>.*?</\1>", " ", html)
+    crudo = re.sub(r"(?is)<(nav|footer|header|aside)[^>]*>.*?</\1>", " ", crudo)
+    crudo = re.sub(r"(?is)<br\s*/?>", "\n", crudo)
+    crudo = re.sub(r"(?is)</(p|div|section|article|tr|li|h[1-6]|blockquote)>", "\n", crudo)
+    crudo = re.sub(r"(?is)<h([1-3])[^>]*>", lambda m: "\n" + "#" * int(m.group(1)) + " ", crudo)
+    crudo = re.sub(r"(?is)<li[^>]*>", "\n- ", crudo)
+    crudo = re.sub(r"(?is)<a\s[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>",
+                   lambda m: f"[{_limpio(m.group(2))}]({m.group(1)})", crudo)
+    crudo = re.sub(r"(?s)<[^>]+>", " ", crudo)
+    crudo = html_unescape(crudo)
+    crudo = re.sub(r"[ \t\r\f\v]+", " ", crudo)
+    crudo = re.sub(r" *=+ *\n", "\n", crudo)
+    lineas = []
+    for linea in crudo.splitlines():
+        linea = linea.strip()
+        if not linea or linea in ("-", "*", "#", "##", "###"):
+            continue
+        lineas.append(linea)
+    crudo = "\n".join(lineas)
+    return _recortar(crudo[:maximo])
+
+
+def _pdf_texto(ruta: str, maximo: int) -> str:
+    """Texto de un PDF, si hay herramienta para sacarlo."""
+    for cmd in (["pdftotext", "-layout", ruta, "-"], ["python3", "-c",
+                "import sys;from pypdf import PdfReader;"
+                "print(chr(10).join((p.extract_text() or '') for p in PdfReader(sys.argv[1]).pages))",
+                ruta]):
+        if not shutil.which(cmd[0]):
+            continue
+        try:
+            salida = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            if salida.returncode == 0 and salida.stdout.strip():
+                return _recortar(salida.stdout.strip()[:maximo])
+        except (OSError, subprocess.SubprocessError):
+            continue
+    return "(el PDF se descargó pero no pude extraer el texto)"
 
 
 def _limpio(fragmento: str) -> str:
@@ -534,3 +713,4 @@ def _limpio(fragmento: str) -> str:
 
 from html import unescape as html_unescape  # noqa: E402
 import urllib.parse  # noqa: E402
+import urllib.request  # noqa: E402

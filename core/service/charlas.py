@@ -121,6 +121,17 @@ def agregar(data_dir: str, sid: str, rol: str, texto: str, *,
     return s
 
 
+def guardar_plan(data_dir: str, sid: str, pasos, nota: str = "") -> bool:
+    """Guarda el plan de trabajo de la charla (lista de pasos con estado)."""
+    sesion = _leer(data_dir, sid)
+    if not sesion:
+        return False
+    sesion["plan"] = {"pasos": list(pasos or [])[:20], "nota": (nota or "")[:300],
+                      "actualizado": time.time()}
+    _escribir(data_dir, sesion)
+    return True
+
+
 def renombrar(data_dir: str, sid: str, titulo: str) -> Dict[str, Any]:
     s = obtener(data_dir, sid)
     s["titulo"] = _titulo(titulo)

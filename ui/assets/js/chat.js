@@ -46,6 +46,11 @@ export function initChat() {
   $("#chat-expandir").addEventListener("click", () => alternarModoChat());
   $("#chat-buscar").addEventListener("input", (ev) => filtrarSesiones(ev.target.value));
   $("#cb-compactar").addEventListener("click", () => compactarSesion());
+  $("#chat-plan").addEventListener("click", (ev) => {
+    if (ev.target.closest("[data-plan-toggle]")) {
+      $("#chat-plan").classList.toggle("plegado");
+    }
+  });
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape" && document.querySelector(".app.modo-chat")) {
       alternarModoChat(false);
@@ -184,6 +189,7 @@ async function abrirSesion(id) {
         + `<div class="tool-body">${esc(s.resumen)}</div></details>`;
       log.insertBefore(aviso, log.firstChild);
     }
+    renderPlan(s.plan);
     actualizarBarra();
   } catch {
     sesionActual = null;
@@ -194,6 +200,7 @@ async function abrirSesion(id) {
 }
 
 function nuevaSesion() {
+  renderPlan(null);
   sesionActual = null;
   localStorage.removeItem("sifi.sesion");
   conversacion.length = 0;
@@ -276,6 +283,7 @@ async function enviar(texto) {
         + `turnos viejos y quedaron ${res.compactado.turnos_vivos} textuales.`);
       b2.classList.add("aviso");
     }
+    renderPlan(res.plan);
     actualizarBarra();
     $("#chat-status").textContent = "local";
   } catch (err) {
@@ -497,4 +505,37 @@ function filtrarSesiones(termino) {
   }
   const primera = Array.from(sel.options).find((o) => o.value && !o.hidden);
   if (primera && t) sel.value = primera.value;
+}
+
+// ---------------------------------------------------------------------------
+// Plan de trabajo: la lista de pasos que el agente fija con la tool `plan`.
+// Se ve arriba del log, plegable, con el avance. Es lo que evita que una tarea de
+// seis pasos se pierda en el medio de la conversación.
+const ICONOS = { hecho: "✓", en_curso: "◐", pendiente: "○", fallo: "✕" };
+
+function renderPlan(plan) {
+  const caja = $("#chat-plan");
+  if (!caja) return;
+  const pasos = (plan && plan.pasos) || [];
+  if (!pasos.length) {
+    caja.classList.add("hidden");
+    caja.innerHTML = "";
+    return;
+  }
+  const hechos = pasos.filter((p) => p.estado === "hecho").length;
+  const fallos = pasos.filter((p) => p.estado === "fallo").length;
+  caja.classList.remove("hidden");
+  caja.innerHTML = `
+    <div class="plan-head" data-plan-toggle role="button" tabindex="0"
+         aria-label="Mostrar u ocultar el plan">
+      <strong>plan</strong>
+      <span class="plan-progreso">${hechos}/${pasos.length}${fallos ? ` · ${fallos} con problema` : ""}</span>
+      <span class="plan-mas">${caja.classList.contains("plegado") ? "+" : "−"}</span>
+    </div>
+    ${plan.nota ? `<p class="plan-nota">${esc(plan.nota)}</p>` : ""}
+    <ol class="plan-lista">
+      ${pasos.map((p) => `<li class="p-${esc(p.estado || "pendiente")}">`
+        + `<span class="p-ico" aria-hidden="true">${ICONOS[p.estado] || "○"}</span>`
+        + `${esc(p.texto)}</li>`).join("")}
+    </ol>`;
 }

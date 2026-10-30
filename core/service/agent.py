@@ -180,7 +180,34 @@ TOOLS: List[dict] = [
         "parameters": {"type": "object", "properties": {
             "cmd": {"type": "string", "description": "comando a ejecutar"},
             "timeout": {"type": "integer", "description": "segundos (máx 600)"},
+            "fondo": {"type": "boolean", "description": "si true, lo lanza y vuelve al toque "
+                                                       "(para corridas largas); después se "
+                                                       "consulta con proceso"},
         }, "required": ["cmd"]}}},
+    {"type": "function", "function": {
+        "name": "proceso",
+        "description": "Trabajos lanzados en segundo plano con ejecutar(fondo=true). acciones: "
+                       "listar, estado, log (líneas), matar. Usalo para corridas largas en vez "
+                       "de esperar bloqueado.",
+        "parameters": {"type": "object", "properties": {
+            "accion": {"type": "string", "enum": ["listar", "estado", "log", "matar"]},
+            "id": {"type": "string"}, "lineas": {"type": "integer"}},
+            "required": ["accion"]}}},
+    {"type": "function", "function": {
+        "name": "plan",
+        "description": "Fija el plan de trabajo de esta charla: lista de pasos con estado. "
+                       "Se ve en pantalla al lado de la conversación. Usalo cuando la tarea "
+                       "tiene 3 o más pasos y actualizá el estado a medida que avanzás.",
+        "parameters": {"type": "object", "properties": {
+            "pasos": {"type": "array", "items": {
+                "type": "object",
+                "properties": {
+                    "texto": {"type": "string"},
+                    "estado": {"type": "string",
+                               "enum": ["pendiente", "en_curso", "hecho", "fallo"]}},
+                "required": ["texto"]}},
+            "nota": {"type": "string", "description": "opcional: una línea de contexto"}},
+            "required": ["pasos"]}}},
     {"type": "function", "function": {
         "name": "python",
         "description": "Corre un script de Python en tu carpeta de trabajo (para análisis, "
@@ -341,6 +368,32 @@ TOOLS: List[dict] = [
 ]
 
 
+# Las seis tools de corrida se juntan en una sola con subcomandos: menos esquema, menos
+# lugar a que el modelo invente un nombre de tool que no existe.
+_ACCIONES_CORRIDA = {
+    "paneles": "listar_paneles", "lanzar": "correr_corrida", "estado": "estado_corrida",
+    "resultados": "resultados_corrida", "error": "ver_error_corrida", "informe": "informe",
+}
+_TOOLS_CORRIDA = set(_ACCIONES_CORRIDA.values())
+TOOLS = [t for t in TOOLS if t["function"]["name"] not in _TOOLS_CORRIDA]
+TOOLS.append({"type": "function", "function": {
+    "name": "corrida",
+    "description": "Todo lo de corridas en una tool. acciones: 'paneles' (listar paneles y "
+                   "roles), 'lanzar' (modo design|offtarget con query y paneles), 'estado', "
+                   "'resultados' (tabla de siRNAs), 'error' (por qué falló), 'informe' (PDF).",
+    "parameters": {"type": "object", "properties": {
+        "accion": {"type": "string",
+                   "enum": ["paneles", "lanzar", "estado", "resultados", "error", "informe"]},
+        "run_id": {"type": "string"},
+        "modo": {"type": "string", "description": "design | offtarget"},
+        "query_path": {"type": "string"},
+        "panel_ids": {"type": "array", "items": {"type": "string"}},
+        "mismatches": {"type": "integer"},
+        "sirna_size": {"type": "integer"},
+        "formato": {"type": "string"}},
+        "required": ["accion"]}}})
+
+
 # --------------------------------------------------------------------------- #
 # contexto de la corrida
 # --------------------------------------------------------------------------- #
@@ -393,11 +446,25 @@ def _contexto(store, run_id: Optional[str]) -> Dict[str, Any]:
 # herramientas
 # --------------------------------------------------------------------------- #
 class _Entorno:
-    def __init__(self, store, base_url: str, token: Optional[str], data_dir: str = ""):
+    def __init__(self, store, base_url: str, token: Optional[str], data_dir: str = "",
+                 sesion_id: str = ""):
         self.store = store
+        self.sesion_id = sesion_id
         self.data_dir = data_dir or os.path.expanduser("~/.sifidesk/sifid")
         self.base_url = base_url.rstrip("/")
         self.token = token
+
+    def plan_actual(self):
+        if not self.sesion_id:
+            return None
+        from . import charlas
+        return (charlas.obtener(self.data_dir, self.sesion_id) or {}).get("plan")
+
+    def guardar_plan(self, pasos: list, nota: str = "") -> bool:
+        if not self.sesion_id:
+            return False
+        from . import charlas
+        return charlas.guardar_plan(self.data_dir, self.sesion_id, pasos, nota)
 
     def http(self, metodo: str, ruta: str, cuerpo: Optional[dict] = None,
              timeout: int = 60) -> Any:
@@ -411,9 +478,32 @@ class _Entorno:
 
 def _ejecutar(nombre: str, args: dict, ent: _Entorno) -> Dict[str, Any]:
     """Devuelve {ok, salida, ...} para una llamada del modelo."""
+    if nombre == "corrida":
+        accion = (args.get("accion") or "estado").lower()
+        equivalente = _ACCIONES_CORRIDA.get(accion)
+        if not equivalente:
+            return {"ok": False, "salida": f"acción desconocida: {accion}"}
+        return _ejecutar(equivalente, args, ent)
     if nombre == "ejecutar":
+        if args.get("fondo"):
+            return sandbox.lanzar(args.get("cmd") or "")
         timeout = min(int(args.get("timeout") or 180), 600)
         return sandbox.correr(args.get("cmd") or "", timeout=timeout)
+    if nombre == "proceso":
+        return sandbox.proceso(args.get("accion") or "listar", args.get("id") or "",
+                               int(args.get("lineas") or 80))
+    if nombre == "plan":
+        pasos = []
+        for p in (args.get("pasos") or [])[:20]:
+            if isinstance(p, dict) and p.get("texto"):
+                pasos.append({"texto": str(p["texto"])[:200],
+                              "estado": p.get("estado") if p.get("estado") in
+                              ("pendiente", "en_curso", "hecho", "fallo") else "pendiente"})
+        saved = ent.guardar_plan(pasos, args.get("nota") or "")
+        hechos = sum(1 for q in pasos if q["estado"] == "hecho")
+        return {"ok": True, "salida": f"plan actualizado: {hechos}/{len(pasos)} hechos"
+                                      + (" (no pude guardarlo en la sesión, pero quedó en "
+                                         "el turno)" if not saved else "")}
     if nombre == "python":
         return sandbox.python(args.get("codigo") or "")
     if nombre == "descargar":
@@ -689,7 +779,8 @@ def _tarjeta(nombre: str, args: dict, res: dict) -> dict:
 
 def chat(store, mensaje: str, run_id: Optional[str] = None,
          historial: Optional[List[dict]] = None, *, base_url: str = "",
-         token: Optional[str] = None, data_dir: str = "") -> Dict[str, Any]:
+         token: Optional[str] = None, data_dir: str = "",
+         sesion_id: str = "") -> Dict[str, Any]:
     mensaje = (mensaje or "").strip()
     if not mensaje:
         return {"respuesta": "Escribí una pregunta.", "configurar": False}
@@ -699,7 +790,8 @@ def chat(store, mensaje: str, run_id: Optional[str] = None,
                               "Pegala en Ajustes → Clave del modelo y volvé a preguntar."),
                 "configurar": True}
 
-    ent = _Entorno(store, base_url or "http://127.0.0.1:8765", token, data_dir)
+    ent = _Entorno(store, base_url or "http://127.0.0.1:8765", token, data_dir,
+                   sesion_id=sesion_id)
     ctx = _contexto(store, run_id)
     mensajes: List[dict] = [{"role": "system", "content": _sistema()}]
     # El historial viene ya armado por `contexto.turnos_para_llm`: presupuesto en tokens,
@@ -725,6 +817,7 @@ def chat(store, mensaje: str, run_id: Optional[str] = None,
                 texto = (msg.get("content") or "").strip()
                 return {"respuesta": texto or "(el modelo no devolvió texto)",
                         "tools": tarjetas, "modelo": settings.estado()["modelo"],
+                        "plan": ent.plan_actual(),
                         "ms": int((time.time() - t0) * 1000)}
 
             mensajes.append({"role": "assistant", "content": msg.get("content"), 
